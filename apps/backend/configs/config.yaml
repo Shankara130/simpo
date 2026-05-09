@@ -1,0 +1,58 @@
+# ===========================================
+# Go REST API Boilerplate - Base Configuration
+# ===========================================
+# 
+# CONFIGURATION PRIORITY (highest to lowest):
+# 1. Environment variables (.env file)
+# 2. Environment-specific config (config.production.yaml, config.staging.yaml, etc.)
+# 3. This base configuration file (config.yaml) - YOU ARE HERE
+#
+# 🔧 Environment variables can override any setting below
+# 📝 See .env.example for common overrides
+# 🌍 See config.{environment}.yaml for environment-specific defaults
+#
+# ===========================================
+
+app:
+  name: "GRAB API"                  # Override with APP_NAME
+  version: "1.0.0"                  # Override with APP_VERSION
+  environment: "development"        # Override with APP_ENVIRONMENT
+  debug: true                       # Override with APP_DEBUG
+
+database:
+  host: "db"                        # Override with DATABASE_HOST
+  port: 5432                        # Override with DATABASE_PORT  
+  user: "postgres"                  # Override with DATABASE_USER
+  password: ""                      # Override with DATABASE_PASSWORD (recommended)
+  name: "grab"                      # Override with DATABASE_NAME
+  sslmode: "disable"                # Override with DATABASE_SSLMODE
+
+jwt:
+  access_token_ttl: "15m"           # Override with JWT_ACCESS_TOKEN_TTL
+  refresh_token_ttl: "168h"         # Override with JWT_REFRESH_TOKEN_TTL
+  ttlhours: 24                      # Deprecated: use access_token_ttl instead
+
+server:
+  port: "8080"                      # Override with SERVER_PORT
+  readtimeout: 10                   # Override with SERVER_READTIMEOUT (seconds)
+  writetimeout: 10                  # Override with SERVER_WRITETIMEOUT (seconds)
+  idletimeout: 120                  # Override with SERVER_IDLETIMEOUT (seconds)
+  shutdowntimeout: 30               # Override with SERVER_SHUTDOWNTIMEOUT (seconds)
+  maxheaderbytes: 1048576           # Override with SERVER_MAXHEADERBYTES (1MB default)
+
+logging:
+  level: "info"                     # Override with LOGGING_LEVEL (debug|info|warn|error)
+
+ratelimit:
+  enabled: true                     # Override with RATELIMIT_ENABLED
+  requests: 100                     # Override with RATELIMIT_REQUESTS
+  window: "1m"                      # Override with RATELIMIT_WINDOW
+
+migrations:
+  directory: "./migrations"         # Override with MIGRATIONS_DIRECTORY
+  timeout: 600                      # Override with MIGRATIONS_TIMEOUT (seconds)
+  locktimeout: 30                   # Override with MIGRATIONS_LOCKTIMEOUT (seconds)
+
+health:
+  timeout: 5                        # Override with HEALTH_TIMEOUT (seconds)
+  database_check_enabled: true      # Override with HEALTH_DATABASE_CHECK_ENABLED

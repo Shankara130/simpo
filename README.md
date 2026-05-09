@@ -1,97 +1,343 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# simpo - Pharmacy Management System
 
-# Getting Started
+**Cost-effective Pharmacy Management System for Indonesian SME Pharmacies**
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.73+-61DAFB?logo=react)](https://reactnative.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-000000?logo=next.js)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?logo=postgresql)](https://www.postgresql.org/)
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 🏥 About simpo
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+simpo adalah sistem manajemen apotek **self-hosted** yang dirancang khusus untuk apotek SME di Indonesia. Sistem ini menyediakan:
 
-```sh
-# Using npm
-npm start
+- 💊 **Point of Sale (POS)** - Aplikasi mobile Android untuk kasir
+- 📊 **Admin Dashboard** - Web dashboard untuk pemilik apotek  
+- 📦 **Inventory Management** - Manajemen stok real-time dengan pelacakan expiry
+- 💰 **Financial Reporting** - Laporan penjualan harian dan laba rugi
+- 👥 **Supplier Management** - Manajemen supplier dan faktur pembelian
+- 🔐 **Role-Based Access** - 3 roles: Admin, Owner, Cashier
+- 🌐 **Offline Mode** - Sinkronisasi otomatis saat koneksi tersedia
 
-# OR using Yarn
-yarn start
+---
+
+## 📁 Monorepo Structure
+
+```
+simpo/
+├── apps/                    # Application modules
+│   ├── backend/             # Go REST API (Gin + GORM)
+│   ├── mobile/              # React Native CLI (POS Android)
+│   └── web/                 # Next.js (Admin Dashboard)
+│
+├── packages/                # Shared packages (future)
+│   ├── shared-types/        # TypeScript types
+│   └── ui-components/       # Shared UI components
+│
+├── docs/                    # Documentation
+│   ├── planning/            # PRD, Architecture, HLD, LLD
+│   ├── implementation/      # Stories, Sprint status
+│   └── api/                 # API documentation
+│
+├── scripts/                 # Utility scripts
+│   ├── setup.sh             # Initial setup script
+│   └── dev.sh               # Development commands
+│
+├── .github/                 # GitHub configuration
+│   └── workflows/           # CI/CD workflows
+│
+├── docker-compose.yml       # Local development
+├── .gitignore              # Root gitignore
+└── README.md               # This file
 ```
 
-## Step 2: Build and run your app
+---
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## 🚀 Quick Start
 
-### Android
+### Prerequisites
 
-```sh
-# Using npm
-npm run android
+- **Backend**: Go 1.21+, PostgreSQL 14+
+- **Mobile**: Node.js 18+, React Native CLI, Android Studio
+- **Web**: Node.js 18+, npm/yarn
+- **Docker** (optional): Docker, Docker Compose
 
-# OR using Yarn
-yarn android
+### Initial Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd simpo
+
+# Run setup script
+chmod +x scripts/setup.sh
+./scripts/setup.sh
 ```
 
-### iOS
+The setup script will:
+- ✓ Check prerequisites (Go, Node.js, PostgreSQL)
+- ✓ Install backend dependencies
+- ✓ Install mobile dependencies  
+- ✓ Create database
+- ✓ Generate secure configuration
+- ✓ Setup environment files
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### Development
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+#### Option 1: Using Development Scripts
 
-```sh
-bundle install
+```bash
+# Start all services
+./scripts/dev.sh all
+
+# Start individual services
+./scripts/dev.sh backend    # Backend API (port 8080)
+./scripts/dev.sh mobile     # Mobile Metro (port 8081)
+./scripts/dev.sh web        # Web dashboard (port 3000)
 ```
 
-Then, and every time you update your native dependencies, run:
+#### Option 2: Manual Startup
 
-```sh
-bundle exec pod install
+**Start Backend (Go API):**
+```bash
+cd apps/backend
+cp .env.example .env  # If not exists
+# Edit .env with your configuration
+export $(cat .env | grep -v '^#' | xargs)
+go run cmd/server/main.go
+```
+Backend: http://localhost:8080
+
+**Start Mobile (React Native POS):**
+```bash
+cd apps/mobile
+yarn install      # If not installed
+yarn start        # Metro bundler (port 8081)
+yarn android      # Run on Android emulator/device
+```
+Metro: http://localhost:8081
+
+**Start Web (Next.js Admin):**
+```bash
+cd apps/web
+yarn install      # If not installed
+yarn dev
+```
+Web: http://localhost:3000
+
+#### Option 3: Docker Compose
+
+```bash
+# Start all services in Docker
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+---
 
-```sh
-# Using npm
-npm run ios
+## 📚 Documentation
 
-# OR using Yarn
-yarn ios
+### Planning Documents
+- [Product Requirements Document](docs/planning/planning-artifacts/prd.md)
+- [Architecture Decisions](docs/planning/planning-artifacts/architecture.md)
+- [High Level Design (HLD)](docs/planning/planning-artifacts/HLD-simpo-pharmacy-management.md)
+- [Low Level Design (LLD)](docs/planning/planning-artifacts/LLD-simpo-pharmacy-management.md)
+
+### Implementation
+- [Sprint Status](docs/implementation/implementation-artifacts/sprint-status.yaml)
+- [Story Files](docs/implementation/implementation-artifacts/)
+- [API Documentation](http://localhost:8080/swagger/index.html)
+
+---
+
+## 🏗️ Architecture
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Backend API** | Go 1.24 + Gin | RESTful API server |
+| **Database** | PostgreSQL 14 + GORM | Primary data storage |
+| **Mobile POS** | React Native CLI 0.73+ | Android cashier app |
+| **Web Admin** | Next.js 14+ | Owner dashboard |
+| **Authentication** | JWT (8-hour expiry) | Stateless auth |
+| **Cache** | Redis 7+ | Session management |
+| **Documentation** | Swagger/OpenAPI | API docs |
+
+### System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐
+│   Mobile POS    │    │   Web Admin     │
+│  (React Native) │    │    (Next.js)    │
+└────────┬────────┘    └────────┬────────┘
+         │                     │
+         │    REST API         │
+         └─────────┬───────────┘
+                   │
+         ┌─────────▼───────────┐
+         │   Backend API       │
+         │   (Go + Gin)        │
+         └─────────┬───────────┘
+                   │
+         ┌─────────▼───────────┐
+         │  PostgreSQL + Redis │
+         └─────────────────────┘
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 🔐 Security
 
-## Step 3: Modify your app
+- **Authentication**: JWT dengan 8-hour session expiration
+- **Authorization**: Role-Based Access Control (RBAC)
+- **Password Hashing**: bcrypt dengan cost factor 12
+- **API Security**: Rate limiting (100 req/min), CORS
+- **Audit Trail**: Append-only logging untuk compliance Badan POM
 
-Now that you have successfully run the app, let's make changes!
+---
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## 📱 Features
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Point of Sale (Mobile)
+- 📱 Barcode scanning integration
+- 🛒 Cart management
+- 💳 Multiple payment methods
+- 🧾 Thermal printer support (ESC/POS)
+- 📡 Offline mode dengan sync queue
+- ⏱️ Sub-30 second transaction processing
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+### Inventory Management
+- 📦 Real-time stock visibility
+- ⚠️ Low stock notifications
+- 📅 Expiry date alerts
+- 🔢 Batch/lot number tracking
+- 📊 Multi-branch support
 
-## Congratulations! :tada:
+### Financial Reporting
+- 📈 Daily sales summaries
+- 💹 Profit & Loss statements
+- 📄 Export functionality (CSV/PDF)
+- 📝 Append-only audit trail
+- 🏪 Supplier aging reports
 
-You've successfully run and modified your React Native App. :partying_face:
+---
 
-### Now what?
+## 🛠️ Development
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+### Code Standards
 
-# Troubleshooting
+- **Backend**: Go standard formatting + Air hot-reload
+- **Mobile**: TypeScript strict mode + ESLint
+- **Web**: TypeScript + Prettier + ESLint
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+### Testing
 
-# Learn More
+- **Backend**: Unit tests dengan Go testing framework
+- **Mobile**: Jest + React Native Testing Library
+- **Web**: Jest + React Testing Library
 
-To learn more about React Native, take a look at the following resources:
+### Git Workflow
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+```bash
+# Feature branch workflow
+git checkout -b feature/story-1-2-user-auth
+git commit -m "feat(auth): implement user authentication"
+git push origin feature/story-1-2-user-auth
+```
+
+Commit message format: `type(scope): description`
+
+---
+
+## 📦 Deployment
+
+### Self-Hosted Deployment
+
+Minimum requirements:
+- **CPU**: 2 cores
+- **RAM**: 4GB
+- **Storage**: 20GB
+- **OS**: Linux/macOS/Windows
+
+```bash
+# Build and deploy
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Backup Strategy
+
+- Automated daily backups
+- Database dumps: `/backups/db/`
+- Config backups: `/backups/config/`
+- Retention: 30 days
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+**Backend** (`apps/backend/.env`):
+```bash
+JWT_SECRET=your-secret-key
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=postgres
+DATABASE_NAME=simpo_db
+SERVER_PORT=8080
+```
+
+**Mobile** (`apps/mobile/.env`):
+```bash
+API_BASE_URL=http://localhost:8080/api/v1
+```
+
+**Web** (`apps/web/.env.local`):
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'feat: Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+---
+
+## 👥 Team
+
+- **Product Owner**: Shankara
+- **Development**: simpo Development Team
+
+---
+
+## 📞 Support
+
+- **Documentation**: [docs/](docs/)
+- **Issues**: GitHub Issues
+- **Email**: support@simpo.pharmacy
+
+---
+
+**Status**: 🚀 Active Development  
+**Version**: 0.1.0-alpha  
+**Last Updated**: 2026-05-09

@@ -1,0 +1,43 @@
+package user
+
+import "time"
+
+// simpo Role System
+// =================
+// Three-tier RBAC system for Indonesian SME pharmacy management:
+// - Admin: System administrator with full access
+// - Owner: Pharmacy owner with business management access
+// - Cashier: Staff with transaction processing access
+//
+// Note: "user" role retained for backward compatibility with GRAB boilerplate
+
+const (
+	RoleUser   = "user"   // Legacy role (GRAB boilerplate compatibility)
+	RoleAdmin  = "admin"  // System administrator
+	RoleOwner  = "owner"  // Pharmacy owner
+	RoleCashier = "cashier" // POS staff
+)
+
+// IsValidRole checks if a role string is valid for simpo system
+func IsValidRole(role string) bool {
+	switch role {
+	case RoleAdmin, RoleOwner, RoleCashier, RoleUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Role represents a user role in the system
+type Role struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Name        string    `gorm:"uniqueIndex;not null" json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// TableName specifies the table name for Role model
+func (Role) TableName() string {
+	return "roles"
+}

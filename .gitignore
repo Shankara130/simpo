@@ -1,10 +1,60 @@
-# OSX
-#
-.DS_Store
+# ===========================================
+# simpo Monorepo - Root .gitignore
+# ===========================================
 
-# Xcode
-#
+# ===========================================
+# OS & Editor Files
+# ===========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ===========================================
+# Environment Variables & Secrets
+# ===========================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+secrets/
+credentials/
+
+# ===========================================
+# Dependencies
+# ===========================================
+node_modules/
+vendor/
+bower_components/
+
+# ===========================================
+# Build Outputs
+# ===========================================
 build/
+dist/
+out/
+target/
+bin/
+tmp/
+*.log
+
+# ===========================================
+# Mobile (React Native)
+# ===========================================
+# Xcode
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -23,9 +73,6 @@ DerivedData
 **/.xcode.env.local
 
 # Android/IntelliJ
-#
-build/
-.idea
 .gradle
 local.properties
 *.iml
@@ -35,19 +82,7 @@ local.properties
 !debug.keystore
 .kotlin/
 
-# node.js
-#
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
-
+# Fastlane
 **/fastlane/report.xml
 **/fastlane/Preview.html
 **/fastlane/screenshots
@@ -56,20 +91,99 @@ yarn-error.log
 # Bundle artifact
 *.jsbundle
 
-# Ruby / CocoaPods
+# CocoaPods
 **/Pods/
 /vendor/bundle/
 
-# Temporary files created by Metro to check the health of the file watcher
+# Metro health check
 .metro-health-check*
 
-# testing
-/coverage
+# ===========================================
+# Backend (Go)
+# ===========================================
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
+# Test binary
+*.test
+
+# Coverage
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace
+go.work
+
+# Generated docs (Swagger)
+**/api/docs/docs.go
+**/api/docs/swagger.json
+**/api/docs/swagger.yaml
+
+# Air live reload
+.air.toml
+
+# ===========================================
+# Web (Next.js)
+# ===========================================
+.next/
+out/
+build/
+swc/
+
+# ===========================================
+# Database & Data
+# ===========================================
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+redis_data/
+data/
+
+# ===========================================
+# Testing & Coverage
+# ===========================================
+coverage/
+.nyc_output/
+*.lcov
+
+# ===========================================
+# Logs
+# ===========================================
+*.log
+logs/
+npm-debug.log
+yarn-error.log
+
+# ===========================================
 # Yarn
+# ===========================================
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# ===========================================
+# Documentation Generated
+# ===========================================
+_docs/
+
+# ===========================================
+# Backup Files
+# ===========================================
+*.bak
+*.backup
+*.tmp
+backups/
+
+# ===========================================
+# Docker
+# ===========================================
+docker-compose.override.yml
