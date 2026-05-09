@@ -48,6 +48,203 @@ simpo/
 ├── .github/                 # GitHub configuration
 │   └── workflows/           # CI/CD workflows
 │
+
+---
+
+## 🐳 Docker Development Infrastructure
+
+simpo menggunakan Docker Compose untuk menyediakan **PostgreSQL** dan **Redis** secara lokal untuk development.
+
+### Prerequisites
+
+- Docker Desktop (macOS/Windows) atau Docker Engine (Linux)
+- Docker versi 20.10+ 
+- Docker Compose v2.0+ (sudah terintegrasi di Docker Desktop)
+
+### Quick Start
+
+```bash
+# Start services (PostgreSQL + Redis)
+docker compose up -d
+
+# Check services status
+docker compose ps
+
+# View logs
+docker compose logs postgres
+docker compose logs redis
+
+# Stop services
+docker compose down
+
+# Stop services dan hapus volumes (WARNING: deletes all data)
+docker compose down -v
+```
+
+### Services
+
+| Service | Container Name | Port | Description |
+|---------|---------------|------|-------------|
+| PostgreSQL | simpo-postgres | 5432 | Database untuk aplikasi |
+| Redis | simpo-redis | 6379 | Caching dan session storage |
+
+### Environment Variables
+
+Backend (`apps/backend/.env`) menggunakan konfigurasi default untuk terhubung ke Docker services:
+
+```bash
+# Database (dari docker-compose)
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=simpo_db
+
+# Redis (dari docker-compose)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+```
+
+### Database Migrations
+
+simpo menggunakan **golang-migrate** untuk managing database schema changes.
+
+```bash
+# Install golang-migrate (jika belum)
+# macOS
+brew install golang-migrate
+
+# Linux
+curl -L https://github.com/golang-migrate/migrate/releases/download/vX.X.X/migrate.Linux-x64.tar.gz | tar xvz
+mv migrate /usr/local/bin/migrate
+
+# Buat migration baru
+cd apps/backend
+migrate create -ext sql -dir migrations -seq create_users_table
+
+# Jalankan migrations ke atas
+migrate -path migrations -database "postgresql://postgres:postgres@localhost:5432/simpo_db?sslmode=disable" up
+
+# Jalankan migrations ke bawah (rollback)
+migrate -path migrations -database "postgresql://postgres:postgres@localhost:5432/simpo_db?sslmode=disable" down 1
+
+# Cek versi migration
+migrate -path migrations -database "postgresql://postgres:postgres@localhost:5432/simpo_db?sslmode=disable" version
+```
+
+**Catatan:** Pastikan Docker services berjalan sebelum menjalankan migrations.
+
+### Health Checks
+
+Services otomatis melakukan health check:
+
+```bash
+# Cek health status
+docker compose ps
+
+# Output yang diharapkan:
+# NAME             STATUS
+# simpo-postgres   Up X minutes (healthy)
+# simpo-redis      Up X minutes (healthy)
+```
+
+### Data Persistence
+
+Data disimpan di Docker named volumes dan persists across container restarts:
+
+- `simpo_postgres_data` - PostgreSQL data
+- `simpo_redis_data` - Redis data
+
+Untuk melihat volumes:
+
+```bash
+docker volume ls | grep simpo
+```
+
+### Troubleshooting
+
+#### Port Sudah Digunakan
+
+Jika port 5432 atau 6379 sudah digunakan:
+
+```bash
+# Cek proses yang menggunakan port
+lsof -i :5432
+lsof -i :6379
+
+# Solusi: Stop konflik service atau ubah port di docker-compose.yml
+```
+
+#### Container Tidak Start
+
+Jika container gagal start:
+
+```bash
+# Cek Docker daemon status
+docker info
+
+# Cek container logs
+docker compose logs postgres
+docker compose logs redis
+
+# Restart Docker Desktop jika perlu
+```
+
+#### Database Connection Refused
+
+Jika backend tidak bisa connect ke database:
+
+```bash
+# 1. Pastikan services berjalan
+docker compose ps
+
+# 2. Tunggu health check selesai (status: healthy)
+docker compose ps
+
+# 3. Test koneksi manual
+docker compose exec postgres psql -U postgres -d simpo_db
+
+# 4. Cek environment variables di backend/.env
+cat apps/backend/.env | grep -E 'DB_|REDIS'
+```
+
+#### Reset Data
+
+Untuk menghapus semua data dan mulai fresh:
+
+```bash
+# WARNING: Menghapus semua database dan Redis data
+docker compose down -v
+docker compose up -d
+```
+
+### Backup & Restore
+
+#### Backup PostgreSQL
+
+```bash
+# Backup database ke file
+docker compose exec postgres pg_dump -U postgres simpo_db > backup_$(date +%Y%m%d).sql
+
+# Restore dari file backup
+cat backup_YYYYMMDD.sql | docker compose exec -T postgres psql -U postgres -d simpo_db
+```
+
+#### Volume Management
+
+```bash
+# List semua simpo volumes
+docker volume ls | grep simpo
+
+# Inspect volume
+docker volume inspect simpo_simpo_postgres_data
+
+# Hapus volume (data akan hilang)
+docker volume rm simpo_simpo_postgres_data simpo_simpo_redis_data
+```
+
+
 ├── docker-compose.yml       # Local development
 ├── .gitignore              # Root gitignore
 └── README.md               # This file
@@ -288,10 +485,11 @@ docker-compose -f docker-compose.prod.yml up -d
 **Backend** (`apps/backend/.env`):
 ```bash
 JWT_SECRET=your-secret-key
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=postgres
-DATABASE_NAME=simpo_db
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=simpo_db
 SERVER_PORT=8080
 ```
 

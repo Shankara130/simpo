@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-10T00:00:00+07:00
+last_updated: 2026-05-10T13:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -47,7 +47,7 @@ development_status:
   1-1-initialize-backend-project-with-grab-boilerplate: done
   1-2-initialize-mobile-pos-app-with-expo: done
   1-3-initialize-web-admin-dashboard-with-next-js: done
-  1-4-set-up-development-infrastructure: backlog
+  1-4-set-up-development-infrastructure: done
   1-5-implement-user-authentication-with-jwt: backlog
   1-6-implement-role-based-access-control-rbac: backlog
   1-7-implement-user-registration-with-admin-approval: backlog

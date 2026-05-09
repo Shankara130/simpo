@@ -28,3 +28,10 @@ This file tracks issues that were identified during reviews but deferred to futu
   - Reason: Performance optimization, not critical for MVP
   - Impact: Minor performance impact from unnecessary DOM reconciliation
   - Future Story: Performance optimization story
+
+## Deferred from: code review of 1-4-set-up-development-infrastructure (2026-05-10)
+
+- **Documentation Language Inconsistency** [README.md:48-222]
+  - Reason: README.md uses Indonesian language while project appears to use English; may be intentional for Indonesian project
+  - Impact: Creates inconsistency for international developers
+  - Future Story: Documentation standardization story (if needed)
