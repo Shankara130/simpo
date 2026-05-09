@@ -1,0 +1,141 @@
+# generated: 2026-05-09
+# last_updated: 2026-05-09T01:00:00+07:00
+# project: simpo
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-05-09
+last_updated: 2026-05-09T01:00:00+07:00
+project: simpo
+project_key: NOKEY
+tracking_system: file-system
+story_location: {project-root}/_bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Authentication & User Management
+  epic-1: in-progress
+  1-1-initialize-backend-project-with-grab-boilerplate: ready-for-dev
+  1-2-initialize-mobile-pos-app-with-expo: ready-for-dev
+  1-3-initialize-web-admin-dashboard-with-next-js: backlog
+  1-4-set-up-development-infrastructure: backlog
+  1-5-implement-user-authentication-with-jwt: backlog
+  1-6-implement-role-based-access-control-rbac: backlog
+  1-7-implement-user-registration-with-admin-approval: backlog
+  1-8-implement-session-management-with-timeout: backlog
+  1-9-implement-staff-registration-via-whitelist: backlog
+  1-10-implement-user-deactivation: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Database Schema & Migrations
+  epic-2: backlog
+  2-1-design-database-schema-for-mvp: backlog
+  2-2-create-initial-migration-with-golang-migrate: backlog
+  2-3-implement-gorm-models-with-struct-tags: backlog
+  2-4-implement-database-connection-and-pooling: backlog
+  2-5-implement-repository-layer-for-data-access: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Point of Sale (Mobile)
+  epic-3: backlog
+  3-1-design-pos-screen-layout-and-navigation: backlog
+  3-2-implement-barcode-scanner-integration: backlog
+  3-3-implement-cart-management: backlog
+  3-4-implement-payment-method-selection: backlog
+  3-5-implement-receipt-printing-with-thermal-printer: backlog
+  3-6-implement-transaction-processing-30-seconds: backlog
+  3-7-implement-transaction-history-view: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Inventory Management
+  epic-4: backlog
+  4-1-implement-product-list-view-with-search-and-filters: backlog
+  4-2-implement-real-time-stock-visibility: backlog
+  4-3-implement-manual-stock-adjustment: backlog
+  4-4-implement-low-stock-notifications: backlog
+  4-5-implement-expiry-date-alerts: backlog
+  4-6-prevent-sale-of-expired-medications: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Financial Reporting
+  epic-5: backlog
+  5-1-implement-daily-sales-summary-report: backlog
+  5-2-implement-profit-loss-report: backlog
+  5-3-implement-report-export-functionality: backlog
+  5-4-implement-append-only-audit-trail-for-compliance: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: System Administration & Configuration
+  epic-6: backlog
+  6-1-implement-system-settings-configuration: backlog
+  6-2-implement-system-health-monitoring-dashboard: backlog
+  6-3-implement-automated-daily-backups: backlog
+  6-4-implement-append-only-audit-trail-for-system-changes: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Hardware Integration (Mobile)
+  epic-7: backlog
+  7-1-implement-thermal-printer-support-via-esc-pos-protocol: backlog
+  7-2-implement-usb-barcode-scanner-integration: backlog
+  7-3-implement-bluetooth-barcode-scanner-support: backlog
+  7-4-implement-cash-drawer-control-via-printer-kick: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Offline Mode & Synchronization (Mobile)
+  epic-8: backlog
+  8-1-implement-local-sqlite-storage-for-offline-transactions: backlog
+  8-2-implement-transaction-sync-queue: backlog
+  8-3-implement-bidirectional-data-synchronization: backlog
+  8-4-implement-visual-sync-status-indicators: backlog
+  8-5-implement-conflict-resolution-for-offline-transactions: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: API Foundation & Core Services
+  epic-9: backlog
+  9-1-implement-api-health-check-endpoint: backlog
+  9-2-implement-api-documentation-with-swagger: backlog
+  9-3-implement-rate-limiting-middleware: backlog
+  9-4-implement-cors-middleware-for-cross-origin-requests: backlog
+  9-5-implement-structured-logging-with-zap: backlog
+  9-6-implement-core-business-services: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Supplier & Purchase Management
+  epic-10: backlog
+  10-1-implement-supplier-master-data-management: backlog
+  10-2-implement-purchase-invoice-recording: backlog
+  10-3-implement-goods-receipt-processing: backlog
+  10-4-implement-supplier-payment-tracking: backlog
+  10-5-implement-supplier-product-catalog: backlog
+  10-6-implement-supplier-aging-reports: backlog
+  10-7-implement-supplier-transaction-audit-trail: backlog
+  epic-10-retrospective: optional

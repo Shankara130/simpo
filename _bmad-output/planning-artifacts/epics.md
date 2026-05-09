@@ -174,7 +174,7 @@ No UX Design specification document was provided. UX requirements will be derive
 
 ### FR Coverage Map
 
-All 35 functional requirements are categorized and will be mapped to epics and stories:
+All 42 functional requirements are categorized and will be mapped to epics and stories:
 
 **Authentication & User Management (FR1-5):** Will be covered in Authentication Epic
 **Point of Sale (FR6-10):** Will be covered in Point of Sale Epic
@@ -184,6 +184,7 @@ All 35 functional requirements are categorized and will be mapped to epics and s
 **System Administration (FR24-27):** Will be covered in System Administration Epic
 **Hardware Integration (FR28-31):** Will be covered in Hardware Integration Epic (Mobile)
 **Offline Mode & Synchronization (FR32-35):** Will be covered in Offline Sync Epic (Mobile)
+**Supplier & Purchase Management (FR36-42):** Will be covered in Supplier & Purchase Management Epic
 
 ## Epic List
 
@@ -196,6 +197,7 @@ Epic 6: System Administration & Configuration
 Epic 7: Hardware Integration (Mobile)
 Epic 8: Offline Mode & Synchronization (Mobile)
 Epic 9: API Foundation & Core Services
+Epic 10: Supplier & Purchase Management
 
 ## Epic 1: Authentication & User Management
 
@@ -1150,6 +1152,132 @@ Then**core services are implemented with Clean Architecture separation:
 And**services use repositories for data access (no direct database calls)
 And**services return domain entities or errors (not database-specific errors)
 And**business logic is well-tested and isolated from data access concerns
+
+## Epic 10: Supplier & Purchase Management
+
+Enable supplier management, purchase order tracking, and goods receipt processing to maintain accurate inventory costs and supplier relationships.
+
+### Story 10.1: Implement Supplier Master Data Management
+
+**As a** System Administrator,
+**I want to** create and maintain supplier master data with contact information,
+**So that** we can track our supplier relationships and communicate with them effectively.
+
+**Acceptance Criteria:**
+
+**Given** the system administrator is authenticated with Admin role
+**When** creating a new supplier
+**Then** the admin can input supplier name, contact person, phone number, email, and address
+**And** the system validates required fields (name, phone)
+**And** the system saves the supplier to the database with unique supplier ID
+**And** the system logs supplier creation in the audit trail with admin user ID
+**And** the admin can edit existing supplier information
+**And** the admin can deactivate suppliers (no new purchases, maintain historical data)
+
+### Story 10.2: Implement Purchase Invoice Recording
+
+**As a** System Administrator or Owner,
+**I want to** record purchase invoices from suppliers with item details and costs,
+**So that** we can track purchases accurately and calculate cost of goods sold.
+
+**Acceptance Criteria:**
+
+**Given** the user is authenticated with Admin or Owner role
+**When** recording a purchase invoice
+**Then** the user can input invoice number, date, supplier, and invoice items
+**And** each invoice item includes product, quantity, unit cost, and subtotal
+**And** the system calculates total invoice amount automatically
+**And** the system records the invoice with payment status set to "unpaid"
+**And** the system maintains an append-only audit trail of the invoice recording
+**And** the user can upload or attach invoice document images (optional)
+
+### Story 10.3: Implement Goods Receipt Processing
+
+**As a** System Administrator or Owner,
+**I want to** process goods receipt from suppliers to increase stock and update costs,
+**So that** inventory quantities are accurate and cost prices reflect latest purchases.
+
+**Acceptance Criteria:**
+
+**Given** a purchase invoice has been recorded
+**When** goods are received from the supplier
+**Then** the admin can initiate goods receipt for the invoice
+**And** the system increases stock quantities for all items in the invoice
+**And** the system updates product cost prices to the latest purchase cost
+**And** the system marks the invoice as "received"
+**And** the system logs the goods receipt in the audit trail with user ID and timestamp
+**And** the system triggers stock level check for low stock notifications if applicable
+
+### Story 10.4: Implement Supplier Payment Tracking
+
+**As a** Pharmacy Owner,
+**I want to** track supplier payment status including unpaid, partial, and fully paid invoices,
+**So that** I can manage cash flow and avoid missing payment deadlines.
+
+**Acceptance Criteria:**
+
+**Given** unpaid purchase invoices exist in the system
+**When** recording a supplier payment
+**Then** the owner can select an unpaid invoice and input payment amount
+**And** the system updates invoice payment status (unpaid → partial → fully paid)
+**And** the system records payment date, payment method, and notes
+**And** the system logs all payment transactions in the audit trail
+**And** the owner can view payment history for each supplier
+**And** the owner can filter invoices by payment status
+
+### Story 10.5: Implement Supplier Product Catalog
+
+**As a** System Administrator,
+**I want to** maintain supplier product catalogs with purchase prices,
+**So that** cost calculations are accurate and purchase orders can be created efficiently.
+
+**Acceptance Criteria:**
+
+**Given** suppliers are registered in the system
+**When** managing supplier product catalogs
+**Then** the admin can associate products with suppliers and specify purchase prices
+**And** the system maintains current purchase price for each product-supplier combination
+**And** the system uses supplier purchase prices when recording purchase invoices
+**And** the system can display price history to track cost changes over time
+**And** the admin can mark preferred suppliers for each product
+
+### Story 10.6: Implement Supplier Aging Reports
+
+**As a** Pharmacy Owner,
+**I want to** generate supplier aging reports showing outstanding invoices by payment period,
+**So that** I can prioritize payments and manage supplier relationships effectively.
+
+**Acceptance Criteria:**
+
+**Given** the pharmacy owner is logged into the web dashboard
+**When** generating a supplier aging report
+**Then** the report displays all unpaid and partially paid invoices grouped by supplier
+**And** invoices are categorized by payment period: 0-30, 31-60, 61-90, 90+ days
+**And** the report shows total outstanding amount per supplier
+**And** the report can be filtered by date range and supplier
+**And** the owner can export the aging report as PDF or Excel
+**And** the report data is calculated from purchase invoices and payment records
+
+### Story 10.7: Implement Supplier Transaction Audit Trail
+
+**As a** System,
+**I must** maintain complete append-only audit trail for all supplier transactions for Badan POM compliance,
+**So that** all purchases, returns, and payments are traceable for regulatory inspections.
+
+**Acceptance Criteria:**
+
+**Given** any supplier transaction occurs (purchase, goods receipt, payment, return)
+**When** the transaction is recorded in the database
+**Then** the system automatically creates an immutable audit trail entry
+**And** the audit entry includes:
+  - Who: User ID and role who performed the action
+  - When: Timestamp of the action
+  - What: Description of the action (supplier created, invoice recorded, payment made, etc.)
+  - Why: Reason for the action (if applicable)
+  - How much: Transaction amount and affected items
+**And** the audit entry is append-only (no modifications or deletions allowed)
+**And** audit entries are queryable for at least 5 years per Badan POM requirements
+**And** audit logs can be exported for compliance inspections
 
 ---
 

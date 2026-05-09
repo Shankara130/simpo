@@ -834,6 +834,16 @@ Functional requirements define specific system capabilities that deliver the pro
 - FR34: System can automatically synchronize data when internet connectivity resumes
 - FR35: System can provide visual indicators showing synchronization status (synced, pending, failed)
 
+### Supplier & Purchase Management
+
+- FR36: System Administrator can create and maintain supplier master data including supplier name, contact person, phone number, email, and address
+- FR37: System can record purchase invoices from suppliers with invoice number, date, supplier, items, quantities, unit costs, and total amount
+- FR38: System can process goods receipt from suppliers to increase stock quantities with automatic cost price updates
+- FR39: System can track supplier payment status including unpaid, partial, and fully paid invoices
+- FR40: System can maintain supplier product catalog with purchase prices for accurate cost calculations
+- FR41: Owner can generate supplier aging reports showing outstanding invoices grouped by payment period (0-30, 31-60, 61-90, 90+ days)
+- FR42: System can maintain complete append-only audit trail for all supplier transactions (purchases, returns, payments) for Badan POM compliance
+
 ---
 
 Non-functional requirements define quality attributes that ensure system reliability, performance, security, and scalability.
