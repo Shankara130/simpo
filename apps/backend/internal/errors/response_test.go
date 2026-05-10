@@ -57,7 +57,7 @@ func TestResponseStructure(t *testing.T) {
 				Success: false,
 				Error: &ErrorInfo{
 					Code:      "TEST_ERROR",
-					Message:   "test error",
+					Detail:    "test error",
 					Timestamp: time.Now(),
 				},
 			},
@@ -119,7 +119,7 @@ func TestResponseJSONSerialization(t *testing.T) {
 			Success: false,
 			Error: &ErrorInfo{
 				Code:      "TEST_ERROR",
-				Message:   "test message",
+				Detail:    "test message",
 				Timestamp: time.Now(),
 			},
 		}

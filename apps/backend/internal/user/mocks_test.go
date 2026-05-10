@@ -79,6 +79,14 @@ func (m *MockRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	return args.Get(0).(*User), args.Error(1)
 }
 
+func (m *MockRepository) FindByUsername(ctx context.Context, username string) (*User, error) {
+	args := m.Called(ctx, username)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*User), args.Error(1)
+}
+
 func (m *MockRepository) FindByID(ctx context.Context, id uint) (*User, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {

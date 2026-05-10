@@ -10,13 +10,14 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/health"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authService auth.Service, cfg *config.Config, db *gorm.DB) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -82,7 +83,7 @@ func SetupRouter(userHandler *user.Handler, authService auth.Service, cfg *confi
 		authGroup := v1.Group("/auth")
 		{
 			authGroup.POST("/register", userHandler.Register)
-			authGroup.POST("/login", userHandler.Login)
+			authGroup.POST("/login", authHandler.Login) // Story 1.5: Username-based login with JWT
 			authGroup.POST("/refresh", userHandler.RefreshToken)
 			authGroup.POST("/logout", auth.AuthMiddleware(authService), userHandler.Logout)
 			authGroup.GET("/me", auth.AuthMiddleware(authService), userHandler.GetMe)

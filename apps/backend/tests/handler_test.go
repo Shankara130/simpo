@@ -17,8 +17,10 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/db"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/server"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 )
 
 // createTestSchema creates the SQLite test schema using GORM AutoMigrate for consistency
@@ -74,7 +76,12 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService, authService)
 
-	router := server.SetupRouter(userHandler, authService, testCfg, database)
+	// Create audit service and auth handler (Story 1.5)
+	auditService := services.NewAuditService()
+	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
+	newAuthHandler := handlers.NewAuthHandler(newAuthService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database)
 
 	return router
 }
@@ -97,7 +104,12 @@ func setupRateLimitTestRouter(t *testing.T) *gin.Engine {
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService, authService)
 
-	return server.SetupRouter(userHandler, authService, testCfg, database)
+	// Create audit service and auth handler (Story 1.5)
+	auditService := services.NewAuditService()
+	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
+	newAuthHandler := handlers.NewAuthHandler(newAuthService)
+
+	return server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database)
 }
 
 func TestRegisterHandler(t *testing.T) {

@@ -16,8 +16,10 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/db"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/migrate"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/server"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
 )
 
@@ -78,12 +80,22 @@ func run() error {
 		}
 	}
 
-	authService := auth.NewServiceWithRepo(&cfg.JWT, database)
+	// Create services
 	userRepo := user.NewRepository(database)
 	userService := user.NewService(userRepo)
-	userHandler := user.NewHandler(userService, authService)
 
-	router := server.SetupRouter(userHandler, authService, cfg, database)
+	// Create audit service for login audit logging (Story 1.5, AC7)
+	auditService := services.NewAuditService()
+
+	// Create auth service with audit logging (Story 1.5, username-based login)
+	authServiceForJWT := auth.NewServiceWithRepo(&cfg.JWT, database)
+	newAuthService := services.NewAuthService(&cfg.JWT, userRepo, auditService)
+	newAuthHandler := handlers.NewAuthHandler(newAuthService)
+
+	// Create user handler
+	userHandler := user.NewHandler(userService, authServiceForJWT)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database)
 
 	port := cfg.Server.Port
 	if port == "" {

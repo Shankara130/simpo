@@ -146,7 +146,7 @@ func TestErrorHandler_WithUnknownError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Contains(t, w.Body.String(), `"success":false`)
 	assert.Contains(t, w.Body.String(), CodeInternal)
-	assert.Contains(t, w.Body.String(), "Internal server error")
+	assert.Contains(t, w.Body.String(), "Internal Server Error") // RFC 7807 title field
 }
 
 func TestErrorHandler_WithNoErrors(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
 )
 
@@ -47,7 +48,10 @@ func TestSetupRouter_HealthEndpoint(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthService, testConfig, db)
+	// Create mock auth handler for testing (Story 1.5)
+	mockAuthHandler := &handlers.MockAuthHandler{}
+
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db)
 
 	assert.NotNil(t, router)
 

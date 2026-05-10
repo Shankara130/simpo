@@ -9,6 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// BcryptCost is the cost factor for bcrypt password hashing (Story 1.5, AC3, Decision 5)
+	BcryptCost = 12
+)
+
 var (
 	// ErrUserNotFound is returned when user is not found
 	ErrUserNotFound = errors.New("user not found")
@@ -209,9 +214,9 @@ func (s *service) PromoteToAdmin(ctx context.Context, userID uint) error {
 	return nil
 }
 
-// hashPassword hashes a plain text password using bcrypt
+// hashPassword hashes a plain text password using bcrypt (Story 1.5, AC3, Decision 5: cost factor 12)
 func hashPassword(password string) (string, error) {
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), BcryptCost)
 	if err != nil {
 		return "", err
 	}

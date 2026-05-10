@@ -12,10 +12,11 @@ import "time"
 // Note: "user" role retained for backward compatibility with GRAB boilerplate
 
 const (
-	RoleUser   = "user"   // Legacy role (GRAB boilerplate compatibility)
-	RoleAdmin  = "admin"  // System administrator
-	RoleOwner  = "owner"  // Pharmacy owner
-	RoleCashier = "cashier" // POS staff
+	RoleUser    = "user"         // Legacy role (GRAB boilerplate compatibility)
+	RoleAdmin   = "admin"        // Legacy: System administrator (GRAB compatibility)
+	RoleSystemAdmin = "SYSTEM_ADMIN" // Story 1.5: System administrator with full access
+	RoleOwner   = "OWNER"        // Story 1.5: Pharmacy owner with business management access
+	RoleCashier = "CASHIER"      // Story 1.5: POS staff with transaction processing access
 )
 
 // IsValidRole checks if a role string is valid for simpo system

@@ -1,37 +1,40 @@
 # Deferred Work Items
 
-This file tracks issues that were identified during reviews but deferred to future stories.
+This file tracks work items that were identified during reviews but deferred to later stories or infrastructure work.
 
-## Deferred from: code review of 1-3-initialize-web-admin-dashboard-with-next-js (2026-05-10)
+## Deferred from: code review of 1-5-implement-user-authentication-with-jwt (2026-05-10)
 
-- **Missing Token Expiration Validation** [lib/apiClient.ts:115-119]
-  - Reason: JWT decode logic needed - requires crypto library implementation
-  - Impact: User might remain "authenticated" after token expires
-  - Future Story: 1.5 (Implement User Authentication with JWT)
+### Infrastructure & Config
 
-- **Missing CSRF Protection** [lib/apiClient.ts:39-59]
-  - Reason: Backend CSRF implementation needed first
-  - Impact: Application vulnerable to CSRF attacks with cookie-based auth
-  - Future Story: 1.5 (Implement User Authentication with JWT)
+- **Hardcoded JWT secret in .env.example**
+  - File: `.env.example:42`
+  - Issue: Contains `JWT_SECRET=simpo_jwt_secret_key_min_32_chars_for_production_please_change`
+  - Why deferred: Pre-existed before Story 1.5, already documented as placeholder for production
+  - Recommendation: Add validation in CI/CD to detect usage of example secrets in production builds
 
-- **No Error Boundaries** [app/layout.tsx]
-  - Reason: Error boundary implementation requires separate task
-  - Impact: Unhandled errors crash entire app with blank screen
-  - Future Story: 1.6 (Configure Development Infrastructure)
+- **Missing request ID generation**
+  - File: `internal/errors/response.go:29`
+  - Issue: `RequestID` field exists but is never populated
+  - Why deferred: GRAB boilerplate infrastructure issue, requires middleware changes across all handlers
+  - Recommendation: Implement as infrastructure improvement in separate story
 
-- **Inconsistent API Client Patterns** [lib/auth.ts vs lib/apiClient.ts]
-  - Reason: Acceptable for foundation story - will consolidate when implementing auth
-  - Impact: Inconsistent error handling patterns
-  - Future Story: 1.5 (Implement User Authentication with JWT)
+- **Hardcoded error type URI**
+  - File: `internal/errors/middleware.go:90`
+  - Issue: `baseURL := "https://api.simpo.com/errors"` is hardcoded
+  - Why deferred: Infrastructure-level concern, acceptable for MVP
+  - Recommendation: Make configurable via environment variable for production deployments
 
-- **Missing React.memo on Layout** [app/(auth)/layout.tsx:4-34]
-  - Reason: Performance optimization, not critical for MVP
-  - Impact: Minor performance impact from unnecessary DOM reconciliation
-  - Future Story: Performance optimization story
+### Code Quality & Standards
 
-## Deferred from: code review of 1-4-set-up-development-infrastructure (2026-05-10)
+- **Bcrypt cost not configurable**
+  - File: `internal/user/service.go:17-18`
+  - Issue: `BcryptCost = 12` is hardcoded constant
+  - Why deferred: Per Architecture Decision 5, cost factor 12 is specified. Making it configurable would violate the architecture decision.
+  - Recommendation: Keep as-is per Decision 5. Only reconsider if hardware constraints arise.
 
-- **Documentation Language Inconsistency** [README.md:48-222]
-  - Reason: README.md uses Indonesian language while project appears to use English; may be intentional for Indonesian project
-  - Impact: Creates inconsistency for international developers
-  - Future Story: Documentation standardization story (if needed)
+### Testing
+
+- **Missing integration tests**
+  - Issue: No end-to-end tests verify full login flow with database
+  - Why deferred: Out of scope for current story focus on unit tests
+  - Recommendation: Add integration test suite in future testing-focused story

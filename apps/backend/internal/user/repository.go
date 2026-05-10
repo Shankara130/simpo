@@ -16,6 +16,7 @@ type txKey struct{}
 type Repository interface {
 	Create(ctx context.Context, user *User) error
 	FindByEmail(ctx context.Context, email string) (*User, error)
+	FindByUsername(ctx context.Context, username string) (*User, error)
 	FindByID(ctx context.Context, id uint) (*User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uint) error
@@ -60,6 +61,24 @@ func (r *repository) FindByEmail(ctx context.Context, email string) (*User, erro
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// FindByUsername finds a user by username (Story 1.5, AC1)
+func (r *repository) FindByUsername(ctx context.Context, username string) (*User, error) {
+	// Guard against empty username (prevents unexpected results)
+	if username == "" {
+		return nil, ErrUserNotFound
+	}
+
+	var user User
+	result := r.getDB(ctx).WithContext(ctx).Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
 		}
 		return nil, result.Error
 	}

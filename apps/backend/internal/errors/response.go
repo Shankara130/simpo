@@ -1,6 +1,8 @@
 package errors
 
-import "time"
+import (
+	"time"
+)
 
 // Response wraps all API responses with consistent structure
 type Response struct {
@@ -10,12 +12,19 @@ type Response struct {
 	Meta    *Meta       `json:"meta,omitempty"`
 }
 
-// ErrorInfo contains detailed error information
+// ErrorInfo contains RFC 7807 compliant error information (Story 1.5, AC4)
 type ErrorInfo struct {
-	Code       string      `json:"code"`
-	Message    string      `json:"message"`
+	// RFC 7807 required fields
+	Type     string `json:"type,omitempty"`     // URI reference identifying problem type
+	Title    string `json:"title,omitempty"`    // Short, human-readable summary
+	Status   int    `json:"status"`             // HTTP status code (required by RFC 7807)
+	Detail   string `json:"detail"`             // Human-readable explanation of this occurrence
+	Instance string `json:"instance,omitempty"` // URI reference identifying this specific occurrence
+
+	// Additional fields for internal use
+	Code       string      `json:"code,omitempty"`
 	Details    interface{} `json:"details,omitempty"`
-	Timestamp  time.Time   `json:"timestamp"`
+	Timestamp  time.Time   `json:"timestamp,omitempty"`
 	Path       string      `json:"path,omitempty"`
 	RequestID  string      `json:"request_id,omitempty"`
 	RetryAfter *int        `json:"retry_after,omitempty"`

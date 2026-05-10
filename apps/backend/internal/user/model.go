@@ -6,13 +6,24 @@ import (
 	"gorm.io/gorm"
 )
 
+// User Status Constants (Story 1.5, AC6)
+const (
+	UserStatusActive   = "ACTIVE"
+	UserStatusInactive = "INACTIVE"
+)
+
 // User represents a user in the system
+// Updated for Story 1.5: Added Username, Status, Role, BranchID fields
 type User struct {
 	ID           uint           `gorm:"primaryKey" json:"id"`
 	Name         string         `gorm:"not null" json:"name"`
+	Username     string         `gorm:"uniqueIndex;not null" json:"username"` // Story 1.5: Username for login
 	Email        string         `gorm:"uniqueIndex;not null" json:"email"`
-	PasswordHash string         `gorm:"not null" json:"-"`
-	Roles        []Role         `gorm:"many2many:user_roles;" json:"-"`
+	PasswordHash string         `gorm:"not null;column:password_hash" json:"-"` // Story 1.5: bcrypt hash
+	Status       string         `gorm:"not null;default:ACTIVE" json:"status"` // Story 1.5: ACTIVE/INACTIVE
+	Role         string         `gorm:"not null;default:CASHIER" json:"role"`  // Story 1.5: Single role (not many-to-many)
+	BranchID     *uint          `gorm:"index" json:"branch_id,omitempty"`      // Story 1.5: Nullable for system admin
+	Roles        []Role         `gorm:"many2many:user_roles;" json:"-"`        // Legacy: GRAB compatibility (deprecated)
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
