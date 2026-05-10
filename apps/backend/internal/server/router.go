@@ -78,35 +78,51 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		)
 	}
 
+	// Story 1.6, AC5: Register Protected Routes
+	// Public routes bypass RBAC middleware: login, register, health check
+	// Protected routes require JWT auth and RBAC middleware
+	// Middleware order: CORS → Rate Limit → Auth → RBAC → Handler
+
 	v1 := router.Group("/api/v1")
 	{
+		// Public auth routes - no authentication required
 		authGroup := v1.Group("/auth")
 		{
 			authGroup.POST("/register", userHandler.Register)
 			authGroup.POST("/login", authHandler.Login) // Story 1.5: Username-based login with JWT
-			authGroup.POST("/refresh", userHandler.RefreshToken)
-			authGroup.POST("/logout", auth.AuthMiddleware(authService), userHandler.Logout)
-			authGroup.GET("/me", auth.AuthMiddleware(authService), userHandler.GetMe)
 		}
 
-		// User endpoints - authenticated users can access their own resources
-		usersGroup := v1.Group("/users")
-		usersGroup.Use(auth.AuthMiddleware(authService))
+		// Protected auth routes - require authentication but no RBAC (self-access only)
+		authProtectedGroup := v1.Group("/auth")
+		authProtectedGroup.Use(auth.AuthMiddleware(authService))
 		{
+			authProtectedGroup.POST("/refresh", userHandler.RefreshToken)
+			authProtectedGroup.POST("/logout", userHandler.Logout)
+			authProtectedGroup.GET("/me", userHandler.GetMe)
+		}
+
+		// Story 1.6, AC5: Protected routes with RBAC middleware
+		// These routes enforce role-based access control
+		// Middleware chain: Auth (JWT validation) → RBAC (role-based permissions) → Handler
+
+		// User endpoints - OWNER and SYSTEM_ADMIN can access
+		usersGroup := v1.Group("/users")
+		usersGroup.Use(auth.AuthMiddleware(authService), middleware.RBACMiddleware())
+		{
+			usersGroup.GET("", userHandler.ListUsers)
 			usersGroup.GET("/:id", userHandler.GetUser)
 			usersGroup.PUT("/:id", userHandler.UpdateUser)
 			usersGroup.DELETE("/:id", userHandler.DeleteUser)
 		}
 
-		// Admin endpoints - admin role required, following REST best practices
+		// Admin endpoints - SYSTEM_ADMIN only
 		adminGroup := v1.Group("/admin")
-		adminGroup.Use(auth.AuthMiddleware(authService), middleware.RequireAdmin())
+		adminGroup.Use(auth.AuthMiddleware(authService), middleware.RBACMiddleware())
 		{
-			// User management endpoints
-			adminGroup.GET("/users", userHandler.ListUsers)
-			adminGroup.GET("/users/:id", userHandler.GetUser)
-			adminGroup.PUT("/users/:id", userHandler.UpdateUser)
-			adminGroup.DELETE("/users/:id", userHandler.DeleteUser)
+			// Admin settings endpoint (placeholder for future admin functionality)
+			adminGroup.GET("/settings", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "admin settings"})
+			})
 		}
 	}
 

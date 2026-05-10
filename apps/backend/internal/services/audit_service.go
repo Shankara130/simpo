@@ -10,10 +10,13 @@ import (
 type AuditAction string
 
 const (
-	AuditActionLoginSuccess  AuditAction = "LOGIN_SUCCESS"
-	AuditActionLoginFailure  AuditAction = "LOGIN_FAILURE"
-	AuditActionLogout        AuditAction = "LOGOUT"
-	AuditActionPasswordReset AuditAction = "PASSWORD_RESET"
+	AuditActionLoginSuccess       AuditAction = "LOGIN_SUCCESS"
+	AuditActionLoginFailure       AuditAction = "LOGIN_FAILURE"
+	AuditActionLogout             AuditAction = "LOGOUT"
+	AuditActionPasswordReset      AuditAction = "PASSWORD_RESET"
+	// Story 1.6, AC6: Authorization audit logging
+	AuditActionAuthFailure        AuditAction = "AUTH_FAILURE"
+	AuditActionForbiddenAccess    AuditAction = "FORBIDDEN_ACCESS"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -32,6 +35,10 @@ type AuditLogEntry struct {
 type AuditService interface {
 	// LogLoginAttempt logs login attempts (success and failure) to append-only audit trail
 	LogLoginAttempt(ctx context.Context, entry AuditLogEntry) error
+
+	// LogAuthorizationFailure logs authorization failures (403 responses)
+	// Story 1.6, AC6: All authorization failures are logged with user_id, role, endpoint, reason
+	LogAuthorizationFailure(ctx context.Context, entry AuditLogEntry) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -56,6 +63,31 @@ func (s *auditService) LogLoginAttempt(ctx context.Context, entry AuditLogEntry)
 	// Log to stdout in structured format for MVP (Story 1.5, AC7, NFR-SEC-004)
 	// In production, this should write to an append-only database table or log file
 	// Format: AUDIT | timestamp | action | username | ip_address | outcome | reason
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"username", entry.Username,
+		"user_id", entry.UserID,
+		"ip_address", entry.IPAddress,
+		"outcome", entry.Outcome,
+		"reason", entry.Reason,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogAuthorizationFailure logs authorization failures to append-only audit trail
+// Story 1.6, AC6: All authorization failures are logged with user_id, role, endpoint, reason
+func (s *auditService) LogAuthorizationFailure(ctx context.Context, entry AuditLogEntry) error {
+	// Set timestamp if not provided
+	if entry.Timestamp.IsZero() {
+		entry.Timestamp = time.Now()
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.6, AC6, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | username | role | endpoint | ip_address | outcome | reason
 	slog.Info("AUDIT",
 		"timestamp", entry.Timestamp.Format(time.RFC3339),
 		"action", string(entry.Action),

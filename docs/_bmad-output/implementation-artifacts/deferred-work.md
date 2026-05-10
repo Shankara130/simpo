@@ -38,3 +38,13 @@ This file tracks work items that were identified during reviews but deferred to 
   - Issue: No end-to-end tests verify full login flow with database
   - Why deferred: Out of scope for current story focus on unit tests
   - Recommendation: Add integration test suite in future testing-focused story
+
+## Deferred from: code review of 1-6-implement-role-based-access-control-rbac (2026-05-11)
+
+### Code Quality & Standards
+
+- **Test helper functions location**
+  - File: `internal/middleware/auth_middleware_test.go:537-547`
+  - Issue: `containsRFC7807Fields()` and `containsString()` defined in auth_middleware_test.go but used across multiple test files (rbac_test.go, integration_test.go)
+  - Why deferred: Pre-existing pattern from Story 1.5/GRAB boilerplate, not introduced by this story
+  - Recommendation: Create `internal/middleware/test_helpers.go` to share common test utilities

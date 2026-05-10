@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-10T15:00:00+07:00
+last_updated: 2026-05-10T18:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -49,7 +49,7 @@ development_status:
   1-3-initialize-web-admin-dashboard-with-next-js: done
   1-4-set-up-development-infrastructure: done
   1-5-implement-user-authentication-with-jwt: done # All AC met, all review patches applied
-  1-6-implement-role-based-access-control-rbac: backlog
+  1-6-implement-role-based-access-control-rbac: done
   1-7-implement-user-registration-with-admin-approval: backlog
   1-8-implement-session-management-with-timeout: backlog
   1-9-implement-staff-registration-via-whitelist: backlog

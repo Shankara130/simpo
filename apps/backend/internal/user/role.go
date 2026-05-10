@@ -22,7 +22,7 @@ const (
 // IsValidRole checks if a role string is valid for simpo system
 func IsValidRole(role string) bool {
 	switch role {
-	case RoleAdmin, RoleOwner, RoleCashier, RoleUser:
+	case RoleAdmin, RoleSystemAdmin, RoleOwner, RoleCashier, RoleUser:
 		return true
 	default:
 		return false
