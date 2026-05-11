@@ -47,6 +47,26 @@ type Service interface {
 	RevokeAllUserTokens(ctx context.Context, userID uint) error
 }
 
+// SessionManager defines session tracking and token blocklist interface
+// Story 1.8, Task 1: Interface for session management operations
+type SessionManager interface {
+	UpdateLastActivity(ctx context.Context, userID uint, tokenID string) error
+	IsTokenRevoked(ctx context.Context, tokenID string) (bool, error)
+	RevokeToken(ctx context.Context, tokenID string, ttl time.Duration) error
+}
+
+// SessionInfo represents session data for tracking (used by middleware package)
+// Story 1.8, AC2: Track last activity timestamp for each active session
+type SessionInfo struct {
+	UserID       uint      `json:"user_id"`
+	Username     string    `json:"username"`
+	Email        string    `json:"email"`
+	Role         string    `json:"role"`
+	TokenID      string    `json:"token_id"`
+	IssuedAt     time.Time `json:"issued_at"`
+	LastActivity time.Time `json:"last_activity"`
+}
+
 type service struct {
 	jwtSecret        string
 	accessTokenTTL   time.Duration
@@ -114,6 +134,7 @@ func NewServiceWithRepo(cfg *config.JWTConfig, db *gorm.DB) Service {
 }
 
 // GenerateToken generates a JWT token for a user (deprecated: use GenerateTokenPair)
+// Story 1.8, AC1: Token includes unique ID (jti claim) for session tracking
 func (s *service) GenerateToken(userID uint, email string, name string) (string, error) {
 	now := time.Now()
 	expirationTime := now.Add(s.accessTokenTTL)
@@ -133,13 +154,17 @@ func (s *service) GenerateToken(userID uint, email string, name string) (string,
 		roles = roleNames
 	}
 
+	// Generate unique token ID for session tracking (Story 1.8)
+	tokenID := uuid.New().String()
+
 	claims := jwt.MapClaims{
-		"sub":   fmt.Sprintf("%d", userID),
-		"email": email,
-		"name":  name,
-		"roles": roles,
-		"exp":   expirationTime.Unix(),
-		"iat":   now.Unix(),
+		"sub":       fmt.Sprintf("%d", userID),
+		"email":     email,
+		"name":      name,
+		"roles":     roles,
+		"token_id":  tokenID, // Story 1.8: JWT ID for tracking individual tokens
+		"exp":       expirationTime.Unix(),
+		"iat":       now.Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -188,6 +213,19 @@ func (s *service) ValidateToken(tokenString string) (*Claims, error) {
 
 	email, _ := claims["email"].(string)
 	name, _ := claims["name"].(string)
+	tokenID, _ := claims["token_id"].(string) // Story 1.8: Extract TokenID
+
+	// P1 FIX: Extract expiration time from JWT claims for accurate TTL calculation
+	var expiresAt time.Time
+	if expFloat, ok := claims["exp"].(float64); ok {
+		expiresAt = time.Unix(int64(expFloat), 0)
+	}
+
+	// Extract issued at time for session tracking
+	var issuedAt time.Time
+	if iatFloat, ok := claims["iat"].(float64); ok {
+		issuedAt = time.Unix(int64(iatFloat), 0)
+	}
 
 	var roles []string
 	if rolesInterface, ok := claims["roles"].([]interface{}); ok {
@@ -199,10 +237,13 @@ func (s *service) ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	return &Claims{
-		UserID: uint(userID),
-		Email:  email,
-		Name:   name,
-		Roles:  roles,
+		UserID:    uint(userID),
+		Email:     email,
+		Name:      name,
+		Roles:     roles,
+		TokenID:   tokenID, // Story 1.8: Include TokenID in returned claims
+		ExpiresAt: expiresAt,
+		IssuedAt:  issuedAt,
 	}, nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
@@ -219,9 +220,13 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 }
 
 // generateToken generates JWT token for user (Story 1.5, AC2)
+// Story 1.8, AC1: Token includes unique ID (jti claim) for session tracking
 func (s *AuthService) generateToken(u *user.User) (string, error) {
 	now := time.Now()
 	expirationTime := now.Add(s.accessTokenTTL)
+
+	// Generate unique token ID for session tracking (Story 1.8, Task 1)
+	tokenID := uuid.New().String()
 
 	claims := &JWTClaims{
 		UserID:   u.ID,
@@ -230,6 +235,7 @@ func (s *AuthService) generateToken(u *user.User) (string, error) {
 		Role:     u.Role,
 		BranchID: u.BranchID,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        tokenID,          // Story 1.8: JWT ID for tracking individual tokens
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(now),
 			Issuer:    "simpo-api",

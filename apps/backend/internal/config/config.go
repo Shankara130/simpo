@@ -20,6 +20,7 @@ type Config struct {
 	Ratelimit  RateLimitConfig  `mapstructure:"ratelimit" yaml:"ratelimit"`
 	Migrations MigrationsConfig `mapstructure:"migrations" yaml:"migrations"`
 	Health     HealthConfig     `mapstructure:"health" yaml:"health"`
+	Redis      RedisConfig      `mapstructure:"redis" yaml:"redis"`
 }
 
 type AppConfig struct {
@@ -73,6 +74,14 @@ type MigrationsConfig struct {
 type HealthConfig struct {
 	Timeout              int  `mapstructure:"timeout" yaml:"timeout"`
 	DatabaseCheckEnabled bool `mapstructure:"database_check_enabled" yaml:"database_check_enabled"`
+}
+
+// RedisConfig represents Redis configuration for session tracking and token blocklist
+// Story 1.8, Task 1: Redis for session storage and token blocklist
+type RedisConfig struct {
+	Host     string `mapstructure:"host" yaml:"host"`
+	Port     string `mapstructure:"port" yaml:"port"`
+	Password string `mapstructure:"password" yaml:"password"`
 }
 
 // LoadConfig loads configuration using Viper. If configPath is non-empty it

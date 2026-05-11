@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
@@ -78,10 +79,24 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		)
 	}
 
+	// Story 1.8: Create Redis client for session tracking and token blocklist
+	// Story 1.8, Task 1: Session tracking mechanism (Redis)
+	var redisClient *redis.Client
+	if cfg.Redis.Host != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     cfg.Redis.Host + ":" + cfg.Redis.Port,
+			Password: cfg.Redis.Password,
+			DB:       0,
+		})
+	}
+
+	// Create session manager for tracking and blocklist (Story 1.8)
+	sessionManager := middleware.NewSessionManager(redisClient)
+
 	// Story 1.6, AC5: Register Protected Routes
 	// Public routes bypass RBAC middleware: login, register, health check
 	// Protected routes require JWT auth and RBAC middleware
-	// Middleware order: CORS → Rate Limit → Auth → RBAC → Handler
+	// Story 1.8, Task 6: Middleware order: CORS → Rate Limit → Auth (with session tracking) → RBAC → Handler
 
 	v1 := router.Group("/api/v1")
 	{
@@ -92,9 +107,10 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			authGroup.POST("/login", authHandler.Login) // Story 1.5: Username-based login with JWT
 		}
 
-		// Protected auth routes - require authentication but no RBAC (self-access only)
+		// Protected auth routes - require authentication with session tracking (Story 1.8)
 		authProtectedGroup := v1.Group("/auth")
-		authProtectedGroup.Use(auth.AuthMiddleware(authService))
+		// Story 1.8, Task 6: Use SessionAuthMiddleware for session tracking and blocklist checking
+		authProtectedGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager))
 		{
 			authProtectedGroup.POST("/refresh", userHandler.RefreshToken)
 			authProtectedGroup.POST("/logout", userHandler.Logout)
@@ -103,12 +119,13 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 
 		// Story 1.6, AC5: Protected routes with RBAC middleware
 		// These routes enforce role-based access control
-		// Middleware chain: Auth (JWT validation) → RBAC (role-based permissions) → Handler
+		// Story 1.8, Task 6: Middleware chain: Auth (JWT validation + session tracking) → RBAC → Handler
 
 		// User endpoints - OWNER and SYSTEM_ADMIN can access
 		// POST /api/v1/users requires SYSTEM_ADMIN only (via permissions)
 		usersGroup := v1.Group("/users")
-		usersGroup.Use(auth.AuthMiddleware(authService), middleware.RBACMiddleware())
+		// Story 1.8, Task 6: Use SessionAuthMiddleware for session tracking
+		usersGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
 		{
 			usersGroup.POST("", userHandler.CreateUser)    // Story 1.7: SYSTEM_ADMIN only
 			usersGroup.GET("", userHandler.ListUsers)
@@ -119,7 +136,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 
 		// Admin endpoints - SYSTEM_ADMIN only
 		adminGroup := v1.Group("/admin")
-		adminGroup.Use(auth.AuthMiddleware(authService), middleware.RBACMiddleware())
+		adminGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
 		{
 			// Admin settings endpoint (placeholder for future admin functionality)
 			adminGroup.GET("/settings", func(c *gin.Context) {

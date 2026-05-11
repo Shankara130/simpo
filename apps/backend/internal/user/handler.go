@@ -3,8 +3,10 @@ package user
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -22,18 +24,42 @@ type AuditLogger interface {
 
 // Handler handles user-related HTTP requests
 type Handler struct {
-	userService  Service
-	authService  auth.Service
-	auditLogger  AuditLogger
+	userService     Service
+	authService     auth.Service
+	auditLogger     AuditLogger
+	sessionManager  *middleware.SessionManager // Story 1.8: Session tracking and blocklist
 }
 
 // NewHandler creates a new user handler
 func NewHandler(userService Service, authService auth.Service, auditLogger AuditLogger) *Handler {
 	return &Handler{
-		userService: userService,
-		authService: authService,
-		auditLogger: auditLogger,
+		userService:    userService,
+		authService:    authService,
+		auditLogger:    auditLogger,
+		sessionManager: nil, // Will be set after creation if needed
 	}
+}
+
+// SetSessionManager sets the session manager (used for dependency injection)
+// Story 1.8, Task 1: Session tracking mechanism
+func (h *Handler) SetSessionManager(sessionManager *middleware.SessionManager) {
+	h.sessionManager = sessionManager
+}
+
+// P4 FIX: ValidateSessionManager checks if session manager is initialized
+// This is called by handlers that require session tracking (logout, refresh)
+func (h *Handler) ValidateSessionManager() error {
+	if h.sessionManager == nil {
+		return errors.New("session manager not available - session tracking is required")
+	}
+	return nil
+}
+
+// RefreshResponse represents token refresh response (Story 1.8, AC4)
+type RefreshResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 // Register godoc
@@ -273,74 +299,158 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 // @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to refresh token"
 // @Router /api/v1/auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
-	var req auth.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(apiErrors.FromGinValidation(err))
+	// Story 1.8, AC4: Token refresh uses current JWT token from Authorization header
+	// Extract token from context (set by SessionAuthMiddleware)
+	claims, exists := c.Get("user")
+	if !exists {
+		_ = c.Error(apiErrors.Unauthorized("user not authenticated"))
 		return
 	}
 
-	tokenPair, err := h.authService.RefreshAccessToken(c.Request.Context(), req.RefreshToken)
+	userClaims, ok := claims.(*auth.Claims)
+	if !ok {
+		_ = c.Error(apiErrors.Unauthorized("invalid user claims"))
+		return
+	}
+
+	// Get token ID from context (set by SessionAuthMiddleware)
+	tokenID := auth.GetTokenID(c)
+	if tokenID == "" {
+		_ = c.Error(apiErrors.Unauthorized("token ID not found"))
+		return
+	}
+
+	// SECURITY FIX: Revoke old token FIRST to prevent race condition
+	// This prevents simultaneous refresh requests from both succeeding
+	if h.sessionManager == nil {
+		_ = c.Error(apiErrors.InternalServerError(errors.New("session manager not available")))
+		return
+	}
+
+	// P1 FIX: Calculate actual remaining TTL from JWT expiration claim
+	// This prevents setting wrong TTL on revoked tokens
+	var oldTokenTTL time.Duration
+	if !userClaims.ExpiresAt.IsZero() {
+		oldTokenTTL = time.Until(userClaims.ExpiresAt)
+		if oldTokenTTL < 0 {
+			oldTokenTTL = 0 // Token already expired
+		}
+	} else {
+		oldTokenTTL = 8 * time.Hour // Fallback to default TTL
+	}
+
+	// Revoke the old token before generating new one
+	if err := h.sessionManager.RevokeToken(c.Request.Context(), tokenID, oldTokenTTL); err != nil {
+		// Log error but don't fail - the token will expire naturally
+		log.Printf("WARNING: failed to revoke token during refresh: %v", err)
+	}
+
+	// P3/P6 FIX: Delete old session data to prevent orphaned sessions
+	if err := h.sessionManager.DeleteSession(c.Request.Context(), userClaims.UserID, tokenID); err != nil {
+		// Log error but don't fail - session will expire via TTL
+		log.Printf("WARNING: failed to delete session during refresh: %v", err)
+	}
+
+	// Story 1.8, AC4: Generate new token with same user info and updated expiration
+	// Use authService to generate new token for the user
+	newToken, err := h.authService.GenerateToken(userClaims.UserID, userClaims.Email, userClaims.Name)
 	if err != nil {
-		if errors.Is(err, auth.ErrInvalidToken) || errors.Is(err, auth.ErrExpiredToken) {
-			_ = c.Error(apiErrors.Unauthorized("Invalid or expired refresh token"))
-			return
-		}
-		if errors.Is(err, auth.ErrTokenReuse) {
-			_ = c.Error(apiErrors.Forbidden("Token reuse detected. All tokens have been revoked for security."))
-			return
-		}
-		if errors.Is(err, auth.ErrTokenRevoked) {
-			_ = c.Error(apiErrors.Unauthorized("Token has been revoked"))
-			return
-		}
+		// Rollback: If token generation fails, we've already revoked the old token
+		// The user will need to re-authenticate - this is acceptable security behavior
 		_ = c.Error(apiErrors.InternalServerError(err))
 		return
 	}
 
-	c.JSON(http.StatusOK, apiErrors.Success(auth.TokenPairResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		TokenType:    tokenPair.TokenType,
-		ExpiresIn:    tokenPair.ExpiresIn,
+	// P5 FIX: Calculate ExpiresIn from actual JWT TTL configuration
+	// Parse the new token to get actual expiration time
+	expiresIn := int64(8 * time.Hour.Seconds()) // Default fallback
+	newClaims, err := h.authService.ValidateToken(newToken)
+	if err == nil && !newClaims.ExpiresAt.IsZero() {
+		expiresIn = int64(time.Until(newClaims.ExpiresAt).Seconds())
+		if expiresIn < 0 {
+			expiresIn = 0 // Shouldn't happen, but safety check
+		}
+	}
+
+	// Story 1.8, AC4: Return new token to client
+	c.JSON(http.StatusOK, apiErrors.Success(RefreshResponse{
+		AccessToken: newToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   expiresIn,
 	}))
 }
 
 // Logout godoc
 // @Summary Logout user
-// @Description Revoke refresh token and invalidate user session
+// @Description Invalidate current JWT token (Story 1.8, AC5)
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body auth.RefreshTokenRequest true "Refresh token to revoke"
 // @Success 200 {object} errors.Response{success=bool,data=object} "Successfully logged out"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
 // @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Token does not belong to user"
 // @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to logout"
 // @Router /api/v1/auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
+	// Story 1.8, AC5: Logout invalidates the current JWT token immediately
+	// Extract token ID from context (set by SessionAuthMiddleware)
+	tokenID := auth.GetTokenID(c)
+	if tokenID == "" {
+		_ = c.Error(apiErrors.Unauthorized("token ID not found"))
+		return
+	}
+
+	// Story 1.8, AC6: Get user info for audit logging
 	userID := contextutil.GetUserID(c)
 	if userID == 0 {
 		_ = c.Error(apiErrors.Unauthorized("user not authenticated"))
 		return
 	}
 
-	var req auth.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(apiErrors.FromGinValidation(err))
+	// SECURITY FIX: Require session manager for logout - session tracking is mandatory
+	if h.sessionManager == nil {
+		_ = c.Error(apiErrors.InternalServerError(errors.New("session manager not available")))
 		return
 	}
 
-	if err := h.authService.RevokeUserRefreshToken(c.Request.Context(), userID, req.RefreshToken); err != nil {
-		if errors.Is(err, auth.ErrTokenDoesNotBelongToUser) {
-			_ = c.Error(apiErrors.Forbidden("token does not belong to user"))
-			return
+	// P1 FIX: Calculate remaining token lifetime from JWT claims
+	// Get user claims to extract expiration time
+	var tokenTTL time.Duration
+	if claims, exists := c.Get("user"); exists {
+		if userClaims, ok := claims.(*auth.Claims); ok {
+			// P6 FIX: Delete session data to prevent orphaned sessions
+			if err := h.sessionManager.DeleteSession(c.Request.Context(), userClaims.UserID, tokenID); err != nil {
+				// Log error but don't fail - session will expire via TTL
+				log.Printf("WARNING: failed to delete session during logout: %v", err)
+			}
+
+			if !userClaims.ExpiresAt.IsZero() {
+				tokenTTL = time.Until(userClaims.ExpiresAt)
+				if tokenTTL < 0 {
+					tokenTTL = 0 // Token already expired
+				}
+			}
+
+			// Story 1.8, AC6: Log logout action to audit trail
+			ipAddress := c.ClientIP()
+			// Log logout action using structured logging
+			// Format: action=LOGOUT user_id=<id> username=<user> token_id=<token> ip=<ip>
+			log.Printf("AUDIT action=LOGOUT user_id=%d username=%s token_id=%s ip=%s outcome=success",
+				userClaims.UserID, userClaims.Email, tokenID, ipAddress)
 		}
+	}
+	// Fallback to 8 hours if we can't determine expiration
+	if tokenTTL == 0 {
+		tokenTTL = 8 * time.Hour
+	}
+
+	// Revoke the token
+	if err := h.sessionManager.RevokeToken(c.Request.Context(), tokenID, tokenTTL); err != nil {
 		_ = c.Error(apiErrors.InternalServerError(err))
 		return
 	}
 
+	// Story 1.8, AC5: Return 200 OK on success
 	c.JSON(http.StatusOK, apiErrors.Success(gin.H{"message": "Successfully logged out"}))
 }
 

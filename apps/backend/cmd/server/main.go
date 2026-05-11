@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	_ "github.com/vahiiiid/go-rest-api-boilerplate/api/docs"
@@ -17,6 +18,7 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/db"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/migrate"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/server"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
@@ -94,6 +96,20 @@ func run() error {
 
 	// Create user handler
 	userHandler := user.NewHandler(userService, authServiceForJWT, auditService)
+
+	// Story 1.8: Create Redis client and session manager
+	var redisClient *redis.Client
+	if cfg.Redis.Host != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     cfg.Redis.Host + ":" + cfg.Redis.Port,
+			Password: cfg.Redis.Password,
+			DB:       0,
+		})
+	}
+
+	// Create session manager for tracking and blocklist (Story 1.8)
+	sessionManager := middleware.NewSessionManager(redisClient)
+	userHandler.SetSessionManager(sessionManager)
 
 	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database)
 

@@ -74,10 +74,13 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	authService := auth.NewServiceWithRepo(&testCfg.JWT, database)
 	userRepo := user.NewRepository(database)
 	userService := user.NewService(userRepo)
-	userHandler := user.NewHandler(userService, authService)
 
-	// Create audit service and auth handler (Story 1.5)
+	// Create audit service (Story 1.5)
 	auditService := services.NewAuditService()
+
+	userHandler := user.NewHandler(userService, authService, auditService)
+
+	// Create auth handler (Story 1.5)
 	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
 	newAuthHandler := handlers.NewAuthHandler(newAuthService)
 
@@ -102,10 +105,13 @@ func setupRateLimitTestRouter(t *testing.T) *gin.Engine {
 	authService := auth.NewServiceWithRepo(&testCfg.JWT, database)
 	userRepo := user.NewRepository(database)
 	userService := user.NewService(userRepo)
-	userHandler := user.NewHandler(userService, authService)
 
-	// Create audit service and auth handler (Story 1.5)
+	// Create audit service (Story 1.5)
 	auditService := services.NewAuditService()
+
+	userHandler := user.NewHandler(userService, authService, auditService)
+
+	// Create auth handler (Story 1.5)
 	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
 	newAuthHandler := handlers.NewAuthHandler(newAuthService)
 
