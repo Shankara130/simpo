@@ -9,6 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// isValidRoleForCreate checks if role is valid for admin user creation (Story 1.7)
+// Wrapper for role.IsValidRoleForCreate for service layer use
+func isValidRoleForCreate(role string) bool {
+	return IsValidRoleForCreate(role)
+}
+
 const (
 	// BcryptCost is the cost factor for bcrypt password hashing (Story 1.5, AC3, Decision 5)
 	BcryptCost = 12
@@ -23,11 +29,18 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	// ErrInvalidRole is returned when role is invalid
 	ErrInvalidRole = errors.New("invalid role")
+	// Story 1.7: Username already exists
+	ErrUsernameExists = errors.New("username already exists")
+	// Story 1.7: Invalid role for user creation
+	ErrInvalidRoleForCreate = errors.New("invalid role for user creation")
+	// Story 1.7: Branch ID required for CASHIER role
+	ErrBranchIDRequired = errors.New("branch_id is required for CASHIER role")
 )
 
 // Service defines user service interface
 type Service interface {
 	RegisterUser(ctx context.Context, req RegisterRequest) (*User, error)
+	RegisterUserForAdmin(ctx context.Context, req CreateUserRequest, adminID uint) (*User, error)
 	AuthenticateUser(ctx context.Context, req LoginRequest) (*User, error)
 	GetUserByID(ctx context.Context, id uint) (*User, error)
 	UpdateUser(ctx context.Context, id uint, req UpdateUserRequest) (*User, error)
@@ -87,6 +100,91 @@ func (s *service) RegisterUser(ctx context.Context, req RegisterRequest) (*User,
 
 	// Reload user with roles after successful transaction
 	user, err = s.repo.FindByID(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload user: %w", err)
+	}
+	if user == nil {
+		return nil, fmt.Errorf("failed to reload user: user not found after creation")
+	}
+
+	return user, nil
+}
+
+// RegisterUserForAdmin registers a new user with admin-specified role (Story 1.7)
+func (s *service) RegisterUserForAdmin(ctx context.Context, req CreateUserRequest, adminID uint) (*User, error) {
+	// Use transaction to ensure atomic user creation and prevent race conditions
+	var createdUser *User
+	err := s.repo.Transaction(ctx, func(txCtx context.Context) error {
+		// 1. Validate role
+		if !IsValidRoleForCreate(req.Role) {
+			return ErrInvalidRoleForCreate
+		}
+
+		// 2. Check if username already exists
+		usernameExists, err := s.repo.CheckUsernameExists(txCtx, req.Username)
+		if err != nil {
+			return fmt.Errorf("failed to check username existence: %w", err)
+		}
+		if usernameExists {
+			return ErrUsernameExists
+		}
+
+		// 3. Check if email already exists
+		emailExists, err := s.repo.CheckEmailExists(txCtx, req.Email)
+		if err != nil {
+			return fmt.Errorf("failed to check email existence: %w", err)
+		}
+		if emailExists {
+			return ErrEmailExists
+		}
+
+		// 4. Validate branch_id for CASHIER role (ensure branch exists)
+		if req.Role == RoleCashier {
+			if req.BranchID == nil {
+				return ErrBranchIDRequired
+			}
+			// Verify branch exists in database
+			branchExists, err := s.repo.CheckBranchExists(txCtx, *req.BranchID)
+			if err != nil {
+				return fmt.Errorf("failed to check branch existence: %w", err)
+			}
+			if !branchExists {
+				return fmt.Errorf("branch with ID %d does not exist", *req.BranchID)
+			}
+		}
+
+		// 5. Hash password using bcrypt (cost factor 12)
+		hashedPassword, err := hashPassword(req.Password)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %w", err)
+		}
+
+		// 6. Create user with ACTIVE status and specified role
+		user := &User{
+			Username:     req.Username,
+			Name:         req.Username, // Set Name to Username for consistency
+			Email:        req.Email,
+			PasswordHash: hashedPassword,
+			Role:         req.Role,
+			BranchID:     req.BranchID,
+			Status:       UserStatusActive,
+		}
+
+		// 7. Create user in database
+		if err := s.repo.Create(txCtx, user); err != nil {
+			return fmt.Errorf("failed to create user: %w", err)
+		}
+
+		createdUser = user
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Reload user after creation
+	user, err := s.repo.FindByID(ctx, createdUser.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reload user: %w", err)
 	}

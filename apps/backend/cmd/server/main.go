@@ -93,7 +93,7 @@ func run() error {
 	newAuthHandler := handlers.NewAuthHandler(newAuthService)
 
 	// Create user handler
-	userHandler := user.NewHandler(userService, authServiceForJWT)
+	userHandler := user.NewHandler(userService, authServiceForJWT, auditService)
 
 	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database)
 

@@ -58,7 +58,7 @@ func GetRolePermissions(role string) RolePermissions {
 				"/api/v1/products",
 				"/api/v1/transactions",
 				"/api/v1/reports",
-				"/api/v1/users",
+				"/api/v1/users/:id",		// Story 1.7: Can view specific users, not create/list
 				"/api/v1/inventory",
 				"/api/v1/branches",
 			},

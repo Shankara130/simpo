@@ -84,7 +84,7 @@ func TestHandler_RefreshToken(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "UNAUTHORIZED", errorInfo["code"])
-				assert.Contains(t, errorInfo["message"], "Invalid or expired")
+				assert.Contains(t, errorInfo["detail"], "Invalid or expired")
 			},
 		},
 		{
@@ -104,7 +104,7 @@ func TestHandler_RefreshToken(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "UNAUTHORIZED", errorInfo["code"])
-				assert.Contains(t, errorInfo["message"], "Invalid or expired")
+				assert.Contains(t, errorInfo["detail"], "Invalid or expired")
 			},
 		},
 		{
@@ -124,7 +124,7 @@ func TestHandler_RefreshToken(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "FORBIDDEN", errorInfo["code"])
-				assert.Contains(t, errorInfo["message"], "Token reuse detected")
+				assert.Contains(t, errorInfo["detail"], "Token reuse detected")
 			},
 		},
 		{
@@ -144,7 +144,7 @@ func TestHandler_RefreshToken(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "UNAUTHORIZED", errorInfo["code"])
-				assert.Contains(t, errorInfo["message"], "revoked")
+				assert.Contains(t, errorInfo["detail"], "revoked")
 			},
 		},
 		{

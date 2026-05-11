@@ -23,10 +23,23 @@ type User struct {
 	Status       string         `gorm:"not null;default:ACTIVE" json:"status"` // Story 1.5: ACTIVE/INACTIVE
 	Role         string         `gorm:"not null;default:CASHIER" json:"role"`  // Story 1.5: Single role (not many-to-many)
 	BranchID     *uint          `gorm:"index" json:"branch_id,omitempty"`      // Story 1.5: Nullable for system admin
-	Roles        []Role         `gorm:"many2many:user_roles;" json:"-"`        // Legacy: GRAB compatibility (deprecated)
+	Roles        []Role         `gorm:"many2many:user_roles;joinForeignKey:UserID;joinReferences:RoleID" json:"-"` // Legacy: GRAB compatibility (deprecated)
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// UserRole represents the many-to-many relationship between users and roles
+// Includes assigned_at timestamp for audit trail
+type UserRole struct {
+	UserID     uint      `gorm:"primaryKey;column:user_id" json:"user_id"`
+	RoleID     uint      `gorm:"primaryKey;column:role_id" json:"role_id"`
+	AssignedAt time.Time `gorm:"column:assigned_at;not null;default:CURRENT_TIMESTAMP" json:"assigned_at"`
+}
+
+// TableName specifies the table name for UserRole model
+func (UserRole) TableName() string {
+	return "user_roles"
 }
 
 // TableName specifies the table name for User model

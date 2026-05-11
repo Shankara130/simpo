@@ -29,6 +29,17 @@ func IsValidRole(role string) bool {
 	}
 }
 
+// IsValidRoleForCreate checks if a role string is valid for user creation (Story 1.7)
+// Excludes legacy "user" role, only allows SYSTEM_ADMIN, OWNER, CASHIER
+func IsValidRoleForCreate(role string) bool {
+	switch role {
+	case RoleSystemAdmin, RoleOwner, RoleCashier:
+		return true
+	default:
+		return false
+	}
+}
+
 // Role represents a user role in the system
 type Role struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 )
@@ -17,6 +18,8 @@ const (
 	// Story 1.6, AC6: Authorization audit logging
 	AuditActionAuthFailure        AuditAction = "AUTH_FAILURE"
 	AuditActionForbiddenAccess    AuditAction = "FORBIDDEN_ACCESS"
+	// Story 1.7: User creation audit logging
+	AuditActionUserCreated        AuditAction = "USER_CREATED"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -39,6 +42,10 @@ type AuditService interface {
 	// LogAuthorizationFailure logs authorization failures (403 responses)
 	// Story 1.6, AC6: All authorization failures are logged with user_id, role, endpoint, reason
 	LogAuthorizationFailure(ctx context.Context, entry AuditLogEntry) error
+
+	// LogUserCreation logs user creation actions (Story 1.7, AC7)
+	// Logs admin_user_id, created_user_id, action, timestamp, ip_address
+	LogUserCreation(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -108,5 +115,36 @@ func (s *auditService) LogAuthorizationFailure(ctx context.Context, entry AuditL
 func LogAuditEntry(entry AuditLogEntry) error {
 	// For MVP: Return nil (no-op)
 	// For production: Write to append-only storage
+	return nil
+}
+
+// LogUserCreation logs user creation actions to append-only audit trail (Story 1.7, AC7)
+func (s *auditService) LogUserCreation(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &adminID,
+		Username:  adminUsername,
+		Action:    AuditActionUserCreated,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    fmt.Sprintf("Created user '%s' (ID: %d)", createdUsername, createdUserID),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.7, AC7, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | admin_user_id | admin_username | created_user_id | created_username | ip_address | outcome
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"admin_user_id", adminID,
+		"admin_username", adminUsername,
+		"created_user_id", createdUserID,
+		"created_username", createdUsername,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
 	return nil
 }

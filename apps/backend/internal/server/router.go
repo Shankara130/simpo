@@ -106,9 +106,11 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		// Middleware chain: Auth (JWT validation) → RBAC (role-based permissions) → Handler
 
 		// User endpoints - OWNER and SYSTEM_ADMIN can access
+		// POST /api/v1/users requires SYSTEM_ADMIN only (via permissions)
 		usersGroup := v1.Group("/users")
 		usersGroup.Use(auth.AuthMiddleware(authService), middleware.RBACMiddleware())
 		{
+			usersGroup.POST("", userHandler.CreateUser)    // Story 1.7: SYSTEM_ADMIN only
 			usersGroup.GET("", userHandler.ListUsers)
 			usersGroup.GET("/:id", userHandler.GetUser)
 			usersGroup.PUT("/:id", userHandler.UpdateUser)

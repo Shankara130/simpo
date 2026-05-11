@@ -26,6 +26,10 @@ type Repository interface {
 	FindRoleByName(ctx context.Context, name string) (*Role, error)
 	GetUserRoles(ctx context.Context, userID uint) ([]Role, error)
 	Transaction(ctx context.Context, fn func(context.Context) error) error
+	// Story 1.7: User registration with admin approval
+	CheckUsernameExists(ctx context.Context, username string) (bool, error)
+	CheckEmailExists(ctx context.Context, email string) (bool, error)
+	CheckBranchExists(ctx context.Context, branchID uint) (bool, error)
 }
 
 type repository struct {
@@ -242,4 +246,44 @@ func (r *repository) Transaction(ctx context.Context, fn func(context.Context) e
 		txCtx := context.WithValue(ctx, txKey{}, tx)
 		return fn(txCtx)
 	})
+}
+
+// Story 1.7: CheckUsernameExists checks if a username already exists
+func (r *repository) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
+	// Guard against empty username
+	if username == "" {
+		return false, nil
+	}
+
+	var count int64
+	result := r.getDB(ctx).WithContext(ctx).Model(&User{}).Where("username = ?", username).Count(&count)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return count > 0, nil
+}
+
+// Story 1.7: CheckEmailExists checks if an email already exists
+func (r *repository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	// Guard against empty email
+	if email == "" {
+		return false, nil
+	}
+
+	var count int64
+	result := r.getDB(ctx).WithContext(ctx).Model(&User{}).Where("email = ?", email).Count(&count)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return count > 0, nil
+}
+
+// CheckBranchExists checks if a branch ID exists in the branches table (Story 1.7)
+func (r *repository) CheckBranchExists(ctx context.Context, branchID uint) (bool, error) {
+	var count int64
+	result := r.getDB(ctx).WithContext(ctx).Table("branches").Where("id = ?", branchID).Count(&count)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return count > 0, nil
 }

@@ -161,7 +161,7 @@ func TestHandler_Register(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Email already exists", errorInfo["message"])
+				assert.Equal(t, "Email already exists", errorInfo["detail"])
 			},
 		},
 		{
@@ -226,7 +226,7 @@ func TestHandler_Register(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "VALIDATION_ERROR", errorInfo["code"])
-				assert.Equal(t, "Validation failed", errorInfo["message"])
+				assert.Equal(t, "Validation failed", errorInfo["detail"])
 			},
 		},
 	}
@@ -237,7 +237,7 @@ func TestHandler_Register(t *testing.T) {
 			mockAuthService := &MockAuthService{}
 			tt.setupMocks(mockService, mockAuthService)
 
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -320,7 +320,7 @@ func TestHandler_GetUser(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "VALIDATION_ERROR", errorInfo["code"])
-				assert.Equal(t, "Invalid user ID", errorInfo["message"])
+				assert.Equal(t, "Invalid user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -338,7 +338,7 @@ func TestHandler_GetUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["message"])
+				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -358,7 +358,7 @@ func TestHandler_GetUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["message"])
+				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -379,7 +379,7 @@ func TestHandler_GetUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "User not found", errorInfo["message"])
+				assert.Equal(t, "User not found", errorInfo["detail"])
 			},
 		},
 		{
@@ -420,7 +420,7 @@ func TestHandler_GetUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["message"])
+				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
 			},
 		},
 	}
@@ -431,7 +431,7 @@ func TestHandler_GetUser(t *testing.T) {
 			mockAuthService := &MockAuthService{}
 			tt.setupMocks(mockService, mockAuthService)
 
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -517,7 +517,7 @@ func TestHandler_Login(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Invalid email or password", errorInfo["message"])
+				assert.Equal(t, "Invalid email or password", errorInfo["detail"])
 			},
 		},
 		{
@@ -579,7 +579,7 @@ func TestHandler_Login(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "VALIDATION_ERROR", errorInfo["code"])
-				assert.Equal(t, "Invalid request data format", errorInfo["message"])
+				assert.Equal(t, "Invalid request data format", errorInfo["detail"])
 			},
 		},
 	}
@@ -590,7 +590,7 @@ func TestHandler_Login(t *testing.T) {
 			mockAuthService := &MockAuthService{}
 			tt.setupMocks(mockService, mockAuthService)
 
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -678,7 +678,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Invalid user ID", errorInfo["message"])
+				assert.Equal(t, "Invalid user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -700,7 +700,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["message"])
+				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -725,7 +725,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "User not found", errorInfo["message"])
+				assert.Equal(t, "User not found", errorInfo["detail"])
 			},
 		},
 		{
@@ -750,7 +750,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Email already exists", errorInfo["message"])
+				assert.Equal(t, "Email already exists", errorInfo["detail"])
 			},
 		},
 		{
@@ -796,7 +796,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
 				assert.Equal(t, "VALIDATION_ERROR", errorInfo["code"])
-				assert.Equal(t, "Invalid request data format", errorInfo["message"])
+				assert.Equal(t, "Invalid request data format", errorInfo["detail"])
 			},
 		},
 	}
@@ -807,7 +807,7 @@ func TestHandler_UpdateUser(t *testing.T) {
 			mockAuthService := &MockAuthService{}
 			tt.setupMocks(mockService, mockAuthService)
 
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -879,7 +879,7 @@ func TestHandler_DeleteUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Invalid user ID", errorInfo["message"])
+				assert.Equal(t, "Invalid user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -898,7 +898,7 @@ func TestHandler_DeleteUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["message"])
+				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
 			},
 		},
 		{
@@ -919,7 +919,7 @@ func TestHandler_DeleteUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "User not found", errorInfo["message"])
+				assert.Equal(t, "User not found", errorInfo["detail"])
 			},
 		},
 		{
@@ -951,7 +951,7 @@ func TestHandler_DeleteUser(t *testing.T) {
 			mockAuthService := &MockAuthService{}
 			tt.setupMocks(mockService, mockAuthService)
 
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -1024,7 +1024,7 @@ func TestHandler_GetMe(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockService)
 			mockAuthService := new(MockAuthService)
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			tt.setupMocks(mockService)
 
@@ -1161,7 +1161,7 @@ func TestHandler_ListUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockService)
 			mockAuthService := new(MockAuthService)
-			handler := NewHandler(mockService, mockAuthService)
+			handler := NewHandler(mockService, mockAuthService, nil)
 
 			tt.setupMocks(mockService)
 

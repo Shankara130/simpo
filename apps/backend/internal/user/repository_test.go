@@ -15,47 +15,21 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	sqlDB, err := db.DB()
+	// Use AutoMigrate to create schema matching the User, Role, and UserRole models
+	err = db.AutoMigrate(&User{}, &Role{}, &UserRole{})
 	require.NoError(t, err)
 
-	_, err = sqlDB.Exec(`
-		CREATE TABLE users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT NOT NULL,
-			email TEXT UNIQUE NOT NULL,
-			password_hash TEXT NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			deleted_at DATETIME
-		);
-		CREATE INDEX idx_users_email ON users(email);
-		CREATE INDEX idx_users_deleted_at ON users(deleted_at);
-
-		CREATE TABLE roles (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT UNIQUE NOT NULL,
-			description TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
-		CREATE INDEX idx_roles_name ON roles(name);
-
-		CREATE TABLE user_roles (
-			user_id INTEGER NOT NULL,
-			role_id INTEGER NOT NULL,
-			assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (user_id, role_id),
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-			FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-		);
-		CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
-		CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
-
-		INSERT INTO roles (id, name, description) VALUES 
-			(1, 'user', 'Standard user with basic permissions'),
-			(2, 'admin', 'Administrator with full system access');
-	`)
-	require.NoError(t, err)
+	// Insert base roles for testing
+	roles := []Role{
+		{Name: RoleUser, Description: "Standard user with basic permissions"},
+		{Name: RoleAdmin, Description: "Administrator with full system access"},
+		{Name: RoleSystemAdmin, Description: "System administrator with full access"},
+		{Name: RoleOwner, Description: "Pharmacy owner with business management access"},
+		{Name: RoleCashier, Description: "POS staff with transaction processing access"},
+	}
+	for _, role := range roles {
+		db.FirstOrCreate(&role, Role{Name: role.Name})
+	}
 
 	return db
 }
@@ -73,9 +47,12 @@ func TestRepository_Create(t *testing.T) {
 	repo := NewRepository(db)
 
 	user := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 
 	err := repo.Create(context.Background(), user)
@@ -111,9 +88,12 @@ func TestRepository_FindByEmail(t *testing.T) {
 	repo := NewRepository(db)
 
 	originalUser := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), originalUser)
 	require.NoError(t, err)
@@ -138,9 +118,12 @@ func TestRepository_FindByID(t *testing.T) {
 	repo := NewRepository(db)
 
 	originalUser := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), originalUser)
 	require.NoError(t, err)
@@ -166,9 +149,12 @@ func TestRepository_Update(t *testing.T) {
 	repo := NewRepository(db)
 
 	user := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
@@ -191,9 +177,12 @@ func TestRepository_Update_NonExistentUser(t *testing.T) {
 
 	user := &User{
 		ID:           999999,
+		Username:     "ghostuser",
 		Name:         "Ghost User",
 		Email:        "ghost@example.com",
 		PasswordHash: "password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 
 	err := repo.Update(context.Background(), user)
@@ -206,9 +195,12 @@ func TestRepository_Delete(t *testing.T) {
 	repo := NewRepository(db)
 
 	user := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
@@ -258,7 +250,7 @@ func TestRepository_AssignRole(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewRepository(db)
 
-	user := &User{Name: "John Doe", Email: "john@example.com", PasswordHash: "hash"}
+	user := &User{Username: "johndoe", Name: "John Doe", Email: "john@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
@@ -297,7 +289,7 @@ func TestRepository_RemoveRole(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewRepository(db)
 
-	user := &User{Name: "John Doe", Email: "john@example.com", PasswordHash: "hash"}
+	user := &User{Username: "johndoe", Name: "John Doe", Email: "john@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
@@ -335,7 +327,7 @@ func TestRepository_GetUserRoles(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewRepository(db)
 
-	user := &User{Name: "John Doe", Email: "john@example.com", PasswordHash: "hash"}
+	user := &User{Username: "johndoe", Name: "John Doe", Email: "john@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
@@ -375,19 +367,19 @@ func TestRepository_ListAllUsers(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewRepository(db)
 
-	user1 := &User{Name: "Alice Admin", Email: "alice@example.com", PasswordHash: "hash"}
+	user1 := &User{Username: "aliceadmin", Name: "Alice Admin", Email: "alice@example.com", PasswordHash: "hash", Role: RoleAdmin, Status: UserStatusActive}
 	err := repo.Create(context.Background(), user1)
 	require.NoError(t, err)
 	err = repo.AssignRole(context.Background(), user1.ID, RoleAdmin)
 	require.NoError(t, err)
 
-	user2 := &User{Name: "Bob User", Email: "bob@example.com", PasswordHash: "hash"}
+	user2 := &User{Username: "bobuser", Name: "Bob User", Email: "bob@example.com", PasswordHash: "hash", Role: RoleUser, Status: UserStatusActive}
 	err = repo.Create(context.Background(), user2)
 	require.NoError(t, err)
 	err = repo.AssignRole(context.Background(), user2.ID, RoleUser)
 	require.NoError(t, err)
 
-	user3 := &User{Name: "Charlie User", Email: "charlie@example.com", PasswordHash: "hash"}
+	user3 := &User{Username: "charlieuser", Name: "Charlie User", Email: "charlie@example.com", PasswordHash: "hash", Role: RoleUser, Status: UserStatusActive}
 	err = repo.Create(context.Background(), user3)
 	require.NoError(t, err)
 
@@ -513,7 +505,7 @@ func TestRepository_Transaction(t *testing.T) {
 	t.Run("successful transaction", func(t *testing.T) {
 		var createdUser *User
 		err := repo.Transaction(context.Background(), func(txCtx context.Context) error {
-			user := &User{Name: "John Doe", Email: "john@example.com", PasswordHash: "hash"}
+			user := &User{Username: "johndoe", Name: "John Doe", Email: "john@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 			if err := repo.Create(txCtx, user); err != nil {
 				return err
 			}
@@ -530,7 +522,7 @@ func TestRepository_Transaction(t *testing.T) {
 
 	t.Run("rollback on error", func(t *testing.T) {
 		err := repo.Transaction(context.Background(), func(txCtx context.Context) error {
-			user := &User{Name: "Jane Doe", Email: "jane@example.com", PasswordHash: "hash"}
+			user := &User{Username: "janedoe", Name: "Jane Doe", Email: "jane@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 			if err := repo.Create(txCtx, user); err != nil {
 				return err
 			}
@@ -576,9 +568,12 @@ func TestRepository_Update_Error(t *testing.T) {
 
 	t.Run("successfully updates with empty password hash", func(t *testing.T) {
 		user := &User{
+			Username:     "johndoe",
 			Name:         "John Doe",
 			Email:        "john@example.com",
 			PasswordHash: "hashed_password",
+			Role:         RoleCashier,
+			Status:       UserStatusActive,
 		}
 		err := repo.Create(context.Background(), user)
 		require.NoError(t, err)
@@ -598,7 +593,7 @@ func TestRepository_ListAllUsers_ErrorCases(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewRepository(db)
 
-	user1 := &User{Name: "Alice", Email: "alice@example.com", PasswordHash: "hash"}
+	user1 := &User{Username: "alice", Name: "Alice", Email: "alice@example.com", PasswordHash: "hash", Role: RoleCashier, Status: UserStatusActive}
 	err := repo.Create(context.Background(), user1)
 	require.NoError(t, err)
 
@@ -635,9 +630,12 @@ func TestRepository_AssignRole_RoleNotFound(t *testing.T) {
 	repo := NewRepository(db)
 
 	user := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
@@ -652,9 +650,12 @@ func TestRepository_RemoveRole_RoleNotFound(t *testing.T) {
 	repo := NewRepository(db)
 
 	user := &User{
+		Username:     "johndoe",
 		Name:         "John Doe",
 		Email:        "john@example.com",
 		PasswordHash: "hashed_password",
+		Role:         RoleCashier,
+		Status:       UserStatusActive,
 	}
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)

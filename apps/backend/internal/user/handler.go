@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -13,17 +14,25 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 )
 
+// AuditLogger defines the interface for audit logging (Story 1.7, AC7)
+// This interface is defined here to avoid import cycles with services package
+type AuditLogger interface {
+	LogUserCreation(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error
+}
+
 // Handler handles user-related HTTP requests
 type Handler struct {
-	userService Service
-	authService auth.Service
+	userService  Service
+	authService  auth.Service
+	auditLogger  AuditLogger
 }
 
 // NewHandler creates a new user handler
-func NewHandler(userService Service, authService auth.Service) *Handler {
+func NewHandler(userService Service, authService auth.Service, auditLogger AuditLogger) *Handler {
 	return &Handler{
 		userService: userService,
 		authService: authService,
+		auditLogger: auditLogger,
 	}
 }
 
@@ -417,4 +426,84 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, apiErrors.Success(response))
+}
+
+// CreateUser godoc
+// @Summary Create a new user (Admin only)
+// @Description Create a new user with role assignment. Only users with SYSTEM_ADMIN role can access this endpoint.
+// Required fields: username (min 3 chars), password (min 8 chars), email (valid format), role (SYSTEM_ADMIN, OWNER, or CASHIER).
+// Optional field: branch_id (required for CASHIER role, must reference existing branch).
+// User is created with ACTIVE status. Password is hashed using bcrypt (cost factor 12).
+// Story 1.7, AC1-8: User registration with admin approval.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateUserRequest true "User creation request" SchemaExample(true, "Example SYSTEM_ADMIN user", "{\"username\":\"newadmin\",\"password\":\"SecurePass123!\",\"email\":\"newadmin@example.com\",\"role\":\"SYSTEM_ADMIN\"}") SchemaExample(true, "Example CASHIER user", "{\"username\":\"newcashier\",\"password\":\"SecurePass123!\",\"email\":\"cashier@example.com\",\"role\":\"CASHIER\",\"branch_id\":1}")
+// @Success 201 {object} errors.Response{success=bool,data=CreateUserResponse} "User created successfully"
+// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid request or validation error (missing fields, invalid format, invalid role, missing branch_id for CASHIER)"
+// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized - user not authenticated"
+// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - insufficient permissions (SYSTEM_ADMIN role required)"
+// @Failure 409 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Conflict - username or email already exists"
+// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
+// @Router /api/v1/users [post]
+func (h *Handler) CreateUser(c *gin.Context) {
+	// Extract admin user ID from JWT context
+	adminID := contextutil.GetUserID(c)
+	if adminID == 0 {
+		_ = c.Error(apiErrors.Unauthorized("User not authenticated"))
+		return
+	}
+
+	// Bind request to DTO
+	var req CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(apiErrors.FromGinValidation(err))
+		return
+	}
+
+	// Call service layer
+	user, err := h.userService.RegisterUserForAdmin(c.Request.Context(), req, adminID)
+	if err != nil {
+		// Handle specific errors
+		if errors.Is(err, ErrInvalidRoleForCreate) {
+			_ = c.Error(apiErrors.BadRequest("Invalid role. Must be one of: SYSTEM_ADMIN, OWNER, CASHIER"))
+			return
+		}
+		if errors.Is(err, ErrUsernameExists) {
+			_ = c.Error(apiErrors.Conflict("Username already exists"))
+			return
+		}
+		if errors.Is(err, ErrEmailExists) {
+			_ = c.Error(apiErrors.Conflict("Email already exists"))
+			return
+		}
+		if errors.Is(err, ErrBranchIDRequired) {
+			_ = c.Error(apiErrors.BadRequest("branch_id is required for CASHIER role"))
+			return
+		}
+		// Generic internal server error
+		_ = c.Error(apiErrors.InternalServerError(err))
+		return
+	}
+
+	// Story 1.7, AC7: Log user creation action to audit trail
+	if h.auditLogger != nil {
+		// Get admin username from context for audit log
+		adminUsername := contextutil.GetUserName(c)
+		if adminUsername == "" {
+			// Log warning and return error - admin username is required for audit
+			_ = c.Error(apiErrors.InternalServerError(errors.New("admin username not found in context for audit logging")))
+			return
+		}
+		ipAddress := c.ClientIP()
+		if err := h.auditLogger.LogUserCreation(c.Request.Context(), adminID, user.ID, adminUsername, user.Username, ipAddress); err != nil {
+			// Log the audit error but don't fail the request - audit is asynchronous
+			// The user was already created successfully
+			_ = c.Error(apiErrors.InternalServerError(err))
+		}
+	}
+
+	// Return 201 Created with user response
+	c.JSON(http.StatusCreated, apiErrors.Success(ToCreateUserResponse(user)))
 }
