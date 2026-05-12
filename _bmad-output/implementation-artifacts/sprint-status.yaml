@@ -54,7 +54,7 @@ development_status:
   1-8-implement-session-management-with-timeout: done # All AC met, all review patches applied
   1-9-implement-staff-registration-via-whitelist: done
   1-10-implement-user-deactivation: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2: Database Schema & Migrations
   epic-2: backlog
