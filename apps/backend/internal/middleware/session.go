@@ -227,3 +227,10 @@ func (sm *SessionManager) RevokeAllUserSessions(ctx context.Context, userID uint
 
 	return nil
 }
+
+// RevokeAllUserTokens revokes all tokens for a specific user
+// Story 1.10: User deactivation - revoke all active tokens
+// This is an alias for RevokeAllUserSessions for consistency with service layer naming
+func (sm *SessionManager) RevokeAllUserTokens(ctx context.Context, userID uint) error {
+	return sm.RevokeAllUserSessions(ctx, userID)
+}

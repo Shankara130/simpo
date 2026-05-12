@@ -50,6 +50,12 @@ func (m *MockAuditLogger) LogEmailVerification(ctx context.Context, userID uint,
 	return args.Error(0)
 }
 
+// LogUserDeactivation logs user deactivation actions (Story 1.10, AC5)
+func (m *MockAuditLogger) LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error {
+	args := m.Called(ctx, adminID, deactivatedUserID, adminUsername, deactivatedUsername, reason, ipAddress)
+	return args.Error(0)
+}
+
 func (m *MockService) AuthenticateUser(ctx context.Context, req LoginRequest) (*User, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
@@ -117,6 +123,20 @@ func (m *MockService) SetWhitelistRepo(whitelistRepo WhitelistRepository) {
 
 // SetVerificationRepo sets the verification repository (Story 1.9)
 func (m *MockService) SetVerificationRepo(verificationRepo VerificationRepository) {
+	// No-op for mock
+}
+
+// DeactivateUser deactivates a user account (Story 1.10)
+func (m *MockService) DeactivateUser(ctx context.Context, targetUserID uint, adminID uint, reason string) (*User, error) {
+	args := m.Called(ctx, targetUserID, adminID, reason)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*User), args.Error(1)
+}
+
+// SetSessionManager sets the session manager (Story 1.8)
+func (m *MockService) SetSessionManager(sessionManager SessionManager) {
 	// No-op for mock
 }
 

@@ -24,6 +24,8 @@ type AuditLogger interface {
 	// Story 1.9: Audit logging for whitelist and self-registration
 	LogSelfRegistration(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
 	LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error
+	// Story 1.10: Audit logging for user deactivation
+	LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
 }
 
 // Handler handles user-related HTTP requests
@@ -755,4 +757,100 @@ func isValidID(id uint) bool {
 	// IDs should be within reasonable database range
 	// Most databases use uint32 for IDs, so we check against that
 	return id > 0 && id <= 4294967295 // Max uint32 value
+}
+
+// DeactivateUser godoc
+// @Summary Deactivate user account
+// @Description Deactivate a user account (SYSTEM_ADMIN only). Requires reason field.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID to deactivate"
+// @Param request body DeactivateUserRequest true "Deactivation request"
+// @Success 200 {object} apiErrors.Response{success=bool,data=DeactivateUserResponse} "User deactivated successfully"
+// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Cannot deactivate own account or invalid reason"
+// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - insufficient permissions"
+// @Failure 404 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "User not found"
+// @Router /api/v1/users/{id}/deactivate [put]
+// Story 1.10, AC1-AC7: User deactivation endpoint with reason, token revocation, and audit logging
+func (h *Handler) DeactivateUser(c *gin.Context) {
+	// Parse target user ID
+	targetUserID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
+		c.Abort()
+		return
+	}
+
+	// Story 1.9: Validate ID is within reasonable range
+	if !isValidID(uint(targetUserID)) {
+		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
+		c.Abort()
+		return
+	}
+
+	// Extract admin ID from JWT context
+	adminID := contextutil.GetUserID(c)
+	if adminID == 0 {
+		_ = c.Error(apiErrors.Unauthorized("User not authenticated"))
+		c.Abort()
+		return
+	}
+
+	// Story 1.10, AC1: Only SYSTEM_ADMIN can deactivate users
+	userRole := middleware.GetUserRole(c)
+	if userRole != middleware.RoleSystemAdmin {
+		_ = c.Error(apiErrors.Forbidden("Only SYSTEM_ADMIN can deactivate user accounts"))
+		c.Abort()
+		return
+	}
+
+	// Bind request
+	var req DeactivateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(apiErrors.FromGinValidation(err))
+		c.Abort()
+		return
+	}
+
+	// Call service layer
+	user, err := h.userService.DeactivateUser(c.Request.Context(), uint(targetUserID), adminID, req.Reason)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			_ = c.Error(apiErrors.NotFound("User not found"))
+			c.Abort()
+			return
+		}
+		if errors.Is(err, ErrCannotDeactivateSelf) {
+			_ = c.Error(apiErrors.BadRequest("You cannot deactivate your own account. Please ask another administrator to do this."))
+			c.Abort()
+			return
+		}
+		_ = c.Error(apiErrors.InternalServerError(err))
+		c.Abort()
+		return
+	}
+
+	// AC5: Log deactivation to audit trail
+	if h.auditLogger != nil {
+		adminUsername := contextutil.GetUserName(c)
+		ipAddress := c.ClientIP()
+		if err := h.auditLogger.LogUserDeactivation(c.Request.Context(), adminID, user.ID, adminUsername, user.Username, req.Reason, ipAddress); err != nil {
+			slog.Warn("Failed to log user deactivation", "error", err, "admin_id", adminID, "target_user_id", user.ID)
+		}
+	}
+
+	// AC6: Return response
+	response := DeactivateUserResponse{
+		ID:                 user.ID,
+		Username:           user.Username,
+		Email:              user.Email,
+		Status:             user.Status,
+		DeactivatedAt:      user.DeactivatedAt.Format(time.RFC3339),
+		DeactivatedBy:      *user.DeactivatedBy,
+		DeactivationReason: user.DeactivationReason,
+	}
+
+	c.JSON(http.StatusOK, apiErrors.Success(response))
 }

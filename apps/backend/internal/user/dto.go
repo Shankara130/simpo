@@ -185,3 +185,41 @@ func ToUserResponse(user *User) UserResponse {
 		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }
+
+// DeactivateUserRequest represents user deactivation request payload (Story 1.10, AC2)
+type DeactivateUserRequest struct {
+	// Reason is the deactivation reason (minimum 5 characters)
+	// Examples: "Staff resignation", "Termination", "Contract ended"
+	Reason string `json:"reason" binding:"required,min=5" example:"Staff resignation"`
+}
+
+// DeactivateUserResponse represents user deactivation response (Story 1.10, AC6)
+type DeactivateUserResponse struct {
+	// ID is the unique identifier for the deactivated user
+	// Example: 10
+	ID uint `json:"id" example:"10"`
+
+	// Username is the login username
+	// Example: "formerstaff"
+	Username string `json:"username" example:"formerstaff"`
+
+	// Email is the user's email address
+	// Example: "formerstaff@simpo.pharmacy"
+	Email string `json:"email" example:"formerstaff@simpo.pharmacy"`
+
+	// Status is the user account status (will be "INACTIVE" after deactivation)
+	// Example: "INACTIVE"
+	Status string `json:"status" example:"INACTIVE"`
+
+	// DeactivatedAt is the timestamp when the user was deactivated
+	// Example: "2026-05-12T11:45:00Z"
+	DeactivatedAt string `json:"deactivated_at,omitempty" example:"2026-05-12T11:45:00Z"`
+
+	// DeactivatedBy is the admin user ID who performed deactivation
+	// Example: 1
+	DeactivatedBy uint `json:"deactivated_by,omitempty" example:"1"`
+
+	// DeactivationReason is the reason for deactivation
+	// Example: "Staff resignation"
+	DeactivationReason string `json:"deactivation_reason" example:"Staff resignation"`
+}

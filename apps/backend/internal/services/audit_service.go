@@ -26,6 +26,8 @@ const (
 	AuditActionWhitelistDomainDeleted AuditAction = "WHITELIST_DOMAIN_DELETED"
 	AuditActionSelfRegistration       AuditAction = "SELF_REGISTRATION"
 	AuditActionEmailVerified          AuditAction = "EMAIL_VERIFIED"
+	// Story 1.10: User deactivation audit logging
+	AuditActionUserDeactivated        AuditAction = "USER_DEACTIVATED"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -64,6 +66,10 @@ type AuditService interface {
 	// LogEmailVerification logs email verification actions (Story 1.9, AC8)
 	// Logs user_id, email, action, timestamp, ip_address
 	LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error
+
+	// LogUserDeactivation logs user deactivation actions (Story 1.10, AC5)
+	// Logs admin_user_id, deactivated_user_id, admin_username, deactivated_username, reason, action, timestamp, ip_address
+	LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -247,6 +253,38 @@ func (s *auditService) LogEmailVerification(ctx context.Context, userID uint, em
 		"action", string(entry.Action),
 		"user_id", userID,
 		"email", email,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogUserDeactivation logs user deactivation actions to append-only audit trail (Story 1.10, AC5)
+func (s *auditService) LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &adminID,
+		Username:  adminUsername,
+		Action:    AuditActionUserDeactivated,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    fmt.Sprintf("Deactivated user '%s' (ID: %d) - Reason: %s", deactivatedUsername, deactivatedUserID, reason),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.10, AC5, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | admin_user_id | admin_username | deactivated_user_id | deactivated_username | reason | ip_address | outcome
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"admin_user_id", adminID,
+		"admin_username", adminUsername,
+		"deactivated_user_id", deactivatedUserID,
+		"deactivated_username", deactivatedUsername,
+		"reason", reason,
 		"ip_address", ipAddress,
 		"outcome", entry.Outcome,
 	)

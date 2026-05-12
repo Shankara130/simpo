@@ -12,6 +12,7 @@ type MockAuditService struct {
 	LogWhitelistChangeFunc        func(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error
 	LogSelfRegistrationFunc       func(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
 	LogEmailVerificationFunc       func(ctx context.Context, userID uint, email string, ipAddress string) error
+	LogUserDeactivationFunc       func(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -63,6 +64,15 @@ func (m *MockAuditService) LogEmailVerification(ctx context.Context, userID uint
 	m.LogCount++
 	if m.LogEmailVerificationFunc != nil {
 		return m.LogEmailVerificationFunc(ctx, userID, email, ipAddress)
+	}
+	return nil
+}
+
+// LogUserDeactivation logs user deactivation actions (Story 1.10, AC5)
+func (m *MockAuditService) LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error {
+	m.LogCount++
+	if m.LogUserDeactivationFunc != nil {
+		return m.LogUserDeactivationFunc(ctx, adminID, deactivatedUserID, adminUsername, deactivatedUsername, reason, ipAddress)
 	}
 	return nil
 }

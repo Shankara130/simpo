@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-12T11:45:00+07:00
+last_updated: 2026-05-12T13:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -53,7 +53,7 @@ development_status:
   1-7-implement-user-registration-with-admin-approval: done # Review patches applied, ready for review
   1-8-implement-session-management-with-timeout: done # All AC met, all review patches applied
   1-9-implement-staff-registration-via-whitelist: done
-  1-10-implement-user-deactivation: backlog
+  1-10-implement-user-deactivation: done
   epic-1-retrospective: optional
 
   # Epic 2: Database Schema & Migrations

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -63,6 +64,10 @@ var (
 	ErrDomainNotWhitelisted = errors.New("email domain is not approved for self-registration")
 	// Story 1.9: Invalid verification token
 	ErrInvalidVerificationToken = errors.New("invalid or expired verification token")
+	// Story 1.10: Cannot deactivate own account
+	ErrCannotDeactivateSelf = errors.New("cannot deactivate own account")
+	// Story 1.10: Account has been deactivated
+	ErrAccountDeactivated = errors.New("account has been deactivated")
 )
 
 // Service defines user service interface
@@ -83,12 +88,22 @@ type Service interface {
 	SetWhitelistRepo(whitelistRepo WhitelistRepository)
 	// Story 1.9: SetVerificationRepo - inject verification repository for email tokens
 	SetVerificationRepo(verificationRepo VerificationRepository)
+	// Story 1.10: DeactivateUser - deactivate user account with reason
+	DeactivateUser(ctx context.Context, targetUserID uint, adminID uint, reason string) (*User, error)
 }
 
 type service struct {
 	repo               Repository
 	whitelistRepo      WhitelistRepository
 	verificationRepo   VerificationRepository
+	sessionManager     SessionManager // Story 1.10: For token revocation on deactivation
+}
+
+// SessionManager defines the interface for session management operations (Story 1.8, Story 1.10)
+type SessionManager interface {
+	RevokeToken(ctx context.Context, tokenID string, ttl time.Duration) error
+	RevokeAllUserTokens(ctx context.Context, userID uint) error
+	DeleteSession(ctx context.Context, userID uint, tokenID string) error
 }
 
 // NewService creates a new user service
@@ -106,6 +121,12 @@ func (s *service) SetWhitelistRepo(whitelistRepo WhitelistRepository) {
 // SetVerificationRepo injects the verification repository (dependency injection)
 func (s *service) SetVerificationRepo(verificationRepo VerificationRepository) {
 	s.verificationRepo = verificationRepo
+}
+
+// SetSessionManager injects the session manager (dependency injection)
+// Story 1.10: Required for token revocation on deactivation
+func (s *service) SetSessionManager(sessionManager SessionManager) {
+	s.sessionManager = sessionManager
 }
 
 // RegisterUser registers a new user
@@ -244,6 +265,7 @@ func (s *service) RegisterUserForAdmin(ctx context.Context, req CreateUserReques
 }
 
 // AuthenticateUser authenticates a user with email and password
+// Story 1.10, AC1: Deactivated users cannot authenticate (returns 401 Unauthorized)
 func (s *service) AuthenticateUser(ctx context.Context, req LoginRequest) (*User, error) {
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
@@ -251,6 +273,11 @@ func (s *service) AuthenticateUser(ctx context.Context, req LoginRequest) (*User
 	}
 	if user == nil {
 		return nil, ErrInvalidCredentials
+	}
+
+	// Story 1.10: Check if user account is deactivated
+	if user.Status == UserStatusInactive {
+		return nil, ErrAccountDeactivated
 	}
 
 	if err := verifyPassword(user.PasswordHash, req.Password); err != nil {
@@ -619,4 +646,61 @@ func (s *service) VerifyEmail(ctx context.Context, token string) (*User, error) 
 	}
 
 	return user, nil
+}
+
+// DeactivateUser deactivates a user account with reason
+// Story 1.10, AC1-AC8: User deactivation with token revocation and audit trail
+func (s *service) DeactivateUser(ctx context.Context, targetUserID uint, adminID uint, reason string) (*User, error) {
+	// AC4: Prevent self-deactivation
+	if targetUserID == adminID {
+		return nil, ErrCannotDeactivateSelf
+	}
+
+	var deactivatedUser *User
+	err := s.repo.Transaction(ctx, func(txCtx context.Context) error {
+		// 1. Find target user
+		user, err := s.repo.FindByID(txCtx, targetUserID)
+		if err != nil {
+			return fmt.Errorf("failed to find user: %w", err)
+		}
+		if user == nil {
+			return ErrUserNotFound
+		}
+
+		// AC7: Check if already inactive (idempotent operation)
+		if user.Status == UserStatusInactive {
+			// Return user without error (already deactivated)
+			deactivatedUser = user
+			return nil
+		}
+
+		// AC3: Revoke all active tokens FIRST before status change
+		if s.sessionManager != nil {
+			if err := s.sessionManager.RevokeAllUserTokens(txCtx, targetUserID); err != nil {
+				// Log warning but don't fail - tokens will expire naturally
+				slog.Warn("Failed to revoke tokens during deactivation",
+					"error", err, "user_id", targetUserID)
+			}
+		}
+
+		// AC1: Update user status and deactivation fields
+		now := time.Now()
+		user.Status = UserStatusInactive
+		user.DeactivatedAt = &now
+		user.DeactivatedBy = &adminID
+		user.DeactivationReason = reason
+
+		if err := s.repo.Update(txCtx, user); err != nil {
+			return fmt.Errorf("failed to deactivate user: %w", err)
+		}
+
+		deactivatedUser = user
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return deactivatedUser, nil
 }

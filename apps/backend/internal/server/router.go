@@ -176,6 +176,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			usersGroup.GET("/:id", userHandler.GetUser)
 			usersGroup.PUT("/:id", userHandler.UpdateUser)
 			usersGroup.DELETE("/:id", userHandler.DeleteUser)
+			usersGroup.PUT("/:id/deactivate", userHandler.DeactivateUser) // Story 1.10: SYSTEM_ADMIN only
 		}
 
 		// Admin endpoints - SYSTEM_ADMIN only

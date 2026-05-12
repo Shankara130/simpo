@@ -84,7 +84,7 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
 	newAuthHandler := handlers.NewAuthHandler(newAuthService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database)
+	router := server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil)
 
 	return router
 }
@@ -115,7 +115,7 @@ func setupRateLimitTestRouter(t *testing.T) *gin.Engine {
 	newAuthService := services.NewAuthService(&testCfg.JWT, userRepo, auditService)
 	newAuthHandler := handlers.NewAuthHandler(newAuthService)
 
-	return server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database)
+	return server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil)
 }
 
 func TestRegisterHandler(t *testing.T) {

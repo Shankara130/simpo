@@ -65,6 +65,69 @@ func (m *MockService) PromoteToAdmin(ctx context.Context, userID uint) error {
 	return args.Error(0)
 }
 
+// RegisterStaff registers a new staff member via self-registration (Story 1.9)
+func (m *MockService) RegisterStaff(ctx context.Context, req user.StaffRegistrationRequest) (*user.User, string, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, "", args.Error(1)
+	}
+	return args.Get(0).(*user.User), args.String(1), args.Error(2)
+}
+
+// VerifyEmail verifies an email verification token (Story 1.9)
+func (m *MockService) VerifyEmail(ctx context.Context, token string) (*user.User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.User), args.Error(1)
+}
+
+// RefreshToken refreshes a JWT token (Story 1.8)
+func (m *MockService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	args := m.Called(ctx, refreshToken)
+	return args.String(0), args.String(1), args.Error(2)
+}
+
+// Logout logs out a user (Story 1.8)
+func (m *MockService) Logout(ctx context.Context, userID uint, tokenID string) error {
+	args := m.Called(ctx, userID, tokenID)
+	return args.Error(0)
+}
+
+// RegisterUserForAdmin registers a new user with admin-specified role (Story 1.7)
+func (m *MockService) RegisterUserForAdmin(ctx context.Context, req user.CreateUserRequest, adminID uint) (*user.User, error) {
+	args := m.Called(ctx, req, adminID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.User), args.Error(1)
+}
+
+// DeactivateUser deactivates a user account (Story 1.10)
+func (m *MockService) DeactivateUser(ctx context.Context, targetUserID uint, adminID uint, reason string) (*user.User, error) {
+	args := m.Called(ctx, targetUserID, adminID, reason)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.User), args.Error(1)
+}
+
+// SetWhitelistRepo sets the whitelist repository (Story 1.9)
+func (m *MockService) SetWhitelistRepo(whitelistRepo user.WhitelistRepository) {
+	// No-op for mock
+}
+
+// SetVerificationRepo sets the verification repository (Story 1.9)
+func (m *MockService) SetVerificationRepo(verificationRepo user.VerificationRepository) {
+	// No-op for mock
+}
+
+// SetSessionManager sets the session manager (Story 1.8)
+func (m *MockService) SetSessionManager(sessionManager user.SessionManager) {
+	// No-op for mock
+}
+
 func TestValidatePassword(t *testing.T) {
 	tests := []struct {
 		name        string
