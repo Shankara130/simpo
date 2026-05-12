@@ -175,6 +175,8 @@ func run() error {
 		logger.Info("Closing database connections...")
 		if err := sqlDB.Close(); err != nil {
 			logger.Error("Error closing database", "error", err)
+		} else {
+			logger.Info("Database connections closed successfully")
 		}
 	}
 

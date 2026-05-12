@@ -27,6 +27,14 @@ func (m *mockService) GetReadiness(ctx context.Context) HealthResponse {
 	return m.response
 }
 
+// Story 2.4: Add GetDatabaseHealth to mockService
+func (m *mockService) GetDatabaseHealth(ctx context.Context) CheckResult {
+	return CheckResult{
+		Status:  CheckPass,
+		Message: "Database connection healthy (mock)",
+	}
+}
+
 func TestHandler_Health(t *testing.T) {
 	tests := []struct {
 		name           string

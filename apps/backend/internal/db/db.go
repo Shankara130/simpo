@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/spf13/viper"
@@ -14,6 +15,13 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
+)
+
+// Story 2.4: Default connection pooling constants
+const (
+	DefaultMaxOpenConns    = 25
+	DefaultMaxIdleConns    = 5
+	DefaultConnMaxLifetime = 5 * time.Minute
 )
 
 // customLogger wraps the default logger to ignore ErrRecordNotFound
@@ -78,15 +86,36 @@ func NewPostgresDB(cfg Config) (*gorm.DB, error) {
 }
 
 // NewPostgresDBFromDatabaseConfig creates a new PostgreSQL DB connection from typed config
+// Story 2.4: Enhanced with configurable pooling, Ping verification, and structured logging
 func NewPostgresDBFromDatabaseConfig(cfg config.DatabaseConfig) (*gorm.DB, error) {
+	// Story 2.4: Validate required database fields
+	if cfg.Host == "" {
+		return nil, fmt.Errorf("database host not configured (set DB_HOST or DATABASE_HOST)")
+	}
+	if cfg.Port <= 0 {
+		return nil, fmt.Errorf("database port must be positive (got: %d)", cfg.Port)
+	}
+	if cfg.User == "" {
+		return nil, fmt.Errorf("database user not configured (set DB_USER or DATABASE_USER)")
+	}
+	if cfg.Password == "" {
+		return nil, fmt.Errorf("database password not configured (set DB_PASSWORD or DATABASE_PASSWORD)")
+	}
+	if cfg.Name == "" {
+		return nil, fmt.Errorf("database name not configured (set DB_NAME or DATABASE_NAME)")
+	}
+
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.Port, cfg.SSLMode)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: customLogger{logger.Default.LogMode(logger.Info)},
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres database: %w", err)
+		return nil, fmt.Errorf("failed to connect to database at %s:%d: %w (check if PostgreSQL is running and credentials are correct)", cfg.Host, cfg.Port, err)
 	}
 
 	sqlDB, err := db.DB()
@@ -94,11 +123,70 @@ func NewPostgresDBFromDatabaseConfig(cfg config.DatabaseConfig) (*gorm.DB, error
 		return nil, fmt.Errorf("failed to get sql.DB from gorm DB: %w", err)
 	}
 
-	sqlDB.SetConnMaxLifetime(time.Minute * 30)
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
+	// Story 2.4: Apply configurable connection pooling settings
+	// Use validated defaults if not configured (set in validator.go)
+	maxOpenConns := cfg.MaxOpenConns
+	if maxOpenConns == 0 {
+		maxOpenConns = DefaultMaxOpenConns
+	}
+	maxIdleConns := cfg.MaxIdleConns
+	if maxIdleConns == 0 {
+		maxIdleConns = DefaultMaxIdleConns
+	}
+	connMaxLifetime := cfg.ConnMaxLifetime
+	if connMaxLifetime == 0 {
+		connMaxLifetime = DefaultConnMaxLifetime
+	}
+
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+
+	// Story 2.4: Ping database to verify connectivity
+	// Use context with timeout to prevent indefinite hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sqlDB.PingContext(ctx); err != nil {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			slog.Error("Failed to close database connection after ping failure", "error", closeErr)
+		}
+		return nil, fmt.Errorf("database ping failed at %s:%d (database '%s'): %w (verify database is accessible and network connectivity is working)",
+			cfg.Host, cfg.Port, cfg.Name, err)
+	}
+
+	// Story 2.4: Log successful connection with pooling details
+	slog.Info("Database connection established",
+		slog.String("host", cfg.Host),
+		slog.Int("port", cfg.Port),
+		slog.String("database", cfg.Name),
+		slog.Int("max_open_connections", maxOpenConns),
+		slog.Int("max_idle_connections", maxIdleConns),
+		slog.Duration("conn_max_lifetime", connMaxLifetime),
+	)
 
 	return db, nil
+}
+
+// LogPoolStats logs current connection pool statistics
+// Story 2.4: Pool health monitoring for operations visibility
+func LogPoolStats(db *gorm.DB) {
+	sqlDB, err := db.DB()
+	if err != nil {
+		slog.Error("Failed to get sql.DB for pool stats", "error", err)
+		return
+	}
+
+	stats := sqlDB.Stats()
+	slog.Info("Database connection pool stats",
+		slog.Int("open_connections", stats.OpenConnections),
+		slog.Int("in_use", stats.InUse),
+		slog.Int("idle", stats.Idle),
+		slog.Int64("wait_count", stats.WaitCount),
+		slog.Duration("wait_duration", stats.WaitDuration),
+		slog.Int64("max_idle_closed", stats.MaxIdleClosed),
+		slog.Int64("max_idle_time_closed", stats.MaxIdleTimeClosed),
+		slog.Int64("max_lifetime_closed", stats.MaxLifetimeClosed),
+	)
 }
 
 // NewSQLiteDB creates a new SQLite database connection (for testing)

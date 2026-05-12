@@ -10,18 +10,30 @@ type Service interface {
 	GetHealth(ctx context.Context) HealthResponse
 	GetLiveness(ctx context.Context) HealthResponse
 	GetReadiness(ctx context.Context) HealthResponse
+	GetDatabaseHealth(ctx context.Context) CheckResult // Story 2.4: Database-specific health check
 }
 
 type service struct {
-	checkers    []Checker
-	startTime   time.Time
-	version     string
-	environment string
+	checkers       []Checker
+	dbChecker      Checker // Story 2.4: Cached reference for O(1) lookup
+	startTime      time.Time
+	version        string
+	environment    string
 }
 
 func NewService(checkers []Checker, version, environment string) Service {
+	// Story 2.4: Cache database checker reference for O(1) lookup
+	var dbChecker Checker
+	for _, checker := range checkers {
+		if checker.Name() == "database" {
+			dbChecker = checker
+			break
+		}
+	}
+
 	return &service{
 		checkers:    checkers,
+		dbChecker:   dbChecker,
 		startTime:   time.Now(),
 		version:     version,
 		environment: environment,
@@ -88,4 +100,18 @@ func (s *service) formatUptime() string {
 		return fmt.Sprintf("%dh %dm", hours, minutes)
 	}
 	return fmt.Sprintf("%dm", minutes)
+}
+
+// Story 2.4: Database-specific health check for /health/db endpoint
+func (s *service) GetDatabaseHealth(ctx context.Context) CheckResult {
+	// Use cached checker reference for O(1) lookup
+	if s.dbChecker != nil {
+		return s.dbChecker.Check(ctx)
+	}
+
+	// If no database checker is configured, return unhealthy
+	return CheckResult{
+		Status:  CheckFail,
+		Message: "Database checker not configured (enable with HEALTH_DATABASE_CHECK_ENABLED=true)",
+	}
 }

@@ -64,3 +64,24 @@ func (h *Handler) Ready(c *gin.Context) {
 
 	c.JSON(statusCode, response)
 }
+
+// Database godoc
+// @Summary      Database health check
+// @Description  Check if the database connection is healthy (Story 2.4)
+// @Tags         Health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  CheckResult  "Database is healthy"
+// @Success      503  {object}  CheckResult  "Database is unhealthy"
+// @Router       /health/db [get]
+func (h *Handler) Database(c *gin.Context) {
+	ctx := c.Request.Context()
+	response := h.service.GetDatabaseHealth(ctx)
+
+	statusCode := http.StatusOK
+	if response.Status == CheckFail {
+		statusCode = http.StatusServiceUnavailable
+	}
+
+	c.JSON(statusCode, response)
+}

@@ -84,3 +84,10 @@ This file tracks work items that were identified during reviews but deferred to 
   - Issue: `transaction_id` has `ON DELETE CASCADE` but transaction_items has `deleted_at` for soft delete
   - Why deferred: Complex interaction - hard delete cascade for consistency with snapshot pattern
   - Recommendation: Application must handle soft delete of transactions explicitly (reassign or delete child items first)
+
+## Deferred from: code review of story 2.4 (2026-05-12)
+
+- **Inconsistent defaults between old and new functions** — `NewPostgresDB()` uses different defaults than `NewPostgresDBFromDatabaseConfig()`. Pre-existing code, not changed in this story.
+- **Potential connection leak on validation failure** — Validator runs BEFORE connection is established, so no leak possible. Not applicable.
+- **No handling of connection state transitions** — Long-running connection health management is operational concern, out of scope for this infrastructure story.
+

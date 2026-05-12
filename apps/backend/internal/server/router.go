@@ -55,6 +55,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/live", healthHandler.Live)
 	router.GET("/health/ready", healthHandler.Ready)
+	router.GET("/health/db", healthHandler.Database) // Story 2.4: Database-specific health check
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

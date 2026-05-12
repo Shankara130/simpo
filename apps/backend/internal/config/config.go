@@ -37,6 +37,14 @@ type DatabaseConfig struct {
 	Password string `mapstructure:"password" yaml:"password"`
 	Name     string `mapstructure:"name" yaml:"name"`
 	SSLMode  string `mapstructure:"sslmode" yaml:"sslmode"`
+
+	// Connection pooling configuration (Story 2.4)
+	// MaxOpenConns: Maximum open connections to database (default: 25)
+	// MaxIdleConns: Maximum idle connections in pool (default: 5)
+	// ConnMaxLifetime: Maximum time a connection can be reused (default: 5m)
+	MaxOpenConns    int           `mapstructure:"max_open_conns" yaml:"max_open_conns"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns" yaml:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime" yaml:"conn_max_lifetime"`
 }
 
 type JWTConfig struct {
@@ -159,6 +167,9 @@ func bindEnvVariables(v *viper.Viper) {
 		"database.password":             "DATABASE_PASSWORD",
 		"database.name":                 "DATABASE_NAME",
 		"database.sslmode":              "DATABASE_SSLMODE",
+		"database.max_open_conns":       "DB_MAX_OPEN_CONNECTIONS",
+		"database.max_idle_conns":       "DB_MAX_IDLE_CONNECTIONS",
+		"database.conn_max_lifetime":    "DB_CONNECTION_MAX_LIFETIME",
 		"jwt.secret":                    "JWT_SECRET",
 		"jwt.access_token_ttl":          "JWT_ACCESS_TOKEN_TTL",
 		"jwt.refresh_token_ttl":         "JWT_REFRESH_TOKEN_TTL",
