@@ -48,3 +48,39 @@ This file tracks work items that were identified during reviews but deferred to 
   - Issue: `containsRFC7807Fields()` and `containsString()` defined in auth_middleware_test.go but used across multiple test files (rbac_test.go, integration_test.go)
   - Why deferred: Pre-existing pattern from Story 1.5/GRAB boilerplate, not introduced by this story
   - Recommendation: Create `internal/middleware/test_helpers.go` to share common test utilities
+
+## Deferred from: code review of 2-2-create-initial-migration-with-golang-migrate (2026-05-12)
+
+### Data Integrity & Audit
+
+- **User ID deleted while referenced**
+  - File: `apps/backend/migrations/20260512200001_create_branches_table.up.sql:14-15`
+  - Issue: `created_by INTEGER` and `updated_by INTEGER` have no foreign key constraints to users table
+  - Why deferred: Intentional design to preserve audit trail even when referenced users are deleted
+  - Recommendation: Document this behavior in data dictionary and ensure application handles NULL values gracefully
+
+- **NULL cost_price with profit calculation**
+  - File: `apps/backend/migrations/20260512200002_create_products_table.up.sql:13`
+  - Issue: `cost_price DECIMAL(15,2)` is nullable, will cause NULL in profit/loss calculations
+  - Why deferred: Business decision - some products may not have cost price (e.g., donations, samples)
+  - Recommendation: Application queries must use COALESCE or filter out NULL cost_price in profit calculations
+
+- **Cashier user deletion while transactions exist**
+  - File: `apps/backend/migrations/20260512200003_create_transactions_table.up.sql:33-35`
+  - Issue: `cashier_id` has `ON DELETE RESTRICT` preventing cashier account deletion if transactions exist
+  - Why deferred: Intentional design to preserve transaction audit trail
+  - Recommendation: Application should implement user soft delete or reassign transactions before deleting cashier
+
+### Schema Design
+
+- **Version INTEGER overflow after many updates**
+  - File: All migration files, `version INTEGER NOT NULL DEFAULT 1`
+  - Issue: After 2 billion updates, version column will overflow
+  - Why deferred: Theoretical concern - unlikely to happen in practice for pharmacy system
+  - Recommendation: Monitor version values in production; consider BIGINT if approaching limit (extremely unlikely)
+
+- **Soft delete cascade inconsistency**
+  - File: `apps/backend/migrations/20260512200004_create_transaction_items_table.up.sql:25-27`
+  - Issue: `transaction_id` has `ON DELETE CASCADE` but transaction_items has `deleted_at` for soft delete
+  - Why deferred: Complex interaction - hard delete cascade for consistency with snapshot pattern
+  - Recommendation: Application must handle soft delete of transactions explicitly (reassign or delete child items first)
