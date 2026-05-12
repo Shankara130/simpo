@@ -58,7 +58,7 @@ func GetRolePermissions(role string) RolePermissions {
 				"/api/v1/products",
 				"/api/v1/transactions",
 				"/api/v1/reports",
-				"/api/v1/users/:id",		// Story 1.7: Can view specific users, not create/list
+				"/api/v1/users",				// Can view and list users
 				"/api/v1/inventory",
 				"/api/v1/branches",
 			},
@@ -100,6 +100,7 @@ func HasPermission(role string, perm Permission) bool {
 
 // CanAccessEndpoint checks if a role can access a specific endpoint
 // Story 1.6, AC3: Role-based endpoint access control
+// Supports :param wildcard matching (e.g., /api/v1/users/:id matches /api/v1/users/1)
 func CanAccessEndpoint(role, endpoint string) bool {
 	rolePerms := GetRolePermissions(role)
 
@@ -108,14 +109,51 @@ func CanAccessEndpoint(role, endpoint string) bool {
 		return true
 	}
 
-	// Check if endpoint is in allowed list (prefix match)
+	// Check if endpoint is in allowed list
 	for _, allowed := range rolePerms.AllowedEndpoints {
-		if strings.HasPrefix(endpoint, allowed) {
+		if matchEndpoint(endpoint, allowed) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// matchEndpoint checks if an actual endpoint matches an allowed endpoint pattern
+// Supports prefix matching and :param wildcards
+func matchEndpoint(endpoint, allowed string) bool {
+	// Simple prefix match first (for backward compatibility)
+	if strings.HasPrefix(endpoint, allowed) {
+		return true
+	}
+
+	// Handle :param wildcards
+	// Split both paths into segments
+	endpointParts := strings.Split(strings.Trim(endpoint, "/"), "/")
+	allowedParts := strings.Split(strings.Trim(allowed, "/"), "/")
+
+	// If allowed has more parts, it can't match
+	if len(allowedParts) > len(endpointParts) {
+		return false
+	}
+
+	// Check each segment
+	for i := 0; i < len(allowedParts); i++ {
+		allowedPart := allowedParts[i]
+		endpointPart := endpointParts[i]
+
+		// If allowed part starts with ":", it's a wildcard parameter
+		if strings.HasPrefix(allowedPart, ":") {
+			continue // Skip, matches anything
+		}
+
+		// Otherwise, segments must match exactly
+		if allowedPart != endpointPart {
+			return false
+		}
+	}
+
+	return true
 }
 
 // CanAccessAllBranches checks if a role can access data from all branches

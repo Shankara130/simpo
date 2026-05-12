@@ -38,6 +38,18 @@ func (m *MockAuditLogger) LogUserCreation(ctx context.Context, adminID uint, cre
 	return args.Error(0)
 }
 
+// LogSelfRegistration logs staff self-registration actions (Story 1.9, AC8)
+func (m *MockAuditLogger) LogSelfRegistration(ctx context.Context, userID uint, email string, domain string, ipAddress string) error {
+	args := m.Called(ctx, userID, email, domain, ipAddress)
+	return args.Error(0)
+}
+
+// LogEmailVerification logs email verification actions (Story 1.9, AC8)
+func (m *MockAuditLogger) LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error {
+	args := m.Called(ctx, userID, email, ipAddress)
+	return args.Error(0)
+}
+
 func (m *MockService) AuthenticateUser(ctx context.Context, req LoginRequest) (*User, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
@@ -78,6 +90,34 @@ func (m *MockService) ListUsers(ctx context.Context, filters UserFilterParams, p
 func (m *MockService) PromoteToAdmin(ctx context.Context, userID uint) error {
 	args := m.Called(ctx, userID)
 	return args.Error(0)
+}
+
+// RegisterStaff registers a new staff member via self-registration (Story 1.9)
+func (m *MockService) RegisterStaff(ctx context.Context, req StaffRegistrationRequest) (*User, string, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, "", args.Error(1)
+	}
+	return args.Get(0).(*User), args.String(1), args.Error(2)
+}
+
+// VerifyEmail verifies an email verification token (Story 1.9)
+func (m *MockService) VerifyEmail(ctx context.Context, token string) (*User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*User), args.Error(1)
+}
+
+// SetWhitelistRepo sets the whitelist repository (Story 1.9)
+func (m *MockService) SetWhitelistRepo(whitelistRepo WhitelistRepository) {
+	// No-op for mock
+}
+
+// SetVerificationRepo sets the verification repository (Story 1.9)
+func (m *MockService) SetVerificationRepo(verificationRepo VerificationRepository) {
+	// No-op for mock
 }
 
 // MockRepository is a mock implementation of the user repository for testing services

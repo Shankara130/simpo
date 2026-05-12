@@ -3,9 +3,10 @@ package user
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,9 @@ import (
 // This interface is defined here to avoid import cycles with services package
 type AuditLogger interface {
 	LogUserCreation(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error
+	// Story 1.9: Audit logging for whitelist and self-registration
+	LogSelfRegistration(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
+	LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error
 }
 
 // Handler handles user-related HTTP requests
@@ -172,6 +176,12 @@ func (h *Handler) GetUser(c *gin.Context) {
 		return
 	}
 
+	// Story 1.9: Validate ID is within reasonable range
+	if !isValidID(uint(id)) {
+		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
+		return
+	}
+
 	if !contextutil.CanAccessUser(c, uint(id)) {
 		_ = c.Error(apiErrors.Forbidden("Forbidden user ID"))
 		return
@@ -211,6 +221,12 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	// Parse ID from URL
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
+		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
+		return
+	}
+
+	// Story 1.9: Validate ID is within reasonable range
+	if !isValidID(uint(id)) {
 		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
 		return
 	}
@@ -263,6 +279,12 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	// Parse ID from URL
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
+		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
+		return
+	}
+
+	// Story 1.9: Validate ID is within reasonable range
+	if !isValidID(uint(id)) {
 		_ = c.Error(apiErrors.BadRequest("Invalid user ID"))
 		return
 	}
@@ -342,13 +364,13 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	// Revoke the old token before generating new one
 	if err := h.sessionManager.RevokeToken(c.Request.Context(), tokenID, oldTokenTTL); err != nil {
 		// Log error but don't fail - the token will expire naturally
-		log.Printf("WARNING: failed to revoke token during refresh: %v", err)
+		slog.Warn("Failed to revoke token during refresh", "error", err, "token_id", tokenID)
 	}
 
 	// P3/P6 FIX: Delete old session data to prevent orphaned sessions
 	if err := h.sessionManager.DeleteSession(c.Request.Context(), userClaims.UserID, tokenID); err != nil {
 		// Log error but don't fail - session will expire via TTL
-		log.Printf("WARNING: failed to delete session during refresh: %v", err)
+		slog.Warn("Failed to delete session during refresh", "error", err, "user_id", userClaims.UserID, "token_id", tokenID)
 	}
 
 	// Story 1.8, AC4: Generate new token with same user info and updated expiration
@@ -421,7 +443,7 @@ func (h *Handler) Logout(c *gin.Context) {
 			// P6 FIX: Delete session data to prevent orphaned sessions
 			if err := h.sessionManager.DeleteSession(c.Request.Context(), userClaims.UserID, tokenID); err != nil {
 				// Log error but don't fail - session will expire via TTL
-				log.Printf("WARNING: failed to delete session during logout: %v", err)
+				slog.Warn("Failed to delete session during logout", "error", err, "user_id", userClaims.UserID, "token_id", tokenID)
 			}
 
 			if !userClaims.ExpiresAt.IsZero() {
@@ -435,8 +457,7 @@ func (h *Handler) Logout(c *gin.Context) {
 			ipAddress := c.ClientIP()
 			// Log logout action using structured logging
 			// Format: action=LOGOUT user_id=<id> username=<user> token_id=<token> ip=<ip>
-			log.Printf("AUDIT action=LOGOUT user_id=%d username=%s token_id=%s ip=%s outcome=success",
-				userClaims.UserID, userClaims.Email, tokenID, ipAddress)
+			slog.Info("AUDIT", "action", "LOGOUT", "user_id", userClaims.UserID, "username", userClaims.Email, "token_id", tokenID, "ip", ipAddress, "outcome", "success")
 		}
 	}
 	// Fallback to 8 hours if we can't determine expiration
@@ -452,6 +473,106 @@ func (h *Handler) Logout(c *gin.Context) {
 
 	// Story 1.8, AC5: Return 200 OK on success
 	c.JSON(http.StatusOK, apiErrors.Success(gin.H{"message": "Successfully logged out"}))
+}
+
+// RegisterStaff godoc
+// @Summary Register a new staff member via self-registration
+// @Description Self-registration for staff with whitelisted email domains (Public endpoint)
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body StaffRegistrationRequest true "Staff self-registration request"
+// @Success 201 {object} apiErrors.Response{success=bool,data=StaffRegistrationResponse} "User registered with PENDING status"
+// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Validation error or duplicate username/email"
+// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Email domain not whitelisted"
+// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
+// @Router /api/v1/auth/register-staff [post]
+func (h *Handler) RegisterStaff(c *gin.Context) {
+	var req StaffRegistrationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(apiErrors.FromGinValidation(err))
+		return
+	}
+
+	user, token, err := h.userService.RegisterStaff(c.Request.Context(), req)
+	if err != nil {
+		if err == ErrDomainNotWhitelisted {
+			_ = c.Error(apiErrors.Forbidden("Email domain is not approved for self-registration. Please contact your system administrator."))
+			return
+		}
+		if err == ErrUsernameExists {
+			_ = c.Error(apiErrors.Conflict("Username already exists"))
+			return
+		}
+		if err == ErrEmailExists {
+			_ = c.Error(apiErrors.Conflict("Email already exists"))
+			return
+		}
+		_ = c.Error(apiErrors.InternalServerError(err))
+		return
+	}
+
+	// Story 1.9, AC9: Return response with verification_sent flag
+	response := StaffRegistrationResponse{
+		ID:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		Role:            user.Role,
+		Status:          user.Status,
+		VerificationSent: token != "",
+		CreatedAt:       user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+
+	// Story 1.9, AC8: Log self-registration to audit trail
+	if h.auditLogger != nil {
+		// Extract domain from email for audit logging
+		domain := extractDomainFromEmail(user.Email)
+		if err := h.auditLogger.LogSelfRegistration(c.Request.Context(), user.ID, user.Email, domain, c.ClientIP()); err != nil {
+			// Log error but don't fail the request
+			slog.Warn("Failed to log self-registration", "error", err, "user_id", user.ID, "email", user.Email, "domain", domain, "ip", c.ClientIP())
+		}
+	}
+
+	c.JSON(http.StatusCreated, apiErrors.Success(response))
+}
+
+// VerifyEmail godoc
+// @Summary Verify email and activate account
+// @Description Verify email verification token and activate user account (Public endpoint)
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body VerifyEmailRequest true "Email verification request"
+// @Success 200 {object} apiErrors.Response{success=bool,data=UserResponse} "Account activated successfully"
+// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Invalid or expired verification token"
+// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
+// @Router /api/v1/auth/verify-email [post]
+func (h *Handler) VerifyEmail(c *gin.Context) {
+	var req VerifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(apiErrors.FromGinValidation(err))
+		return
+	}
+
+	user, err := h.userService.VerifyEmail(c.Request.Context(), req.Token)
+	if err != nil {
+		if err == ErrInvalidVerificationToken {
+			_ = c.Error(apiErrors.BadRequest("Invalid or expired verification token. Please request a new verification email."))
+			return
+		}
+		_ = c.Error(apiErrors.InternalServerError(err))
+		return
+	}
+
+	// Story 1.9, AC8: Log email verification to audit trail
+	if h.auditLogger != nil {
+		if err := h.auditLogger.LogEmailVerification(c.Request.Context(), user.ID, user.Email, c.ClientIP()); err != nil {
+			// Log error but don't fail the request
+			slog.Warn("Failed to log email verification", "error", err, "user_id", user.ID, "email", user.Email, "ip", c.ClientIP())
+		}
+	}
+
+	c.JSON(http.StatusOK, apiErrors.Success(ToUserResponse(user)))
 }
 
 // GetMe godoc
@@ -616,4 +737,22 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 	// Return 201 Created with user response
 	c.JSON(http.StatusCreated, apiErrors.Success(ToCreateUserResponse(user)))
+}
+
+// extractDomainFromEmail extracts the domain from an email address
+// Story 1.9: Helper for audit logging
+func extractDomainFromEmail(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[1]
+}
+
+// isValidID checks if an ID is within a reasonable range
+// Story 1.9: ID validation to prevent potential issues with extremely large IDs
+func isValidID(id uint) bool {
+	// IDs should be within reasonable database range
+	// Most databases use uint32 for IDs, so we check against that
+	return id > 0 && id <= 4294967295 // Max uint32 value
 }

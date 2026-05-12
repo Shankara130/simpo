@@ -20,6 +20,12 @@ const (
 	AuditActionForbiddenAccess    AuditAction = "FORBIDDEN_ACCESS"
 	// Story 1.7: User creation audit logging
 	AuditActionUserCreated        AuditAction = "USER_CREATED"
+	// Story 1.9: Whitelist and self-registration audit logging
+	AuditActionWhitelistDomainAdded   AuditAction = "WHITELIST_DOMAIN_ADDED"
+	AuditActionWhitelistDomainUpdated AuditAction = "WHITELIST_DOMAIN_UPDATED"
+	AuditActionWhitelistDomainDeleted AuditAction = "WHITELIST_DOMAIN_DELETED"
+	AuditActionSelfRegistration       AuditAction = "SELF_REGISTRATION"
+	AuditActionEmailVerified          AuditAction = "EMAIL_VERIFIED"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -46,6 +52,18 @@ type AuditService interface {
 	// LogUserCreation logs user creation actions (Story 1.7, AC7)
 	// Logs admin_user_id, created_user_id, action, timestamp, ip_address
 	LogUserCreation(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error
+
+	// LogWhitelistChange logs whitelist domain management actions (Story 1.9, AC8)
+	// Logs admin_user_id, domain, action, timestamp, ip_address
+	LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error
+
+	// LogSelfRegistration logs staff self-registration actions (Story 1.9, AC8)
+	// Logs user_id, email, domain, action, timestamp, ip_address
+	LogSelfRegistration(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
+
+	// LogEmailVerification logs email verification actions (Story 1.9, AC8)
+	// Logs user_id, email, action, timestamp, ip_address
+	LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -140,6 +158,95 @@ func (s *auditService) LogUserCreation(ctx context.Context, adminID uint, create
 		"admin_username", adminUsername,
 		"created_user_id", createdUserID,
 		"created_username", createdUsername,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogWhitelistChange logs whitelist domain management actions to append-only audit trail (Story 1.9, AC8)
+func (s *auditService) LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &adminID,
+		Username:  adminUsername,
+		Action:    action,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    fmt.Sprintf("Domain '%s'", domain),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.9, AC8, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | admin_user_id | admin_username | domain | ip_address | outcome
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"admin_user_id", adminID,
+		"admin_username", adminUsername,
+		"domain", domain,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogSelfRegistration logs staff self-registration actions to append-only audit trail (Story 1.9, AC8)
+func (s *auditService) LogSelfRegistration(ctx context.Context, userID uint, email string, domain string, ipAddress string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &userID,
+		Username:  email, // Use email as username for self-registration
+		Action:    AuditActionSelfRegistration,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    fmt.Sprintf("Self-registered from domain '%s'", domain),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.9, AC8, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | user_id | email | domain | ip_address | outcome
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"user_id", userID,
+		"email", email,
+		"domain", domain,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogEmailVerification logs email verification actions to append-only audit trail (Story 1.9, AC8)
+func (s *auditService) LogEmailVerification(ctx context.Context, userID uint, email string, ipAddress string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &userID,
+		Username:  email, // Use email as username for email verification
+		Action:    AuditActionEmailVerified,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    "Email verified and account activated",
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 1.9, AC8, NFR-SEC-004)
+	// Format: AUDIT | timestamp | action | user_id | email | ip_address | outcome
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"user_id", userID,
+		"email", email,
 		"ip_address", ipAddress,
 		"outcome", entry.Outcome,
 	)

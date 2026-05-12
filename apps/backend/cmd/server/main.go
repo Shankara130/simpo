@@ -23,6 +23,7 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/server"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/whitelist"
 )
 
 // @title Go REST API Boilerplate
@@ -97,6 +98,23 @@ func run() error {
 	// Create user handler
 	userHandler := user.NewHandler(userService, authServiceForJWT, auditService)
 
+	// Story 1.9: Create whitelist repository and service
+	whitelistRepo := whitelist.NewRepository(database)
+	whitelistService := whitelist.NewService(whitelistRepo)
+
+	// Create adapter to convert whitelist.Repository to user.WhitelistRepository
+	// This allows the user service to use the whitelist repository
+	whitelistRepoAdapter := user.NewWhitelistRepoAdapter(whitelistRepo)
+	userService.SetWhitelistRepo(whitelistRepoAdapter)
+
+	// Story 1.9: Create verification repository
+	verificationRepo := user.NewVerificationRepository(database)
+	userService.SetVerificationRepo(verificationRepo)
+
+	// Create whitelist handler
+	whitelistHandler := whitelist.NewHandler(whitelistService)
+	whitelistHandler.SetAuditService(auditService) // Story 1.9: Wire up audit service for whitelist operations
+
 	// Story 1.8: Create Redis client and session manager
 	var redisClient *redis.Client
 	if cfg.Redis.Host != "" {
@@ -111,7 +129,7 @@ func run() error {
 	sessionManager := middleware.NewSessionManager(redisClient)
 	userHandler.SetSessionManager(sessionManager)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database)
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler)
 
 	port := cfg.Server.Port
 	if port == "" {

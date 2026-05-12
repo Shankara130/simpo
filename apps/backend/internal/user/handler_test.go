@@ -412,7 +412,7 @@ func TestHandler_GetUser(t *testing.T) {
 				claims := &auth.Claims{UserID: 1}
 				c.Set(auth.KeyUser, claims)
 			},
-			expectedStatus: http.StatusForbidden,
+			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -420,7 +420,7 @@ func TestHandler_GetUser(t *testing.T) {
 				assert.Equal(t, false, response["success"])
 				errorInfo, ok := response["error"].(map[string]interface{})
 				assert.True(t, ok, "error should be a map")
-				assert.Equal(t, "Forbidden user ID", errorInfo["detail"])
+				assert.Equal(t, "Invalid user ID", errorInfo["detail"])
 			},
 		},
 	}

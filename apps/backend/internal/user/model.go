@@ -10,6 +10,7 @@ import (
 const (
 	UserStatusActive   = "ACTIVE"
 	UserStatusInactive = "INACTIVE"
+	UserStatusPending  = "PENDING" // Story 1.9: For self-registered users awaiting email verification
 )
 
 // User represents a user in the system

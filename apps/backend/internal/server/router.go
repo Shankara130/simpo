@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -15,10 +17,11 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/health"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/whitelist"
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -107,6 +110,36 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			authGroup.POST("/login", authHandler.Login) // Story 1.5: Username-based login with JWT
 		}
 
+		// Story 1.9: Staff self-registration endpoints with stricter rate limiting
+		// These are public endpoints that are vulnerable to abuse, so we apply stricter limits
+		authStrictGroup := v1.Group("/auth")
+		if rlCfg.Enabled {
+			authStrictGroup.Use(
+				middleware.NewRateLimitMiddleware(
+					15*time.Minute, // 15 minute window
+					5,               // Max 5 requests per window (stricter than global limit)
+					func(c *gin.Context) string {
+						ip := c.ClientIP()
+						if ip == "" {
+							ip = c.GetHeader("X-Forwarded-For")
+							if ip == "" {
+								ip = c.GetHeader("X-Real-IP")
+							}
+							if ip == "" {
+								ip = "unknown"
+							}
+						}
+						return "auth-strict:" + ip
+					},
+					nil,
+				),
+			)
+		}
+		{
+			authStrictGroup.POST("/register-staff", userHandler.RegisterStaff)
+			authStrictGroup.POST("/verify-email", userHandler.VerifyEmail)
+		}
+
 		// Protected auth routes - require authentication with session tracking (Story 1.8)
 		authProtectedGroup := v1.Group("/auth")
 		// Story 1.8, Task 6: Use SessionAuthMiddleware for session tracking and blocklist checking
@@ -115,6 +148,17 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			authProtectedGroup.POST("/refresh", userHandler.RefreshToken)
 			authProtectedGroup.POST("/logout", userHandler.Logout)
 			authProtectedGroup.GET("/me", userHandler.GetMe)
+		}
+
+		// Story 1.9: Whitelist management routes - SYSTEM_ADMIN only
+		whitelistGroup := v1.Group("/whitelist")
+		whitelistGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+		{
+			whitelistGroup.POST("", whitelistHandler.AddDomain)
+			whitelistGroup.GET("", whitelistHandler.ListDomains)
+			whitelistGroup.GET("/:id", whitelistHandler.GetDomain)
+			whitelistGroup.PUT("/:id", whitelistHandler.UpdateDomain)
+			whitelistGroup.DELETE("/:id", whitelistHandler.DeleteDomain)
 		}
 
 		// Story 1.6, AC5: Protected routes with RBAC middleware

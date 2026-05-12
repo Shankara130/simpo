@@ -58,7 +58,7 @@ func TestSetupRouter_HealthEndpoint(t *testing.T) {
 	// Create mock auth handler for testing (Story 1.5)
 	mockAuthHandler := &mockAuthHandler{}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil)
 
 	assert.NotNil(t, router)
 
@@ -109,7 +109,7 @@ func TestSetupRouter_PublicRoutesBypassRBAC(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil)
 
 	// Test public health endpoints
 	publicEndpoints := []struct {
@@ -170,7 +170,7 @@ func TestSetupRouter_ProtectedRoutesRequireAuth(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil)
 
 	// Test protected endpoints without auth token
 	protectedEndpoints := []struct {
@@ -228,7 +228,7 @@ func TestSetupRouter_MiddlewareOrder(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil)
 
 	// Verify CORS headers are set (CORS middleware should be first)
 	w := httptest.NewRecorder()
