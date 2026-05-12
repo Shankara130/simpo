@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-12T21:00:00+07:00
+last_updated: 2026-05-12T23:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -60,7 +60,7 @@ development_status:
   epic-2: in-progress
   2-1-design-database-schema-for-mvp: done
   2-2-create-initial-migration-with-golang-migrate: done
-  2-3-implement-gorm-models-with-struct-tags: backlog
+  2-3-implement-gorm-models-with-struct-tags: done
   2-4-implement-database-connection-and-pooling: backlog
   2-5-implement-repository-layer-for-data-access: backlog
   epic-2-retrospective: optional
