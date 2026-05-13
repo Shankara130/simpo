@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-13T13:00:00+07:00
+last_updated: 2026-05-13T20:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -57,17 +57,17 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: Database Schema & Migrations
-  epic-2: in-progress
+  epic-2: done
   2-1-design-database-schema-for-mvp: done
   2-2-create-initial-migration-with-golang-migrate: done
   2-3-implement-gorm-models-with-struct-tags: done
   2-4-implement-database-connection-and-pooling: done
   2-5-implement-repository-layer-for-data-access: done # All review patches applied
-  epic-2-retrospective: optional
+  epic-2-retrospective: done # Retrospective completed 2026-05-13
 
   # Epic 3: Point of Sale (Mobile)
-  epic-3: backlog
-  3-1-design-pos-screen-layout-and-navigation: backlog
+  epic-3: in-progress
+  3-1-design-pos-screen-layout-and-navigation: done
   3-2-implement-barcode-scanner-integration: backlog
   3-3-implement-cart-management: backlog
   3-4-implement-payment-method-selection: backlog

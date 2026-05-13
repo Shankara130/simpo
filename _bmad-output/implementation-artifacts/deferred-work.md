@@ -123,3 +123,7 @@ This file tracks work items that were identified during reviews but deferred to 
 - **sanitizeSearchInput Limited Scope** — GORM uses parameterized queries, so this is defense-in-depth.
   - Recommendation: Current sanitization sufficient for Epic 2 requirements.
 
+
+## Deferred from: code review of Story 3.1 (2026-05-13)
+
+- **Barcode scanning functionality** - Barcode scan input prominent and accessible (AC1) deferred to Story 3.2 (Barcode Scanner Integration) per user decision.
