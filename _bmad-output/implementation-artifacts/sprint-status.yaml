@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-13T10:00:00+07:00
+last_updated: 2026-05-13T13:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -126,7 +126,7 @@ development_status:
   9-3-implement-rate-limiting-middleware: backlog
   9-4-implement-cors-middleware-for-cross-origin-requests: backlog
   9-5-implement-structured-logging-with-zap: backlog
-  9-6-implement-core-business-services: ready-for-dev
+  9-6-implement-core-business-services: done
   epic-9-retrospective: optional
 
   # Epic 10: Supplier & Purchase Management

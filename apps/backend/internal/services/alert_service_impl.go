@@ -1,0 +1,162 @@
+package services
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/repositories"
+)
+
+// alertService implements AlertService interface
+// AC2: Services use repository interfaces (not concrete implementations)
+type alertService struct {
+	productRepo  repositories.ProductRepository
+	auditService AuditService
+}
+
+// NewAlertService creates a new alert service with dependency injection
+// AC2: Services accept repository interfaces via constructor injection
+func NewAlertService(productRepo repositories.ProductRepository, auditService AuditService) AlertService {
+	// Fail fast on nil dependencies
+	if productRepo == nil {
+		panic("alertService: productRepo cannot be nil")
+	}
+	if auditService == nil {
+		panic("alertService: auditService cannot be nil")
+	}
+
+	return &alertService{
+		productRepo:  productRepo,
+		auditService: auditService,
+	}
+}
+
+// CheckLowStockAlerts checks for products with stock below reorder threshold
+// AC3: Business rule: stock_qty <= reorder_threshold
+func (s *alertService) CheckLowStockAlerts(ctx context.Context, branchID uint) ([]*LowStockAlert, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate branch ID
+	if branchID == 0 {
+		return nil, &InvalidInputError{Field: "branch_id", Message: "branch ID is required"}
+	}
+
+	// Get low stock products via repository
+	products, err := s.productRepo.GetLowStockProducts(ctx, branchID)
+	if err != nil {
+		return nil, &ServiceError{Op: "get low stock products", Err: err}
+	}
+
+	// Build alerts
+	alerts := make([]*LowStockAlert, 0, len(products))
+	for _, product := range products {
+		// Determine severity based on stock level
+		severity := "LOW"
+		if product.StockQty == 0 {
+			severity = "HIGH"
+			// PATCH: Fixed division by zero issue - check threshold before division
+			} else if product.ReorderThreshold > 2 && product.StockQty < int64(product.ReorderThreshold/2) {
+			severity = "MEDIUM"
+		}
+
+		alerts = append(alerts, &LowStockAlert{
+			ProductID:        product.ID,
+			ProductName:      product.Name,
+			SKU:              product.SKU,
+			CurrentStock:     product.StockQty,
+			ReorderThreshold: product.ReorderThreshold,
+			BranchID:         product.BranchID,
+			BranchName:       "", // Would need branch repo to get name
+			Severity:         severity,
+		})
+	}
+
+	return alerts, nil
+}
+
+// CheckExpiryAlerts checks for products expiring soon
+// AC3: Business rule: expiry within 30/14/7 days
+func (s *alertService) CheckExpiryAlerts(ctx context.Context, branchID uint, daysThreshold int) ([]*ExpiryAlert, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate branch ID
+	if branchID == 0 {
+		return nil, &InvalidInputError{Field: "branch_id", Message: "branch ID is required"}
+	}
+
+	// Validate days threshold
+	if daysThreshold <= 0 {
+		return nil, &InvalidInputError{Field: "days_threshold", Message: "days threshold must be positive"}
+	}
+
+	// Get expired products via repository
+	products, err := s.productRepo.GetExpiredProducts(ctx, branchID)
+	if err != nil {
+		return nil, &ServiceError{Op: "get expired products", Err: err}
+	}
+
+	// Filter products expiring within threshold and build alerts
+	alerts := make([]*ExpiryAlert, 0)
+	for _, product := range products {
+		if product.ExpiryDate == nil {
+			continue
+		}
+
+		// PATCH: Safe days calculation with overflow protection
+		hoursUntilExpiry := time.Until(*product.ExpiryDate).Hours()
+		daysUntilExpiry := int(hoursUntilExpiry / 24)
+
+		// Bound the value to prevent overflow and handle already-expired products
+		if daysUntilExpiry < -36500 {
+			daysUntilExpiry = -36500 // Cap at -100 years
+		} else if daysUntilExpiry > 36500 {
+			daysUntilExpiry = 36500 // Cap at 100 years
+		}
+
+		// Only include products expiring within threshold
+		if daysUntilExpiry <= daysThreshold && daysUntilExpiry >= 0 {
+			// Determine severity
+			severity := "INFO"
+			if daysUntilExpiry <= 7 {
+				severity = "CRITICAL"
+			} else if daysUntilExpiry <= 14 {
+				severity = "WARNING"
+			}
+
+			alerts = append(alerts, &ExpiryAlert{
+				ProductID:       product.ID,
+				ProductName:     product.Name,
+				SKU:             product.SKU,
+				ExpiryDate:      *product.ExpiryDate,
+				DaysUntilExpiry: daysUntilExpiry,
+				BranchID:        product.BranchID,
+				BranchName:      "", // Would need branch repo to get name
+				Severity:        severity,
+			})
+		}
+	}
+
+	return alerts, nil
+}
+
+// SendNotification sends alert notifications
+// Stub for future Redis pub/sub story
+func (s *alertService) SendNotification(ctx context.Context, alert interface{}) error {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Stub implementation for future story
+	return &InvalidInputError{
+		Field:   "notification",
+		Message: "alert notifications not implemented - scheduled for future Redis pub/sub story",
+	}
+}

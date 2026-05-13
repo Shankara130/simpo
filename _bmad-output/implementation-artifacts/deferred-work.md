@@ -91,3 +91,35 @@ This file tracks work items that were identified during reviews but deferred to 
 - **Potential connection leak on validation failure** — Validator runs BEFORE connection is established, so no leak possible. Not applicable.
 - **No handling of connection state transitions** — Long-running connection health management is operational concern, out of scope for this infrastructure story.
 
+## Deferred from: Code Review of Story 9.6 (2026-05-13)
+
+### Architecture & Design Decisions
+
+- **Missing Documentation** — Pre-existing pattern. No godoc comments on existing services (AuthService, AuditService).
+  - Recommendation: Defer to tech writer for consistent documentation pass.
+
+- **No Metrics/Instrumentation** — Observability not implemented yet.
+  - Recommendation: Defer to dedicated monitoring/instrumentation story.
+
+- **Hardcoded Pagination Limits** — Existing pattern from Epic 2.
+  - Recommendation: Defer to configuration story for consistent limits.
+
+- **Panic in Constructors** — Existing pattern from AuthService.
+  - Recommendation: Defer to architecture decision for consistent error handling pattern.
+
+- **Context Timeout Propagation** — Design-level decision.
+  - Recommendation: Handlers should set timeouts, not services. Defer to architecture decision.
+
+### Business Logic
+
+- **UpdateProduct SKU Change Prevention** — Could validate new SKU uniqueness, but repository likely enforces this at DB level.
+  - Recommendation: Defer to architecture decision.
+
+- **CheckAvailability Nil ExpiryDate** — Business rule decision: products without expiry dates are valid.
+  - Recommendation: Defer to product owner.
+
+### Security & Validation
+
+- **sanitizeSearchInput Limited Scope** — GORM uses parameterized queries, so this is defense-in-depth.
+  - Recommendation: Current sanitization sufficient for Epic 2 requirements.
+
