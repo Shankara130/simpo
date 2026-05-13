@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-13T20:00:00+07:00
+last_updated: 2026-05-13T22:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -68,7 +68,7 @@ development_status:
   # Epic 3: Point of Sale (Mobile)
   epic-3: in-progress
   3-1-design-pos-screen-layout-and-navigation: done
-  3-2-implement-barcode-scanner-integration: backlog
+  3-2-implement-barcode-scanner-integration: done
   3-3-implement-cart-management: backlog
   3-4-implement-payment-method-selection: backlog
   3-5-implement-receipt-printing-with-thermal-printer: backlog

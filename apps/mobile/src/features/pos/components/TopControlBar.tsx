@@ -2,10 +2,12 @@
  * TopControlBar Component
  * Top control area with product search/barcode scan input and cart summary
  * Displays running total and payment button
+ * Enhanced with barcode scanner integration
  */
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useBarcodeScanner, ScannerState } from '../hooks/useBarcodeScanner';
 
 interface TopControlBarProps {
   itemCount: number;
@@ -13,6 +15,7 @@ interface TopControlBarProps {
   searchQuery?: string;
   onSearch: (query: string) => void;
   onPayment: () => void;
+  onBarcodeScanned?: (barcode: string) => void | Promise<void>;
 }
 
 export const TopControlBar: React.FC<TopControlBarProps> = ({
@@ -21,6 +24,7 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
   searchQuery = '',
   onSearch,
   onPayment,
+  onBarcodeScanned,
 }) => {
   const formatPrice = (price: string): string => {
     // Validate price input
@@ -38,19 +42,122 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
     return `Rp ${priceNum.toLocaleString('id-ID')}`;
   };
 
+  const inputRef = useRef<TextInput>(null);
+  const lastScanTimeRef = useRef<number>(0);
+
   const isCartEmpty = itemCount === 0;
+
+  // Barcode scanner integration
+  const { state: scannerState, handleScannerInput, reset: resetScanner } = useBarcodeScanner({
+    onBarcodeScanned: async (barcode) => {
+      // Forward to parent callback if provided
+      if (onBarcodeScanned) {
+        await onBarcodeScanned(barcode);
+      }
+      // Update search query to show scanned barcode
+      onSearch(barcode);
+    },
+    onStateChange: (newState) => {
+      // Could be used to update UI based on scanner state
+      console.log('[TopControlBar] Scanner state:', newState);
+    },
+    onError: (error) => {
+      console.error('[TopControlBar] Scanner error:', error);
+      // Could show error banner here
+    },
+  });
+
+  // Auto-focus input when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputRef.current && !inputRef.current.isFocused()) {
+        inputRef.current?.focus();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle text input changes (manual search)
+  const handleTextChange = (text: string) => {
+    const now = Date.now();
+
+    // Reset scanner if user is manually typing
+    if (now - lastScanTimeRef.current > 100) {
+      // This is manual input, clear any scanner state
+      if (scannerState === 'scanning') {
+        resetScanner();
+      }
+    }
+
+    onSearch(text);
+  };
+
+  // Handle keyboard input with timing for scanner detection
+  const handleKeyPress = (nativeEvent: any) => {
+    const char = nativeEvent.key;
+
+    // Track timing for scanner detection
+    const now = Date.now();
+    if (lastScanTimeRef.current === 0) {
+      lastScanTimeRef.current = now;
+    }
+
+    // Pass to scanner hook for processing
+    if (char) {
+      handleScannerInput(char, now);
+    }
+  };
+
+  // Handle input submission (Enter key)
+  const handleSubmitEditing = () => {
+    // Scanner input is already handled by handleScannerInput
+    // This is for manual search submission
+    if (searchQuery && searchQuery.trim().length > 0) {
+      onSearch(searchQuery);
+    }
+  };
+
+  // Get scanner state color for visual indicator
+  const getScannerStateColor = (): string => {
+    switch (scannerState) {
+      case 'scanning':
+        return '#2196F3'; // Blue - actively scanning
+      case 'success':
+        return '#4CAF50'; // Green - scan successful
+      case 'error':
+        return '#F44336'; // Red - scan error
+      case 'loading':
+        return '#FF9800'; // Orange - processing
+      default:
+        return '#BDBDBD'; // Gray - idle
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
+        <View style={styles.scannerIndicator}>
+          <View
+            style={[
+              styles.scannerDot,
+              { backgroundColor: getScannerStateColor() },
+            ]}
+          />
+        </View>
         <TextInput
+          ref={inputRef}
           style={styles.searchInput}
           placeholder="Search products or scan barcode..."
           placeholderTextColor="#757575"
           value={searchQuery}
-          onChangeText={onSearch}
+          onChangeText={handleTextChange}
+          onSubmitEditing={handleSubmitEditing}
+          onKeyPress={handleKeyPress}
           autoCapitalize="none"
           autoCorrect={false}
+          blurOnSubmit={false}
+          selectTextOnFocus
           testID="search-input"
         />
       </View>
@@ -151,5 +258,19 @@ const styles = StyleSheet.create({
 
   paymentButtonTextDisabled: {
     color: '#757575',
+  },
+
+  scannerIndicator: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+
+  scannerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#BDBDBD',
   },
 });

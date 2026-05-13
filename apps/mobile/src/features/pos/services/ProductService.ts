@@ -112,6 +112,15 @@ export const ProductService = {
   },
 
   /**
+   * Get a single product by barcode (alias for getProductBySKU)
+   * This method provides semantic clarity for barcode scanning use case
+   */
+  getProductByBarcode: async (barcode: string): Promise<Product> => {
+    // Barcode is stored as SKU in the system, so we just alias to getProductBySKU
+    return ProductService.getProductBySKU(barcode);
+  },
+
+  /**
    * Search products by name or SKU
    */
   searchProducts: async (query: string, page = 1, limit = 20): Promise<ProductListResponse> => {
