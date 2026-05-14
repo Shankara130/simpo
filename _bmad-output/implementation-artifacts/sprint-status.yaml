@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-10T05:00:00+07:00
+# last_updated: 2026-05-14T15:30:00+07:00
 # project: simpo
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-14T13:00:00+07:00
+last_updated: 2026-05-14T15:30:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -71,7 +71,7 @@ development_status:
   3-2-implement-barcode-scanner-integration: done
   3-3-implement-cart-management: done
   3-4-implement-payment-method-selection: done
-  3-5-implement-receipt-printing-with-thermal-printer: backlog
+  3-5-implement-receipt-printing-with-thermal-printer: done
   3-6-implement-transaction-processing-30-seconds: backlog
   3-7-implement-transaction-history-view: backlog
   epic-3-retrospective: optional
