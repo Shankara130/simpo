@@ -26,6 +26,11 @@ export const ProductList: React.FC<ProductListProps> = ({
 }) => {
   // Filter products based on search query
   const filteredProducts = products.filter((product) => {
+    // Handle null/undefined products in array
+    if (!product) {
+      return false;
+    }
+
     const query = searchQuery.toLowerCase();
 
     // Safely check name and SKU (required fields)

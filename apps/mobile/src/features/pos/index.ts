@@ -9,10 +9,16 @@ export { POSScreen } from './screens/POSScreen';
 // Components
 export { ProductCard } from './components/ProductCard';
 export { CartSummary } from './components/CartSummary';
+export { CartList } from './components/CartList';
+export { CartItem } from './components/CartItem';
+export { CartTotal } from './components/CartTotal';
 export { TopControlBar } from './components/TopControlBar';
 export { ProductList } from './components/ProductList';
 export { ActionButtons } from './components/ActionButtons';
 export { ScannerFeedback } from './components/ScannerFeedback';
+
+// Utils
+export { formatCurrency } from './utils/formatCurrency';
 
 // Context
 export { CartProvider, useCartContext } from './context/CartContext';

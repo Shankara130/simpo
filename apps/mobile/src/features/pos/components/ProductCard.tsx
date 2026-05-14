@@ -19,6 +19,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd }) => {
 
   const formatPrice = (price: string): string => {
     const priceNum = parseFloat(price);
+    // Validate for Infinity/NaN
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      console.warn('ProductCard: Invalid price value', price);
+      return 'Rp 0';
+    }
     return `Rp ${priceNum.toLocaleString('id-ID')}`;
   };
 

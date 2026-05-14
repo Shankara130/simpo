@@ -10,7 +10,7 @@ export interface CartItem {
   price: string; // Decimal as string for precision
   quantity: number;
   subtotal: string;
-  stockQty?: number; // Optional: Current stock level for validation
+  stockQty: number; // Required: Current stock level for validation
 }
 
 export interface CartState {

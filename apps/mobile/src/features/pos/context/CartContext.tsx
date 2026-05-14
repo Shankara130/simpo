@@ -73,9 +73,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     case 'ADD_ITEM': {
       const MAX_CART_ITEMS = 100;
 
-      // Check cart limit
-      if (state.itemCount >= MAX_CART_ITEMS) {
-        console.warn('Cart is full (maximum 100 items)');
+      // Check cart limit - prevent adding if would exceed maximum
+      if (state.itemCount + action.payload.quantity > MAX_CART_ITEMS) {
+        console.warn(`Cannot add: would exceed maximum cart size (${MAX_CART_ITEMS})`);
         // In production: could dispatch error action
         return state;
       }

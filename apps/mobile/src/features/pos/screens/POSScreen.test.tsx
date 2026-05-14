@@ -46,25 +46,27 @@ describe('POSScreen', () => {
       <POSScreen products={mockProducts} loading={false} />
     );
 
-    expect(getByText('Cart is empty')).toBeTruthy();
+    // CartList shows Indonesian empty message
+    expect(getByText('Keranjang masih kosong')).toBeTruthy();
   });
 
   it('adds product to cart when add button is pressed', async () => {
-    const { getAllByText, getByText } = renderWithCartProvider(
+    const { getAllByText, getByText, getByTestId } = renderWithCartProvider(
       <POSScreen products={mockProducts} loading={false} />
     );
 
     // Initially cart should be empty
-    expect(getByText('Cart is empty')).toBeTruthy();
+    expect(getByText('Keranjang masih kosong')).toBeTruthy();
+    expect(getByText('0 items')).toBeTruthy();
 
     const addButtons = getAllByText('Add');
     fireEvent.press(addButtons[0]);
 
     await waitFor(() => {
       // Cart should no longer be empty
-      expect(() => getByText('Cart is empty')).toThrow();
-      // Cart should show items
-      expect(getByText('Cart (1 item)')).toBeTruthy();
+      expect(() => getByText('Keranjang masih kosong')).toThrow();
+      // CartTotal should show updated item count
+      expect(getByText('1 item')).toBeTruthy();
     });
   });
 

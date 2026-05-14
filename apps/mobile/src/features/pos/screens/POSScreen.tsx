@@ -1,16 +1,17 @@
 /**
  * POSScreen Component
  * Main POS screen that integrates all POS components
- * Layout: Top control bar, Product list, Cart summary, Action buttons
+ * Layout: Top control bar, Product list, Cart summary (CartList + CartTotal), Action buttons
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { Product } from '../types/product.types';
 import { useCartContext } from '../context/CartContext';
 import { TopControlBar } from '../components/TopControlBar';
 import { ProductList } from '../components/ProductList';
-import { CartSummary } from '../components/CartSummary';
+import { CartList } from '../components/CartList';
+import { CartTotal } from '../components/CartTotal';
 import { ActionButtons } from '../components/ActionButtons';
 
 interface POSScreenProps {
@@ -76,14 +77,17 @@ export const POSScreen: React.FC<POSScreenProps> = ({
           />
         </View>
 
-        {/* Cart Summary Panel (15%) */}
-        <CartSummary
-          items={state.items}
-          total={state.total}
-          itemCount={state.itemCount}
-          onRemove={handleRemoveFromCart}
-          onUpdateQuantity={handleUpdateQuantity}
-        />
+        {/* Cart Summary Panel (15%) - CartList + CartTotal */}
+        <View style={styles.cartSummaryPanel}>
+          <ScrollView style={styles.cartListContainer} nestedScrollEnabled={false}>
+            <CartList
+              cartItems={state.items}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveFromCart}
+            />
+          </ScrollView>
+          <CartTotal onClearCart={handleClearCart} />
+        </View>
 
         {/* Bottom Action Buttons (15%) */}
         <ActionButtons
@@ -110,5 +114,16 @@ const styles = StyleSheet.create({
   productArea: {
     flex: 1, // Takes remaining space (~55%)
     backgroundColor: '#F5F5F5',
+  },
+
+  cartSummaryPanel: {
+    height: 150, // ~15% of screen height (approx)
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+
+  cartListContainer: {
+    flex: 1,
   },
 });
