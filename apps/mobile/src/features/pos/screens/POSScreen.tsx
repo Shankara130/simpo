@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { Product } from '../types/product.types';
+import { PaymentData } from '../types/payment.types';
 import { useCartContext } from '../context/CartContext';
 import { TopControlBar } from '../components/TopControlBar';
 import { ProductList } from '../components/ProductList';
@@ -26,6 +27,7 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   error,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const { state, actions } = useCartContext();
 
   const handleAddToCart = (product: Product) => {
@@ -50,8 +52,25 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   };
 
   const handlePayment = () => {
-    // TODO: Navigate to payment screen (future story)
-    console.log('Payment clicked', state);
+    // Payment is now handled via ActionButtons → PaymentModal
+    console.log('Payment flow initiated');
+  };
+
+  const handlePaymentMethodSelected = (data: PaymentData) => {
+    // Store payment data for transaction processing
+    setPaymentData(data);
+
+    // Log payment method selection for audit trail
+    console.log('Payment method selected:', {
+      method: data.method,
+      timestamp: new Date().toISOString(),
+      cartItemCount: state.itemCount,
+      cartTotal: state.total,
+    });
+
+    // TODO: Future story (3.6) - Pass payment data to transaction creation endpoint
+    // For now, just store it locally and log the selection
+    console.log('Payment data stored for transaction:', data);
   };
 
   return (
@@ -92,8 +111,10 @@ export const POSScreen: React.FC<POSScreenProps> = ({
         {/* Bottom Action Buttons (15%) */}
         <ActionButtons
           itemCount={state.itemCount}
+          cartTotal={state.total}
           onCheckout={handleCheckout}
           onClearCart={handleClearCart}
+          onPaymentMethodSelected={handlePaymentMethodSelected}
         />
       </View>
     </SafeAreaView>

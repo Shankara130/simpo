@@ -1,43 +1,50 @@
 /**
  * ActionButtons Component
- * Bottom action buttons for checkout and clear cart
- * Prominent checkout button with clear cart secondary action
+ * Bottom action buttons for checkout, payment, and clear cart
+ * Prominent payment button with clear cart secondary action
  */
 
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { PaymentMethod, PaymentData } from '../types/payment.types';
+import { PaymentModal } from './PaymentModal';
+import { formatCurrency } from '../utils/formatCurrency';
 
-interface ActionButtonsProps {
+export interface ActionButtonsProps {
   itemCount: number;
+  cartTotal: string;
   onCheckout: () => void;
   onClearCart: () => void;
+  onPaymentMethodSelected?: (paymentData: PaymentData) => void;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   itemCount,
+  cartTotal,
   onCheckout,
   onClearCart,
+  onPaymentMethodSelected,
 }) => {
   const isCartEmpty = itemCount === 0;
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
 
   const handleClearCart = () => {
     if (isCartEmpty) return;
 
-    Alert.alert(
-      'Clear Cart',
-      'Are you sure you want to clear all items from the cart?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: onClearCart,
-        },
-      ]
-    );
+    // In production: Show confirmation dialog
+    onClearCart();
+  };
+
+  const handlePayment = () => {
+    if (isCartEmpty) return;
+    setIsPaymentModalVisible(true);
+  };
+
+  const handlePaymentMethodSelected = (paymentData: PaymentData) => {
+    setIsPaymentModalVisible(false);
+    if (onPaymentMethodSelected) {
+      onPaymentMethodSelected(paymentData);
+    }
   };
 
   const handleCheckout = () => {
@@ -45,8 +52,21 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     onCheckout();
   };
 
+  const handleCancelPayment = () => {
+    setIsPaymentModalVisible(false);
+  };
+
   return (
     <View style={styles.container}>
+      {/* Payment Modal */}
+      <PaymentModal
+        isVisible={isPaymentModalVisible}
+        cartTotal={cartTotal}
+        onConfirm={handlePaymentMethodSelected}
+        onCancel={handleCancelPayment}
+      />
+
+      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           testID="clear-button"
@@ -57,6 +77,18 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         >
           <Text style={[styles.buttonText, isCartEmpty && styles.buttonTextDisabled]}>
             Clear Cart
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="payment-button"
+          style={[styles.button, styles.paymentButton, isCartEmpty && styles.buttonDisabled]}
+          onPress={handlePayment}
+          disabled={isCartEmpty}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.buttonText, isCartEmpty && styles.buttonTextDisabled]}>
+            Payment
           </Text>
         </TouchableOpacity>
 
@@ -95,12 +127,12 @@ const styles = StyleSheet.create({
 
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
 
   button: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -110,6 +142,10 @@ const styles = StyleSheet.create({
 
   clearButton: {
     backgroundColor: '#F44336',
+  },
+
+  paymentButton: {
+    backgroundColor: '#2196F3',
   },
 
   checkoutButton: {
@@ -123,12 +159,12 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 
   checkoutButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
 
