@@ -36,11 +36,12 @@ type TransactionService interface {
 
 // SaleRequest represents a sale request
 type SaleRequest struct {
-	Items         []*SaleItem
-	PaymentMethod string
-	CustomerName  string
-	TaxAmount     string
+	Items          []*SaleItem
+	PaymentMethod  string
+	CustomerName   string
+	TaxAmount      string
 	DiscountAmount string
+	IdempotencyKey string // CRITICAL-003: Idempotency key to prevent duplicate charges
 }
 
 // SaleItem represents a single item in a sale

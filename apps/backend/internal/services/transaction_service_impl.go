@@ -90,6 +90,23 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		return nil, fmt.Errorf("operation cancelled: %w", err)
 	}
 
+	if sale == nil {
+		return nil, fmt.Errorf("sale request cannot be nil")
+	}
+
+	// CRITICAL-003: Check for existing transaction with same idempotency key
+	if sale.IdempotencyKey != "" {
+		existing, err := s.transactionRepo.GetByIdempotencyKey(ctx, sale.IdempotencyKey)
+		if err == nil && existing != nil {
+			// Transaction with this key already exists, return it (idempotent response)
+			return existing, nil
+		}
+		if err != repositories.ErrNotFound {
+			// Unexpected error checking for existing transaction
+			return nil, fmt.Errorf("failed to check idempotency: %w", err)
+		}
+	}
+
 	// Validate: at least 1 item required (AC3)
 	if len(sale.Items) == 0 {
 		return nil, &InvalidInputError{Field: "items", Message: "at least one item is required"}
@@ -114,7 +131,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		aggregatedItems = append(aggregatedItems, item)
 	}
 
-	// Validate all products exist and have sufficient stock
+	// Validate all product fields
 	for _, item := range aggregatedItems {
 		if item.ProductID == 0 {
 			return nil, &InvalidInputError{Field: "product_id", Message: "product ID is required"}
@@ -125,29 +142,6 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		if item.UnitPrice == "" {
 			return nil, &InvalidInputError{Field: "unit_price", Message: "unit price is required"}
 		}
-
-		// Check availability
-		available, err := (&productService{
-			productRepo:  s.productRepo,
-			auditService: s.auditService,
-		}).CheckAvailability(ctx, item.ProductID, item.Quantity)
-		if err != nil {
-			return nil, err
-		}
-		if available < item.Quantity {
-			// Get product for error message
-			product, _ := s.productRepo.GetByID(ctx, item.ProductID)
-			productName := "Unknown"
-			if product != nil {
-				productName = product.Name
-			}
-			return nil, &InsufficientStockError{
-				ProductID:    item.ProductID,
-				ProductName:  productName,
-				RequestedQty: item.Quantity,
-				AvailableQty: available,
-			}
-		}
 	}
 
 	// Calculate total
@@ -156,7 +150,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		return nil, err
 	}
 
-	// PATCH: Validate payment method against allowed values
+	// Validate payment method
 	allowedPaymentMethods := map[string]bool{
 		"CASH":    true,
 		"TRANSFER": true,
@@ -187,6 +181,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		Tax:               sale.TaxAmount,
 		Discount:          sale.DiscountAmount,
 		PaymentMethod:     sale.PaymentMethod,
+		IdempotencyKey:    sale.IdempotencyKey, // CRITICAL-003: Store idempotency key
 		Status:            models.StatusCompleted,
 		CustomerName:      &sale.CustomerName,
 	}
@@ -194,7 +189,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 	// Create transaction items
 	var items []*models.TransactionItem
 	for _, item := range aggregatedItems {
-		// Get product details
+		// Get product details for item names
 		product, err := s.productRepo.GetByID(ctx, item.ProductID)
 		if err != nil {
 			return nil, &ProductNotFoundError{ProductID: item.ProductID}
@@ -213,27 +208,21 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		})
 	}
 
-	// PATCH: Race condition fix - update stock BEFORE creating transaction
-	// Step 1: Update stock for all items FIRST (before transaction creation)
-	// If transaction fails, we compensate by adding stock back
+	// Build stock updates map (negative quantity for deduction)
+	stockUpdates := make(map[uint]int64)
 	for _, item := range aggregatedItems {
-		// Use negative quantity to deduct stock
-		err := s.productRepo.UpdateStock(ctx, item.ProductID, -item.Quantity)
-		if err != nil {
-			// Stock update failed - no transaction created, so no compensation needed
-			return nil, &ServiceError{Op: "update stock", Err: err}
-		}
+		stockUpdates[item.ProductID] = -item.Quantity
 	}
 
-	// Step 2: Create transaction with items (only after stock updates succeed)
-	err = s.transactionRepo.CreateWithItems(ctx, transaction, items)
+	// Use atomic transaction with stock locking (Story 3.6 Task 2)
+	// ProcessSaleWithStockUpdate handles:
+	// - Stock validation with SELECT FOR UPDATE locking
+	// - Atomic stock updates
+	// - Transaction creation
+	// - Automatic rollback on any error
+	err = s.transactionRepo.ProcessSaleWithStockUpdate(ctx, transaction, items, stockUpdates)
 	if err != nil {
-		// Transaction creation failed - compensate by rolling back stock updates
-		for _, item := range aggregatedItems {
-			// Add stock back (compensation)
-			_ = s.productRepo.UpdateStock(ctx, item.ProductID, item.Quantity)
-		}
-		return nil, &ServiceError{Op: "create transaction with items", Err: err}
+		return nil, &ServiceError{Op: "process sale", Err: err}
 	}
 
 	return transaction, nil

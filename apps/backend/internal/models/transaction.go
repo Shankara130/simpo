@@ -17,6 +17,7 @@ type Transaction struct {
 	Tax             string           `gorm:"type:decimal(12,2);column:tax;default:0" json:"tax"`
 	Discount        string           `gorm:"type:decimal(12,2);column:discount;default:0" json:"discount"`
 	PaymentMethod   string           `gorm:"type:varchar(20);column:payment_method;not null" json:"paymentMethod"`
+	IdempotencyKey  string           `gorm:"column:idempotency_key;uniqueIndex;size:255" json:"idempotencyKey,omitempty"`
 	Status          string           `gorm:"type:varchar(20);column:status;not null;default:COMPLETED" json:"status"`
 	CustomerName    *string          `gorm:"type:varchar(100);column:customer_name" json:"customerName,omitempty"`
 	Notes           *string          `gorm:"type:text;column:notes" json:"notes,omitempty"`

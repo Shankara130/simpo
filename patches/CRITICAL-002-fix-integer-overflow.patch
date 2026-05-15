@@ -1,0 +1,118 @@
+CRITICAL-002: Fix Integer Underflow in Stock Calculation
+========================================================
+
+ISSUE:
+-------
+When deducting stock, no underflow check exists. If a malicious or corrupted
+request contains UINT64_MAX as quantity, the validation passes but calculation
+wraps around, corrupting stock data:
+
+  Current Stock: 10
+  Requested: UINT64_MAX - 5
+  Validation: 10 < (UINT64_MAX - 5) = true, passes!
+  Calculation: 10 - (UINT64_MAX - 5) = wraps to huge positive number
+  Result: DATA CORRUPTION
+
+FILE: apps/backend/internal/repositories/transaction_repository_impl.go
+LINE: 352-363
+
+FIX APPLIED:
+------------
+1. Use int64 for all stock arithmetic (not uint)
+2. Check for negative result BEFORE assigning back to uint field
+3. Add defensive underflow detection
+4. Use explicit stock value assignment instead of += expression
+
+PATCH:
+-------
+```diff
+--- a/apps/backend/internal/repositories/transaction_repository_impl.go
++++ b/apps/backend/internal/repositories/transaction_repository_impl.go
+@@ -350,15 +350,26 @@ func (r *transactionRepository) ProcessSaleWithStockUpdate(ctx context.Context,
+ 				return fmt.Errorf("failed to lock product %d: %w", productID, err)
+ 			}
+
+-			// Check if sufficient stock is available
+-			if product.StockQty + delta < 0 {
++			// CRITICAL-002 FIX: Use int64 arithmetic to prevent integer overflow/underflow
++			// Cast to int64 first, then check for negative result
++			currentStock := int64(product.StockQty)
++			newStock := currentStock + delta
++
++			// Check if sufficient stock is available (newStock must be >= 0)
++			if newStock < 0 {
+ 				return fmt.Errorf("insufficient stock for product %s (ID: %d). Available: %d, Requested: %d",
+-					product.Name, productID, product.StockQty, -delta)
++					product.Name, productID, product.StockQty, -delta)
+ 			}
+
+-			// Update stock
++			// Defensive: Detect underflow (new stock should be less than or equal to current when deducting)
++			if delta < 0 && newStock > currentStock {
++				return fmt.Errorf("stock calculation error: underflow detected for product %s (ID: %d)",
++					product.Name, productID)
++			}
++
++			// Update stock with validated int64 value
+ 			if err := tx.Model(&models.Product{}).
+ 				Where("id = ?", productID).
+-				Update("stock_qty", gorm.Expr("stock_qty + ?", delta)).Error; err != nil {
++				Update("stock_qty", newStock).Error; err != nil {
+ 				return fmt.Errorf("failed to update stock for product %d: %w", productID, err)
+ 			}
+ 		}
+```
+
+ADDITIONAL PROTECTION:
+---------------------
+Add input validation at handler level to reject unreasonably large quantities:
+
+```diff
+--- a/apps/backend/internal/handlers/transaction_handler.go
++++ b/apps/backend/internal/handlers/transaction_handler.go
+@@ -90,6 +90,16 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
+ 			})
+ 			return
+ 		}
++
++		// CRITICAL-002: Validate item quantities to prevent integer overflow attacks
++		const maxQuantity = 10000 // Reasonable upper bound for single product quantity
++		for _, item := range saleRequest.Items {
++			if item.Quantity <= 0 || item.Quantity > maxQuantity {
++				c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
++					Type:     "https://api.simpo.com/errors/invalid-quantity",
++					Title:    "Invalid Quantity",
++					Status:   http.StatusBadRequest,
++					Detail:   "Jumlah produk harus antara 1 dan 10000",
++					Instance: c.Request.URL.Path,
++				})
++				return
++			}
++		}
+
+ 		// Process sale with transactional operations
+ 		transaction, err := h.transactionService.ProcessSale(c.Request.Context(), &saleRequest, cashierID, branchID)
+```
+
+VERIFICATION:
+-------------
+1. Add unit test with quantity = UINT64_MAX
+2. Add unit test with quantity that causes underflow
+3. Verify stock value remains valid after failed transaction
+
+IMPACT:
+-------
+- Prevents stock data corruption from malformed requests
+- Adds reasonable quantity limits (10000 per item)
+- No performance impact
+- Improves data integrity
+
+TEST CASE TO ADD:
+-----------------
+```go
+func TestProcessSaleWithStockUpdate_PreventsUnderflow(t *testing.T) {
+    // Setup: product with stock = 10
+    // Attempt: deduct UINT64_MAX
+    // Assert: error returned, stock still = 10
+}
+```

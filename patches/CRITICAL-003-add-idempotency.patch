@@ -1,0 +1,244 @@
+CRITICAL-003: Add Idempotency Key to Prevent Duplicate Charges
+==============================================================
+
+ISSUE:
+-------
+No idempotency mechanism exists. When network retry occurs:
+1. User clicks "Pay" → Request sent
+2. Network timeout, no response received
+3. User clicks "Retry" → Duplicate request sent
+4. Backend processes both requests
+5. **CUSTOMER CHARGED TWICE**
+
+This is a critical financial bug that directly impacts customers.
+
+FILES AFFECTED:
+---------------
+- apps/backend/internal/handlers/transaction_handler.go
+- apps/backend/internal/services/transaction_service.go (interface)
+- apps/backend/internal/services/transaction_service_impl.go
+- apps/backend/internal/models/transaction.go
+- apps/backend/internal/repositories/transaction_repository.go (interface)
+- apps/backend/internal/repositories/transaction_repository_impl.go
+- apps/mobile/src/features/pos/services/TransactionService.ts
+- apps/mobile/src/features/pos/types/transaction.types.ts
+
+FIX APPLIED:
+------------
+1. Add idempotency_key field to Transaction model and SaleRequest
+2. Check for existing transaction with same key before processing
+3. Return existing transaction if found (idempotent response)
+4. Generate UUID on mobile client for each payment attempt
+
+PATCH - BACKEND MODEL:
+----------------------
+```diff
+--- a/apps/backend/internal/models/transaction.go
++++ b/apps/backend/internal/models/transaction.go
+@@ -18,6 +18,7 @@ type Transaction struct {
+ 	CashierID      uint             `gorm:"column:cashier_id;not null" json:"cashierId"`
+ 	BranchID       uint             `gorm:"column:branch_id;not null" json:"branchId"`
+ 	PaymentMethod  string           `gorm:"column:payment_method;size:50;not null" json:"paymentMethod"`
++	IdempotencyKey string           `gorm:"column:idempotency_key;uniqueIndex;size:255" json:"idempotencyKey,omitempty"`
+ 	Status         string           `gorm:"column:status;size:20;not null;default:'PENDING'" json:"status"`
+ 	CustomerName   string           `gorm:"column:customer_name;size:255" json:"customerName,omitempty"`
+ 	Total          string           `gorm:"column:total;type:decimal(15,2);not null" json:"total"`
+```
+
+PATCH - BACKEND TYPES:
+----------------------
+```diff
+--- a/apps/backend/internal/services/transaction_service.go
++++ b/apps/backend/internal/services/transaction_service.go
+@@ -18,6 +18,7 @@ type SaleRequest struct {
+ 	PaymentMethod  string        `json:"payment_method" binding:"required,oneof=CASH TRANSFER E-WALLET"`
+ 	CustomerName   string        `json:"customer_name"`
+ 	TaxAmount      string        `json:"tax_amount"`
+ 	DiscountAmount string        `json:"discount_amount"`
++	IdempotencyKey string        `json:"idempotency_key" binding:"required"`
+ }
+```
+
+PATCH - BACKEND REPOSITORY INTERFACE:
+-------------------------------------
+```diff
+--- a/apps/backend/internal/repositories/transaction_repository.go
++++ b/apps/backend/internal/repositories/transaction_repository.go
+@@ -15,6 +15,10 @@ type TransactionRepository interface {
+ 	Create(ctx context.Context, transaction *models.Transaction) error
+ 	GetByID(ctx context.Context, id uint) (*models.Transaction, error)
+ 	GetByTransactionNumber(ctx context.Context, transactionNumber string) (*models.Transaction, error)
++
++	// CRITICAL-003: Idempotency support
++	GetByIdempotencyKey(ctx context.Context, key string) (*models.Transaction, error)
++
+ 	Update(ctx context.Context, transaction *models.Transaction) error
+ 	Delete(ctx context.Context, id uint) error
+```
+
+PATCH - BACKEND REPOSITORY IMPLEMENTATION:
+------------------------------------------
+```diff
+--- a/apps/backend/internal/repositories/transaction_repository_impl.go
++++ b/apps/backend/internal/repositories/transaction_repository_impl.go
+@@ -74,6 +74,19 @@ func (r *transactionRepository) GetByTransactionNumber(ctx context.Context, trans
+ 	return &transaction, nil
+ }
+
++// CRITICAL-003: GetByIdempotencyKey retrieves a transaction by its idempotency key
++// Used to implement idempotent transaction creation
++func (r *transactionRepository) GetByIdempotencyKey(ctx context.Context, key string) (*models.Transaction, error) {
++	if key == "" {
++		return nil, fmt.Errorf("idempotency key cannot be empty")
++	}
++	var transaction models.Transaction
++	err := r.db.WithContext(ctx).
++		Where("idempotency_key = ?", key).
++		First(&transaction).Error
++	if err != nil {
++		if errors.Is(err, gorm.ErrRecordNotFound) {
++			return nil, ErrNotFound
++		}
++		return nil, fmt.Errorf("failed to get transaction by idempotency key: %w", err)
++	}
++	return &transaction, nil
+}
++
+ // Update modifies an existing transaction in the database
+```
+
+PATCH - BACKEND SERVICE:
+------------------------
+```diff
+--- a/apps/backend/internal/services/transaction_service_impl.go
++++ b/apps/backend/internal/services/transaction_service_impl.go
+@@ -50,6 +50,20 @@ func (s *TransactionServiceImpl) ProcessSale(ctx context.Context, sale *SaleReque
+ 	if sale == nil {
+ 		return nil, fmt.Errorf("sale request cannot be nil")
+ 	}
++
++	// CRITICAL-003: Check for existing transaction with same idempotency key
++	existing, err := s.transactionRepo.GetByIdempotencyKey(ctx, sale.IdempotencyKey)
++	if err == nil && existing != nil {
++		// Transaction with this key already exists, return it (idempotent response)
++		log.Info("Idempotent request: returning existing transaction",
++			"transaction_number", existing.TransactionNumber,
++			"idempotency_key", sale.IdempotencyKey)
++		return existing, nil
++	}
++	if err != ErrNotFound {
++		// Unexpected error checking for existing transaction
++		return nil, fmt.Errorf("failed to check idempotency: %w", err)
++	}
+
+ 	if len(sale.Items) == 0 {
+ 		return nil, fmt.Errorf("sale items cannot be empty")
+ 	}
+@@ -103,6 +117,7 @@ func (s *TransactionServiceImpl) ProcessSale(ctx context.Context, sale *SaleReque
+ 		CashierID:      cashierID,
+ 		BranchID:       branchID,
+ 		PaymentMethod:  sale.PaymentMethod,
++		IdempotencyKey: sale.IdempotencyKey,
+ 		Status:         models.StatusCompleted,
+ 		CustomerName:   sale.CustomerName,
+```
+
+PATCH - BACKEND HANDLER:
+-------------------------
+No changes needed - handler already passes SaleRequest to service.
+
+PATCH - MOBILE TYPES:
+---------------------
+```diff
+--- a/apps/mobile/src/features/pos/types/transaction.types.ts
++++ b/apps/mobile/src/features/pos/types/transaction.types.ts
+@@ -18,6 +18,7 @@ export interface SaleRequest {
+   items: SaleItem[];
+   payment_method: string;
+   customer_name?: string;
++	idempotency_key: string;
+   tax_amount: string;
+   discount_amount: string;
+ }
+```
+
+PATCH - MOBILE SERVICE:
+-----------------------
+```diff
+--- a/apps/mobile/src/features/pos/services/TransactionService.ts
++++ b/apps/mobile/src/features/pos/services/TransactionService.ts
+@@ -1,6 +1,7 @@
+ import axios, { AxiosError } from 'axios';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
++import { v4 as uuidv4 } from 'uuid'; // CRITICAL-003: Add uuid dependency
+
+ /**
+  * Convert CartItem array to SaleItem array for backend API
+@@ -119,6 +120,11 @@ export const TransactionService = {
+         const token = await getAuthToken();
+
++		// CRITICAL-003: Generate idempotency key for this transaction attempt
++		// This prevents duplicate charges if network retry occurs
++		const idempotencyKey = uuidv4();
++
+ 		// Convert cart items to sale items
+ 		const items = convertCartItemsToSaleItems(cartItems);
+ 		const paymentMethod = convertPaymentMethod(paymentData);
+@@ -130,6 +136,7 @@ export const TransactionService = {
+           payment_method: paymentMethod,
+           customer_name: customerName,
+           tax_amount: taxAmount,
++			idempotency_key: idempotencyKey,
+         }
+       };
+```
+
+MOBILE DEPENDENCY ADD:
+----------------------
+Add uuid package to mobile project:
+```bash
+cd apps/mobile
+npm install uuid
+npm install --save-dev @types/uuid
+```
+
+DATABASE MIGRATION:
+-------------------
+Create migration to add idempotency_key column:
+```sql
+-- Migration: add_idempotency_key_to_transactions
+ALTER TABLE transactions ADD COLUMN idempotency_key VARCHAR(255);
+CREATE UNIQUE INDEX idx_transactions_idempotency_key ON transactions(idempotency_key);
+
+-- Backfill existing transactions with UUID based on ID
+UPDATE transactions SET idempotency_key = CONCAT('legacy-', id) WHERE idempotency_key IS NULL;
+ALTER TABLE transactions MODIFY COLUMN idempotency_key VARCHAR(255) NOT NULL;
+```
+
+VERIFICATION:
+-------------
+1. Add test: duplicate request with same idempotency key returns same transaction
+2. Add test: different idempotency keys create different transactions
+3. Test network retry scenario (mock timeout, then retry)
+4. Verify unique index prevents database-level duplicates
+
+IMPACT:
+-------
+- Prevents duplicate charges from network retries
+- Standard pattern for payment APIs (Stripe, PayPal use this)
+- Adds uuid dependency to mobile (~10KB)
+- Minimal backend performance impact (indexed lookup)
+
+SECURITY CONSIDERATIONS:
+------------------------
+- UUID v4 is cryptographically random, cannot be guessed
+- Key is generated on client, but validated by unique index
+- Keys are not reused across different payment attempts
+- Consider key expiration (TTL) if needed (not required for MVP)
+
+ROLLBACK PLAN:
+--------------
+If issues occur:
+1. Make idempotency_key optional in model (remove NOT NULL constraint)
+2. Keep unique index but allow NULL values
+3. Mobile clients can gracefully handle missing idempotency key

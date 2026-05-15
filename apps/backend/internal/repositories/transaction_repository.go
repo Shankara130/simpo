@@ -21,6 +21,14 @@ type TransactionRepository interface {
 	// Returns ErrNotFound if transaction doesn't exist
 	GetByTransactionNumber(ctx context.Context, transactionNumber string) (*models.Transaction, error)
 
+	// CRITICAL-003: GetByIdempotencyKey retrieves a transaction by its idempotency key
+	// Used to implement idempotent transaction creation
+	GetByIdempotencyKey(ctx context.Context, key string) (*models.Transaction, error)
+
+	// GetNextTransactionNumber gets the next sequential transaction number for a branch and date
+	// Returns the next sequential number (e.g., 1 for first transaction of the day)
+	GetNextTransactionNumber(ctx context.Context, branchID uint, dateStr string) (int, error)
+
 	// Update modifies an existing transaction in the database
 	Update(ctx context.Context, transaction *models.Transaction) error
 
@@ -39,6 +47,11 @@ type TransactionRepository interface {
 
 	// CreateWithItems creates a transaction with its items in a single transaction
 	CreateWithItems(ctx context.Context, transaction *models.Transaction, items []*models.TransactionItem) error
+
+	// ProcessSaleWithStockUpdate processes a sale with atomic operations
+	// Wraps stock updates and transaction creation in a single database transaction
+	// Uses SELECT FOR UPDATE to prevent race conditions on stock
+	ProcessSaleWithStockUpdate(ctx context.Context, transaction *models.Transaction, items []*models.TransactionItem, stockUpdates map[uint]int64) error
 }
 
 // TransactionFilter defines filtering options for transaction listing

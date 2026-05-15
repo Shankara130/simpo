@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -33,6 +34,15 @@ func (m *MockTransactionRepository) GetByID(ctx context.Context, id uint) (*mode
 
 func (m *MockTransactionRepository) GetByTransactionNumber(ctx context.Context, transactionNumber string) (*models.Transaction, error) {
 	args := m.Called(ctx, transactionNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Transaction), args.Error(1)
+}
+
+// CRITICAL-003: GetByIdempotencyKey mock implementation
+func (m *MockTransactionRepository) GetByIdempotencyKey(ctx context.Context, key string) (*models.Transaction, error) {
+	args := m.Called(ctx, key)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -75,6 +85,11 @@ func (m *MockTransactionRepository) GetMonthlySummary(ctx context.Context, branc
 
 func (m *MockTransactionRepository) CreateWithItems(ctx context.Context, transaction *models.Transaction, items []*models.TransactionItem) error {
 	args := m.Called(ctx, transaction, items)
+	return args.Error(0)
+}
+
+func (m *MockTransactionRepository) ProcessSaleWithStockUpdate(ctx context.Context, transaction *models.Transaction, items []*models.TransactionItem, stockUpdates map[uint]int64) error {
+	args := m.Called(ctx, transaction, items, stockUpdates)
 	return args.Error(0)
 }
 
@@ -204,8 +219,7 @@ func TestTransactionService_ProcessSale_Success(t *testing.T) {
 
 	// Mock expectations
 	mockProdRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
-	mockProdRepo.On("UpdateStock", mock.Anything, uint(1), int64(-2)).Return(nil)
-	mockTxnRepo.On("CreateWithItems", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockTxnRepo.On("ProcessSaleWithStockUpdate", mock.Anything, mock.Anything, mock.Anything, map[uint]int64{1: -2}).Return(nil)
 
 	// Act
 	result, err := service.ProcessSale(context.Background(), sale, 1, 1)
@@ -262,18 +276,18 @@ func TestTransactionService_ProcessSale_InsufficientStock(t *testing.T) {
 		StockQty: 10, // Less than requested
 	}
 
-	// Mock expectations
+	// Mock expectations - ProcessSaleWithStockUpdate will handle stock validation
 	mockProdRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+	// ProcessSaleWithStockUpdate returns error for insufficient stock
+	stockErr := fmt.Errorf("insufficient stock for product Test Product (ID: 1). Available: 10, Requested: 50")
+	mockTxnRepo.On("ProcessSaleWithStockUpdate", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(stockErr)
 
 	// Act
 	_, err := service.ProcessSale(context.Background(), sale, 1, 1)
 
 	// Assert
 	assert.Error(t, err)
-	var stockErr *InsufficientStockError
-	assert.True(t, errors.As(err, &stockErr))
-	assert.Equal(t, int64(50), stockErr.RequestedQty)
-	assert.Equal(t, int64(10), stockErr.AvailableQty)
+	assert.Contains(t, err.Error(), "insufficient stock")
 }
 
 // Test CalculateTotal

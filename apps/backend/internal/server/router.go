@@ -21,7 +21,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -188,6 +188,17 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			adminGroup.GET("/settings", func(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "admin settings"})
 			})
+		}
+
+		// Story 3.6: Transaction endpoints - require authentication
+		// Cashiers can create transactions for sales
+		transactionsGroup := v1.Group("/transactions")
+		transactionsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager))
+
+		// MEDIUM FIX: Rate limiting should be applied to prevent DoS attacks
+		// TODO: Add rate limiting middleware: transactionsGroup.Use(middleware.RateLimit(100, time.Minute))
+		{
+			transactionsGroup.POST("", transactionHandler.CreateTransaction)
 		}
 	}
 

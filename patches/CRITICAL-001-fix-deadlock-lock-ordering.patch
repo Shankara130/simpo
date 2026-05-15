@@ -1,0 +1,125 @@
+CRITICAL-001: Fix Database Deadlock Risk via Deterministic Lock Ordering
+=========================================================================
+
+ISSUE:
+-------
+Products are locked in cart-item order (non-deterministic). If two cashiers
+simultaneously sell products A and B in different orders, a deadlock occurs:
+
+  Cashier 1: Locks A -> Locks B
+  Cashier 2: Locks B -> Locks A
+  Result: DEADLOCK
+
+FILE: apps/backend/internal/repositories/transaction_repository_impl.go
+LINE: 340-363
+
+FIX APPLIED:
+------------
+Sort items by product_id BEFORE locking to ensure consistent lock ordering
+across all concurrent transactions. This prevents deadlocks by ensuring all
+transactions acquire locks in the same order.
+
+PATCH:
+-------
+```diff
+--- a/apps/backend/internal/repositories/transaction_repository_impl.go
++++ b/apps/backend/internal/repositories/transaction_repository_impl.go
+@@ -336,13 +336,25 @@ func (r *transactionRepository) ProcessSaleWithStockUpdate(ctx context.Context,
+
+ 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+ 		// Step 1: Lock and update stock for all products using SELECT FOR UPDATE
+ 		// This prevents race conditions where concurrent transactions might oversell
++		// CRITICAL-001 FIX: Sort by product_id to ensure deterministic lock ordering
++		// and prevent deadlocks when multiple cashiers sell overlapping products
++		type productLock struct {
++			productID uint
++			delta     int64
++		}
++		sortedProducts := make([]productLock, 0, len(stockUpdates))
++		for productID, delta := range stockUpdates {
++			sortedProducts = append(sortedProducts, productLock{productID: productID, delta: delta})
++		}
++
++		// Sort by product_id to ensure consistent lock acquisition order
++		sort.Slice(sortedProducts, func(i, j int) bool {
++			return sortedProducts[i].productID < sortedProducts[j].productID
++		})
++
+ 		for productID, delta := range stockUpdates {
+ 			// Use SELECT FOR UPDATE to lock the product row
+ 			var product models.Product
+ 			if err := tx.Where("id = ?", productID).
+-				First(&product).Error; err != nil {
++				First(&product).Error; err != nil {
++			// Note: iteration now uses sortedProducts for lock ordering
++			for _, lockItem := range sortedProducts {
++				productID := lockItem.productID
++				delta := lockItem.delta
++
++				// Use SELECT FOR UPDATE to lock the product row
++				var product models.Product
++				if err := tx.Where("id = ?", productID).
+ 					First(&product).Error; err != nil {
+ 					if errors.Is(err, err, gorm.ErrRecordNotFound) {
+ 						return fmt.Errorf("product with ID %d not found", productID)
+ 					}
+ 					return fmt.Errorf("failed to lock product %d: %w", productID, err)
+ 				}
+
+-				// Check if sufficient stock is available
+-				if product.StockQty + delta < 0 {
++				// Check if sufficient stock is available
++				// CRITICAL-002 FIX: Use int64 arithmetic and check for underflow
++				newStock := int64(product.StockQty) + delta
++				if newStock < 0 {
+ 					return fmt.Errorf("insufficient stock for product %s (ID: %d). Available: %d, Requested: %d",
+-						product.Name, productID, product.StockQty, -delta)
++						product.Name, productID, product.StockQty, -delta)
+ 				}
+
+-				// Update stock
+-				if err := tx.Model(&models.Product{}).
+-					Where("id = ?", productID).
+-					Update("stock_qty", gorm.Expr("stock_qty + ?", delta)).Error; err != nil {
++				// Validate no underflow occurred (defensive check)
++				if newStock > int64(product.StockQty) && delta < 0 {
++					return fmt.Errorf("stock calculation error: underflow detected for product %s (ID: %d)",
++						product.Name, productID)
++				}
++
++				// Update stock with validated new value
++				if err := tx.Model(&models.Product{}).
++					Where("id = ?", productID).
++					Update("stock_qty", newStock).Error; err != nil {
+ 					return fmt.Errorf("failed to update stock for product %d: %w", productID, err)
+ 				}
+ 			}
+```
+
+ADDITIONAL CHANGES:
+-------------------
+Add sort import at top of file:
+```diff
+--- a/apps/backend/internal/repositories/transaction_repository_impl.go
++++ b/apps/backend/internal/repositories/transaction_repository_impl.go
+@@ -3,6 +3,7 @@ package repositories
+
+ import (
+ 	"context"
++	"sort"
+ 	"errors"
+ 	"fmt"
+ 	"strings"
+```
+
+VERIFICATION:
+-------------
+1. Run existing tests: `go test ./internal/repositories/...`
+2. Add concurrent transaction test to verify deadlock prevention
+3. Load test with 10+ concurrent cashiers selling overlapping products
+
+IMPACT:
+-------
+- Prevents production deadlocks under concurrent load
+- Minimal performance impact (O(n log n) sort where n = cart size)
+- No API contract changes

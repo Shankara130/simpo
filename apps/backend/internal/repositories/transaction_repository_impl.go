@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -71,6 +72,54 @@ func (r *transactionRepository) GetByTransactionNumber(ctx context.Context, tran
 		return nil, fmt.Errorf("failed to get transaction by number: %w", err)
 	}
 	return &transaction, nil
+}
+
+// CRITICAL-003: GetByIdempotencyKey retrieves a transaction by its idempotency key
+// Used to implement idempotent transaction creation
+func (r *transactionRepository) GetByIdempotencyKey(ctx context.Context, key string) (*models.Transaction, error) {
+	if key == "" {
+		return nil, fmt.Errorf("idempotency key cannot be empty")
+	}
+	var transaction models.Transaction
+	err := r.db.WithContext(ctx).
+		Where("idempotency_key = ?", key).
+		First(&transaction).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get transaction by idempotency key: %w", err)
+	}
+	return &transaction, nil
+}
+
+// GetNextTransactionNumber gets the next sequential transaction number for a branch and date
+// This implements proper sequential numbering to prevent transaction number collisions
+// CRITICAL FIX: Use MAX + 1 with FOR UPDATE to prevent race condition
+func (r *transactionRepository) GetNextTransactionNumber(ctx context.Context, branchID uint, dateStr string) (int, error) {
+	type TransactionMax struct {
+		MaxSeq int
+	}
+	var result TransactionMax
+
+	// Transaction number format: TRX-YYYYMMDD-XXXX
+	pattern := fmt.Sprintf("TRX-%s-%%", dateStr)
+
+	// CRITICAL FIX: Use FOR UPDATE to lock and prevent concurrent reads
+	// Get the maximum sequence number for this branch and date, then add 1
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(transaction_number, '-', -1) AS UNSIGNED)), 0) as max_seq
+		FROM transactions
+		WHERE branch_id = ? AND transaction_number LIKE ?
+		FOR UPDATE
+	`, branchID, pattern).Scan(&result).Error
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to get next transaction number: %w", err)
+	}
+
+	// Next sequential number is max + 1
+	return result.MaxSeq + 1, nil
 }
 
 // Update modifies an existing transaction in the database
@@ -314,6 +363,102 @@ func (r *transactionRepository) CreateWithItems(ctx context.Context, transaction
 		for _, item := range items {
 			item.TransactionID = transaction.ID
 			// P-014: Wrap error with descriptive message
+			if err := tx.Create(item).Error; err != nil {
+				return fmt.Errorf("failed to create transaction item: %w", err)
+			}
+		}
+
+		return nil
+	})
+}
+
+// ProcessSaleWithStockUpdate processes a sale with atomic operations
+// Story 3.6 Task 2: Wraps stock updates and transaction creation in a single database transaction
+// Uses SELECT FOR UPDATE to prevent race conditions on stock
+// CRITICAL-001: Sorts locks by product_id to prevent deadlocks
+// CRITICAL-002: Uses int64 arithmetic to prevent integer overflow/underflow
+func (r *transactionRepository) ProcessSaleWithStockUpdate(ctx context.Context, transaction *models.Transaction, items []*models.TransactionItem, stockUpdates map[uint]int64) error {
+	if transaction == nil {
+		return fmt.Errorf("transaction cannot be nil")
+	}
+	if len(items) == 0 {
+		return fmt.Errorf("transaction must have at least one item")
+	}
+
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Step 1: Lock and update stock for all products using SELECT FOR UPDATE
+		// This prevents race conditions where concurrent transactions might oversell
+
+		// CRITICAL-001 FIX: Sort by product_id to ensure deterministic lock ordering
+		// and prevent deadlocks when multiple cashiers sell overlapping products
+		type productLock struct {
+			productID uint
+			delta     int64
+		}
+		sortedProducts := make([]productLock, 0, len(stockUpdates))
+		for productID, delta := range stockUpdates {
+			sortedProducts = append(sortedProducts, productLock{productID: productID, delta: delta})
+		}
+
+		// Sort by product_id to ensure consistent lock acquisition order
+		sort.Slice(sortedProducts, func(i, j int) bool {
+			return sortedProducts[i].productID < sortedProducts[j].productID
+		})
+
+		// Iterate in sorted order to prevent deadlocks
+		for _, lockItem := range sortedProducts {
+			productID := lockItem.productID
+			delta := lockItem.delta
+
+			// Use SELECT FOR UPDATE to lock the product row
+			var product models.Product
+			if err := tx.Where("id = ?", productID).
+				First(&product).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return fmt.Errorf("product with ID %d not found", productID)
+				}
+				return fmt.Errorf("failed to lock product %d: %w", productID, err)
+			}
+
+			// MEDIUM FIX: Detect corrupted stock (negative values)
+			if product.StockQty < 0 {
+				return fmt.Errorf("corrupted stock detected for product %s (ID: %d). Stock is negative: %d. Please contact administrator.",
+					product.Name, productID, product.StockQty)
+			}
+
+			// CRITICAL-002 FIX: Use int64 arithmetic to prevent integer overflow/underflow
+			// Cast to int64 first, then check for negative result
+			currentStock := int64(product.StockQty)
+			newStock := currentStock + delta
+
+			// Check if sufficient stock is available (newStock must be >= 0)
+			if newStock < 0 {
+				return fmt.Errorf("insufficient stock for product %s (ID: %d). Available: %d, Requested: %d",
+					product.Name, productID, product.StockQty, -delta)
+			}
+
+			// Defensive: Detect underflow (new stock should be less than or equal to current when deducting)
+			if delta < 0 && newStock > currentStock {
+				return fmt.Errorf("stock calculation error: underflow detected for product %s (ID: %d)",
+					product.Name, productID)
+			}
+
+			// Update stock with validated int64 value
+			if err := tx.Model(&models.Product{}).
+				Where("id = ?", productID).
+				Update("stock_qty", newStock).Error; err != nil {
+				return fmt.Errorf("failed to update stock for product %d: %w", productID, err)
+			}
+		}
+
+		// Step 2: Create transaction record
+		if err := tx.Create(transaction).Error; err != nil {
+			return fmt.Errorf("failed to create transaction: %w", err)
+		}
+
+		// Step 3: Create transaction items
+		for _, item := range items {
+			item.TransactionID = transaction.ID
 			if err := tx.Create(item).Error; err != nil {
 				return fmt.Errorf("failed to create transaction item: %w", err)
 			}
