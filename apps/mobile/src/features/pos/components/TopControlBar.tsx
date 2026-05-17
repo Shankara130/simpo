@@ -3,11 +3,21 @@
  * Top control area with product search/barcode scan input and cart summary
  * Displays running total and payment button
  * Enhanced with barcode scanner integration
+ * Story 3.7: Added Transaction History button
  */
 
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useBarcodeScanner, ScannerState } from '../hooks/useBarcodeScanner';
+import { POSStackParamList } from '../types/navigation.types';
+
+type TopControlBarNavigationProp = StackNavigationProp<
+  POSStackParamList,
+  'POS'
+>;
 
 interface TopControlBarProps {
   itemCount: number;
@@ -26,6 +36,8 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
   onPayment,
   onBarcodeScanned,
 }) => {
+  const navigation = useNavigation<TopControlBarNavigationProp>();
+
   const formatPrice = (price: string): string => {
     // Validate price input
     if (!price || typeof price !== 'string') {
@@ -181,6 +193,16 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
             Pay
           </Text>
         </TouchableOpacity>
+
+        {/* Story 3.7: Transaction History button */}
+        <TouchableOpacity
+          testID="history-button"
+          style={styles.historyButton}
+          onPress={() => navigation.navigate('TransactionHistory')}
+          activeOpacity={0.7}
+        >
+          <Icon name="history" size={24} color="#2196F3" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -272,5 +294,17 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#BDBDBD',
+  },
+
+  // Story 3.7: Transaction History button styles
+  historyButton: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
 });

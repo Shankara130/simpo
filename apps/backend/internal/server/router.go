@@ -199,6 +199,9 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		// TODO: Add rate limiting middleware: transactionsGroup.Use(middleware.RateLimit(100, time.Minute))
 		{
 			transactionsGroup.POST("", transactionHandler.CreateTransaction)
+			// Story 3.7: Transaction history and detail endpoints
+			transactionsGroup.GET("", transactionHandler.ListTransactions)  // List with filters and pagination
+			transactionsGroup.GET("/:id", transactionHandler.GetTransactionByID) // Get transaction details
 		}
 	}
 

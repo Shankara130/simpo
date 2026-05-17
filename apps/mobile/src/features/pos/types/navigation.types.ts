@@ -8,6 +8,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type POSStackParamList = {
   POS: undefined;
   TransactionHistory: NavigatorScreenParams<TransactionHistoryParamList> | undefined;
+  TransactionDetail: { transactionId: number };
   Settings: undefined;
 };
 

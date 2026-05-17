@@ -6,10 +6,11 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { POSScreen } from '../screens/POSScreen';
+import { TransactionHistoryScreen } from '../screens/TransactionHistoryScreen';
+import { TransactionDetailScreen } from '../screens/TransactionDetailScreen';
 import { POSStackParamList } from '../types/navigation.types';
 
 // Placeholder screens for future stories
-const TransactionHistoryScreen = () => null;
 const SettingsScreen = () => null;
 
 const Stack = createStackNavigator<POSStackParamList>();
@@ -42,6 +43,14 @@ export const POSNavigator: React.FC = () => {
         component={TransactionHistoryScreen}
         options={{
           title: 'Transaction History',
+        }}
+      />
+      <Stack.Screen
+        name="TransactionDetail"
+        component={TransactionDetailScreen}
+        options={{
+          title: 'Transaction Detail',
+          headerShown: false, // TransactionDetailScreen has its own header
         }}
       />
       <Stack.Screen

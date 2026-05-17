@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/repositories"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 )
 
@@ -244,4 +246,251 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 
 	// Return created transaction with 201 status
 	c.JSON(http.StatusCreated, transaction)
+}
+
+// ListTransactions handles GET /api/v1/transactions
+// Returns paginated list of transactions for the cashier's branch
+func (h *TransactionHandler) ListTransactions(c *gin.Context) {
+	// Extract cashier ID from JWT context (for logging only)
+	_, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/unauthorized",
+			Title:  "Unauthorized",
+			Status: http.StatusUnauthorized,
+			Detail: "Authentication required",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Extract branch ID from JWT context for RBAC
+	branchIDValue, exists := c.Get("branchID")
+	if !exists {
+		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/missing-branch",
+			Title:  "Branch ID required",
+			Status: http.StatusBadRequest,
+			Detail: "Branch ID tidak ditemukan dalam konteks user",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	branchID, ok := branchIDValue.(uint)
+	if !ok || branchID == 0 {
+		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/internal-error",
+			Title:  "Internal Error",
+			Status: http.StatusInternalServerError,
+			Detail: "Invalid branch ID format in context",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Parse query parameters
+	var startDate, endDate, status string
+	page := 1 // Default page
+	limit := 20 // Default limit per page
+
+	if startDateParam := c.Query("startDate"); startDateParam != "" {
+		startDate = startDateParam
+	}
+	if endDateParam := c.Query("endDate"); endDateParam != "" {
+		endDate = endDateParam
+	}
+	if statusParam := c.Query("status"); statusParam != "" {
+		status = statusParam
+	}
+	if pageParam := c.Query("page"); pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Parse dates if provided
+	var startDatePtr, endDatePtr *time.Time
+	if startDate != "" {
+		if t, err := time.Parse("2006-01-02", startDate); err == nil {
+			startDatePtr = &t
+		}
+	}
+	if endDate != "" {
+		if t, err := time.Parse("2006-01-02", endDate); err == nil {
+			endDatePtr = &t
+		}
+	}
+
+	// Build filter criteria
+	filter := &services.TransactionFilter{
+		BranchID:  &branchID,
+		StartDate: startDatePtr,
+		EndDate:   endDatePtr,
+		Status:    status,
+		Page:      page,
+		Limit:     limit,
+		SortBy:    "created_at",
+		SortOrder: "desc",
+	}
+
+	// Call service to get transactions
+	transactions, total, err := h.transactionService.ListTransactions(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/internal-error",
+			Title:  "Internal Error",
+			Status: http.StatusInternalServerError,
+			Detail: "Gagal memuat riwayat transaksi: " + err.Error(),
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Calculate pagination metadata
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+
+	// Build response with pagination metadata
+	response := gin.H{
+		"data": transactions,
+		"pagination": gin.H{
+			"total":      total,
+			"totalPages": totalPages,
+			"currentPage": page,
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetTransactionByID handles GET /api/v1/transactions/:id
+// Returns full transaction details with items, cashier, and branch information
+func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
+	// Extract cashier ID from JWT context (for audit trail)
+	_, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/unauthorized",
+			Title:  "Unauthorized",
+			Status: http.StatusUnauthorized,
+			Detail: "Authentication required",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Extract branch ID from JWT context for RBAC
+	branchIDValue, exists := c.Get("branchID")
+	if !exists {
+		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/missing-branch",
+			Title:  "Branch ID required",
+			Status: http.StatusBadRequest,
+			Detail: "Branch ID tidak ditemukan dalam konteks user",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	branchID, ok := branchIDValue.(uint)
+	if !ok || branchID == 0 {
+		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/internal-error",
+			Title:  "Internal Error",
+			Status: http.StatusInternalServerError,
+			Detail: "Invalid branch ID format in context",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Parse transaction ID from URL parameter
+ transactionIDParam := c.Param("id")
+	transactionID, err := strconv.ParseUint(transactionIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/invalid-id",
+			Title:  "Invalid Transaction ID",
+			Status: http.StatusBadRequest,
+			Detail: "Format ID transaksi tidak valid",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Call service to get transaction details
+	transaction, err := h.transactionService.GetTransactionByID(c.Request.Context(), uint(transactionID))
+	if err != nil {
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, middleware.RFC7807Error{
+				Type:   "https://api.simpo.com/errors/not-found",
+				Title:  "Transaction Not Found",
+				Status: http.StatusNotFound,
+				Detail: "Transaksi tidak ditemukan",
+				Instance: c.Request.URL.Path,
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/internal-error",
+			Title:  "Internal Error",
+			Status: http.StatusInternalServerError,
+			Detail: "Gagal memuat detail transaksi: " + err.Error(),
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// RBAC check: Ensure cashier can only access transactions from their branch
+	if transaction.BranchID != branchID {
+		c.JSON(http.StatusForbidden, middleware.RFC7807Error{
+			Type:   "https://api.simpo.com/errors/forbidden",
+			Title:  "Access Denied",
+			Status: http.StatusForbidden,
+			Detail: "Anda tidak memiliki akses ke transaksi ini",
+			Instance: c.Request.URL.Path,
+		})
+		return
+	}
+
+	// Generate receipt data for reprint capability
+	receiptData, err := h.transactionService.GenerateReceiptData(c.Request.Context(), transaction.ID)
+	if err != nil {
+		// Log error but don't fail the request - receipt data is optional
+		// Transaction can still be viewed without reprint capability
+		receiptData = nil
+	}
+
+	// Build response with transaction details and receipt data
+	response := gin.H{
+		"id":               transaction.ID,
+		"transactionNumber": transaction.TransactionNumber,
+		"total":            transaction.Total,
+		"status":           transaction.Status,
+		"paymentMethod":    transaction.PaymentMethod,
+		"createdAt":        transaction.CreatedAt,
+		"items":            transaction.TransactionItems,
+		"cashier": gin.H{
+			"id":   transaction.CashierID,
+			"name": "", // Will be populated from user data
+		},
+		"branch": gin.H{
+			"id":   transaction.BranchID,
+			"name": "", // Will be populated from branch data
+		},
+	}
+
+	if receiptData != nil {
+		response["receiptData"] = receiptData
+	}
+
+	c.JSON(http.StatusOK, response)
 }

@@ -93,6 +93,11 @@ func (m *MockTransactionRepository) ProcessSaleWithStockUpdate(ctx context.Conte
 	return args.Error(0)
 }
 
+func (m *MockTransactionRepository) GetNextTransactionNumber(ctx context.Context, branchID uint, dateStr string) (int, error) {
+	args := m.Called(ctx, branchID, dateStr)
+	return args.Int(0), args.Error(1)
+}
+
 // MockTransactionItemRepository is a mock implementation of TransactionItemRepository
 type MockTransactionItemRepository struct {
 	mock.Mock
@@ -403,4 +408,241 @@ func TestTransactionService_ProcessSale_ContextCanceled(t *testing.T) {
 
 	// Assert
 	assert.Error(t, err)
+}
+
+// Story 3.7: Transaction History Service Tests
+
+// TestTransactionService_ListTransactions_WithStatusFilter tests filtering by status
+func TestTransactionService_ListTransactions_WithStatusFilter(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	status := "COMPLETED"
+	branchID := uint(1)
+	filter := &TransactionFilter{
+		BranchID: &branchID,
+		Status:   status,
+		Page:     1,
+		Limit:    20,
+	}
+
+	// Mock expectations - expect status filter to be passed through
+	mockTxnRepo.On("List", mock.Anything, mock.MatchedBy(func(f *repositories.TransactionFilter) bool {
+		return f.Status == status && *f.BranchID == branchID
+	})).Return([]*models.Transaction{}, int64(0), nil)
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.NoError(t, err)
+	mockTxnRepo.AssertExpectations(t)
+}
+
+// TestTransactionService_ListTransactions_WithDateRangeFilter tests filtering by date range
+func TestTransactionService_ListTransactions_WithDateRangeFilter(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	startDate := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	branchID := uint(1)
+
+	filter := &TransactionFilter{
+		BranchID:  &branchID,
+		StartDate: &startDate,
+		EndDate:   &endDate,
+		Page:      1,
+		Limit:     20,
+	}
+
+	// Mock expectations - expect date range filter to be passed through
+	mockTxnRepo.On("List", mock.Anything, mock.MatchedBy(func(f *repositories.TransactionFilter) bool {
+		return f.StartDate != nil && f.EndDate != nil
+	})).Return([]*models.Transaction{}, int64(0), nil)
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.NoError(t, err)
+	mockTxnRepo.AssertExpectations(t)
+}
+
+// TestTransactionService_ListTransactions_DateRangeExceedsMax tests validation of date range
+func TestTransactionService_ListTransactions_DateRangeExceedsMax(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	// Date range exceeding 1 year
+	startDate := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2027, 6, 1, 0, 0, 0, 0, time.UTC)
+	branchID := uint(1)
+
+	filter := &TransactionFilter{
+		BranchID:  &branchID,
+		StartDate: &startDate,
+		EndDate:   &endDate,
+		Page:      1,
+		Limit:     20,
+	}
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.Error(t, err)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "date_range", invErr.Field)
+}
+
+// TestTransactionService_ListTransactions_WithSortOrder tests descending sort order
+func TestTransactionService_ListTransactions_WithSortOrder(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	branchID := uint(1)
+	filter := &TransactionFilter{
+		BranchID:  &branchID,
+		SortBy:    "created_at",
+		SortOrder: "desc", // Newest first
+		Page:      1,
+		Limit:     20,
+	}
+
+	// Mock expectations - expect sort order to be passed through
+	mockTxnRepo.On("List", mock.Anything, mock.MatchedBy(func(f *repositories.TransactionFilter) bool {
+		return f.SortBy == "created_at" && f.SortOrder == "desc"
+	})).Return([]*models.Transaction{}, int64(0), nil)
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.NoError(t, err)
+	mockTxnRepo.AssertExpectations(t)
+}
+
+// TestTransactionService_ListTransactions_InvalidSortField tests validation of sort field
+func TestTransactionService_ListTransactions_InvalidSortField(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	branchID := uint(1)
+	filter := &TransactionFilter{
+		BranchID:  &branchID,
+		SortBy:    "invalid_field", // Invalid sort field
+		SortOrder: "desc",
+		Page:      1,
+		Limit:     20,
+	}
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.Error(t, err)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "sort_by", invErr.Field)
+}
+
+// TestTransactionService_ListTransactions_RBACBranchFilter tests RBAC via branch filtering
+func TestTransactionService_ListTransactions_RBACBranchFilter(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	cashierBranchID := uint(1)
+	filter := &TransactionFilter{
+		BranchID: &cashierBranchID, // Only transactions from cashier's branch
+		Page:     1,
+		Limit:    20,
+	}
+
+	// Mock expectations - verify branch ID filter is passed
+	mockTxnRepo.On("List", mock.Anything, mock.MatchedBy(func(f *repositories.TransactionFilter) bool {
+		return f.BranchID != nil && *f.BranchID == cashierBranchID
+	})).Return([]*models.Transaction{}, int64(0), nil)
+
+	// Act
+	_, _, err := service.ListTransactions(context.Background(), filter)
+
+	// Assert
+	assert.NoError(t, err)
+	mockTxnRepo.AssertExpectations(t)
+}
+
+// TestTransactionService_GetTransactionByID_Success tests successful retrieval
+func TestTransactionService_GetTransactionByID_Success(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	expectedTransaction := &models.Transaction{
+		ID:                1,
+		TransactionNumber: "TRX-20260515-0001",
+		CashierID:         100,
+		BranchID:          1,
+		Total:             "150000.00",
+		Status:            models.StatusCompleted,
+	}
+
+	mockTxnRepo.On("GetByID", mock.Anything, uint(1)).Return(expectedTransaction, nil)
+
+	// Act
+	result, err := service.GetTransactionByID(context.Background(), 1)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTransaction.ID, result.ID)
+	assert.Equal(t, expectedTransaction.TransactionNumber, result.TransactionNumber)
+	mockTxnRepo.AssertExpectations(t)
+}
+
+// TestTransactionService_GetTransactionByID_NotFound tests not found error
+func TestTransactionService_GetTransactionByID_NotFound(t *testing.T) {
+	// Arrange
+	mockTxnRepo := new(MockTransactionRepository)
+	mockItemRepo := new(MockTransactionItemRepository)
+	mockProdRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit)
+
+	mockTxnRepo.On("GetByID", mock.Anything, uint(999)).Return(nil, repositories.ErrNotFound)
+
+	// Act
+	_, err := service.GetTransactionByID(context.Background(), 999)
+
+	// Assert
+	assert.Error(t, err)
+	var svcErr *ServiceError
+	assert.True(t, errors.As(err, &svcErr))
 }

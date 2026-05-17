@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-16T10:00:00+07:00
+last_updated: 2026-05-17T10:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -66,18 +66,18 @@ development_status:
   epic-2-retrospective: done # Retrospective completed 2026-05-13
 
   # Epic 3: Point of Sale (Mobile)
-  epic-3: in-progress
+  epic-3: done
   3-1-design-pos-screen-layout-and-navigation: done
   3-2-implement-barcode-scanner-integration: done
   3-3-implement-cart-management: done
   3-4-implement-payment-method-selection: done
   3-5-implement-receipt-printing-with-thermal-printer: done
   3-6-implement-transaction-processing-30-seconds: done
-  3-7-implement-transaction-history-view: backlog
-  epic-3-retrospective: optional
+  3-7-implement-transaction-history-view: done
+  epic-3-retrospective: done
 
   # Epic 4: Inventory Management
-  epic-4: backlog
+  epic-4: in-progress
   4-1-implement-product-list-view-with-search-and-filters: backlog
   4-2-implement-real-time-stock-visibility: backlog
   4-3-implement-manual-stock-adjustment: backlog
