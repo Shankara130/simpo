@@ -51,7 +51,7 @@ func TestSetupRouter_DeactivateRouteRegistered(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil, nil)
 
 	// Test that the route is registered by checking all routes
 	routes := router.Routes()
@@ -101,7 +101,7 @@ func TestSetupRouter_DeactivateRouteRequiresAuth(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil, nil)
 
 	// Make request without authentication
 	w := httptest.NewRecorder()
@@ -146,7 +146,7 @@ func TestSetupRouter_DeactivateRouteProtected(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil, nil)
 
 	// Test all user management routes are protected
 	protectedEndpoints := []struct {
@@ -205,7 +205,7 @@ func TestSetupRouter_UserRoutesGroup(t *testing.T) {
 		},
 	}
 
-	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil)
+	router := SetupRouter(mockUserHandler, mockAuthHandler, mockAuthService, testConfig, db, nil, nil, nil)
 
 	// All user routes should be under /api/v1/users prefix
 	expectedPaths := []string{

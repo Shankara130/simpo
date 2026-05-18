@@ -127,3 +127,27 @@ This file tracks work items that were identified during reviews but deferred to 
 ## Deferred from: code review of Story 3.1 (2026-05-13)
 
 - **Barcode scanning functionality** - Barcode scan input prominent and accessible (AC1) deferred to Story 3.2 (Barcode Scanner Integration) per user decision.
+
+## Deferred from: code review of Story 4.1 (2026-05-18)
+
+### Code Quality & Standards
+
+- **MAGIC NUMBERS: Pagination limits hardcode** — `apps/backend/internal/handlers/product_handler.go:70-76`
+  - Angka hardcode (20 default limit, 1000 max) adalah pola yang sudah ada di codebase sejak Epic 2.
+  - Recommendation: Defer to configuration story untuk consistent pagination limits across all endpoints.
+
+- **CONSTRUCTOR PANIC: Nil check dengan panic** — `apps/backend/internal/handlers/product_handler.go:36-39`
+  - Panic pada nil service adalah design choice untuk fail-fast pattern, konsisten dengan AuthService constructor.
+  - Recommendation: Defer to architecture decision untuk consistent error handling pattern across constructors.
+
+### Business Logic
+
+- **EMPTY SEARCH: Search string kosong return semua produk** — `apps/backend/internal/handlers/product_handler.go:115-119`
+  - Perlu keputusan desain: apakah search kosong harus return empty list atau semua produk.
+  - Recommendation: Defer to product owner untuk clarify expected behavior.
+
+### Edge Cases
+
+- **INTEGER OVERFLOW: Pagination calculation edge case** — `apps/backend/internal/handlers/product_handler.go:150-154`
+  - Memerlukan 10K+ produk dengan limit kecil untuk trigger integer overflow di `totalPages` calculation.
+  - Recommendation: Monitor production data; jika produk mendekati limit, implementasikan safe math division.

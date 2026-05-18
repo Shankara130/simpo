@@ -123,6 +123,10 @@ func run() error {
 	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
+	// Story 4.1: Create product service and handler
+	productService := services.NewProductService(productRepo, auditService)
+	productHandler := handlers.NewProductHandler(productService)
+
 	// Story 1.8: Create Redis client and session manager
 	var redisClient *redis.Client
 	if cfg.Redis.Host != "" {
@@ -137,7 +141,7 @@ func run() error {
 	sessionManager := middleware.NewSessionManager(redisClient)
 	userHandler.SetSessionManager(sessionManager)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler)
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler)
 
 	port := cfg.Server.Port
 	if port == "" {

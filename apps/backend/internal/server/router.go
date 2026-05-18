@@ -21,7 +21,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -202,6 +202,16 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			// Story 3.7: Transaction history and detail endpoints
 			transactionsGroup.GET("", transactionHandler.ListTransactions)  // List with filters and pagination
 			transactionsGroup.GET("/:id", transactionHandler.GetTransactionByID) // Get transaction details
+		}
+
+		// Story 4.1: Product endpoints - require authentication
+		// Owners and Cashiers can view products with RBAC for branch access
+		if productHandler != nil {
+			productsGroup := v1.Group("/products")
+			productsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				productsGroup.GET("", productHandler.ListProducts) // List with search, filters, and pagination
+			}
 		}
 	}
 
