@@ -30,7 +30,7 @@ func setupProductTestRouter(productService services.ProductService, userRole str
 	})
 
 	// Add product handler
-	handler := NewProductHandler(productService)
+	handler := NewProductHandler(productService, nil, "test-secret-key")
 	router.GET("/api/v1/products", handler.ListProducts)
 
 	return router

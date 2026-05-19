@@ -1,11 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
@@ -15,23 +22,62 @@ import (
 
 // ProductHandler defines product handler interface
 // Story 4.1, Task 1: Handler interface for product operations
+// Story 4.2, Task 4: WebSocket handler for real-time stock updates
 type ProductHandler interface {
 	ListProducts(c *gin.Context)
+	SubscribeStockUpdates(c *gin.Context) // Story 4.2, Task 4.1-4.6: WebSocket subscription
 }
 
 // productHandler implements ProductHandler
 type productHandler struct {
-	productService services.ProductService
+	productService      services.ProductService
+	stockEventService    services.StockEventService // Story 4.2, Task 4.1: Stock event service dependency
+	jwtSecret           string                      // Story 4.2, Task 4.5: JWT secret for token validation
+	upgrader             *websocket.Upgrader
 }
+
+// Story 4.2, Task 4.3: Client represents a WebSocket client connection
+type wsClient struct {
+	id         string
+	branches   []uint
+	conn       *websocket.Conn
+	messageChan chan services.StockUpdatedEvent
+}
+
+// Story 4.2, Task 4.3: Active WebSocket clients registry with mutex protection
+var (
+	wsClients        = make(map[string]*wsClient)
+	wsClientsMutex   sync.RWMutex
+	wsRegister       = make(chan *wsClient)
+	wsUnregister     = make(chan string)
+)
 
 // NewProductHandler creates a new product handler
 // Story 4.1, Task 1: Constructor with service dependency injection
-func NewProductHandler(productService services.ProductService) ProductHandler {
+// Story 4.2, Task 4.1: Add stockEventService dependency for WebSocket support
+// Story 4.2, Task 4.5: Add jwtSecret for JWT validation
+func NewProductHandler(productService services.ProductService, stockEventService services.StockEventService, jwtSecret string) ProductHandler {
 	if productService == nil {
 		panic("productService cannot be nil")
 	}
+	if jwtSecret == "" {
+		panic("jwtSecret cannot be empty")
+	}
+
+	// Story 4.2, Task 4.1: Create WebSocket upgrader with JWT authentication
+	upgrader := &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true // TODO: Configure CORS properly for production
+		},
+	}
+
 	return &productHandler{
-		productService: productService,
+		productService:   productService,
+		stockEventService: stockEventService,
+		jwtSecret:       jwtSecret,
+		upgrader:          upgrader,
 	}
 }
 
@@ -198,4 +244,189 @@ func (h *productHandler) ListProducts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, errors.Success(response))
+}
+
+// SubscribeStockUpdates handles WebSocket connections for real-time stock updates
+// Story 4.2, Task 4.1-4.6: WebSocket endpoint with JWT auth and branch filtering
+//
+//	@Summary		Subscribe to real-time stock updates
+//	@Description	WebSocket endpoint for receiving real-time stock updates. JWT token required via query parameter.
+//	@Tags			products
+//	@Param			token	query		string	true	"JWT authentication token"
+//	@Param			branches	query		string	false	"Comma-separated branch IDs to filter (Owner only, defaults to user's branch)"
+//	@Router			/api/v1/products/stock/subscribe [get]
+func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
+	// Story 4.2, Task 4.5: JWT authentication validation
+	token := c.Query("token")
+	if token == "" {
+		_ = c.Error(errors.Unauthorized("JWT token required"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// Validate JWT token and extract user info
+	// Story 4.2, Task 4.5: Proper JWT validation for WebSocket
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		// Validate signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(h.jwtSecret), nil
+	})
+
+	if err != nil || !parsedToken.Valid {
+		_ = c.Error(errors.Unauthorized(fmt.Sprintf("Invalid JWT token: %v", err)))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract claims
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		_ = c.Error(errors.Unauthorized("Invalid token claims"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract user role and branch ID from validated claims
+	userRole, ok := claims["role"].(string)
+	if !ok {
+		_ = c.Error(errors.Unauthorized("Invalid token: missing role"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract branch_id (can be nil for system users)
+	var userBranchID *uint
+	if branchIDFloat, ok := claims["branch_id"].(float64); ok {
+		bid := uint(branchIDFloat)
+		userBranchID = &bid
+	}
+
+	// Verify user role is valid
+	if userRole != user.RoleOwner && userRole != user.RoleCashier {
+		_ = c.Error(errors.Unauthorized("Invalid token: invalid user role"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	// Story 4.2, Task 4.4: Branch-based subscription filtering
+	// Parse branches parameter
+	var branches []uint
+	branchesParam := c.Query("branches")
+	if branchesParam != "" {
+		// Only Owners can specify multiple branches
+		if userRole == user.RoleOwner {
+			// Fix: Split by comma to get individual branch IDs
+			branchStrings := strings.Split(branchesParam, ",")
+			for _, bs := range branchStrings {
+				bs = strings.TrimSpace(bs)
+				if bs == "" {
+					continue
+				}
+				bid, err := strconv.ParseUint(bs, 10, 64)
+				if err == nil {
+					branches = append(branches, uint(bid))
+				}
+			}
+		}
+	}
+
+	// Cashiers can only subscribe to their assigned branch
+	if len(branches) == 0 {
+		if userBranchID != nil {
+			branches = []uint{*userBranchID}
+		} else {
+			_ = c.Error(errors.Unauthorized("Cashier must have a branch assignment"))
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+	}
+
+	// Story 4.2, Task 4.1-4.2: Upgrade to WebSocket
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		slog.Error("WebSocket upgrade failed", "error", err)
+		return
+	}
+
+	// Story 4.2, Task 4.3: Generate client ID and register
+	clientID := fmt.Sprintf("client-%d", time.Now().UnixNano())
+	
+	// Create message channel for this client (increased to 1000 for backpressure handling)
+	messageChan := make(chan services.StockUpdatedEvent, 1000)
+	
+	client := &wsClient{
+		id:         clientID,
+		branches:   branches,
+		conn:       conn,
+		messageChan: messageChan,
+	}
+
+	// Story 4.2, Task 4.3: Register client with stock event service
+	if h.stockEventService != nil {
+		h.stockEventService.RegisterClient(clientID, branches, messageChan)
+	}
+	wsClientsMutex.Lock()
+		wsClients[clientID] = client
+		wsClientsMutex.Unlock()
+
+	// Start goroutine to send messages to this client
+	go h.handleClientMessages(client)
+
+	// Story 4.2, Task 4.6: Connection cleanup on disconnect
+	// Wait for client to disconnect
+	defer func() {
+		if h.stockEventService != nil {
+			h.stockEventService.UnregisterClient(clientID)
+		}
+		delete(wsClients, clientID)
+		close(messageChan)
+		conn.Close()
+	}()
+
+	// Keep connection alive and handle incoming messages
+	for {
+		messageType, message, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+		
+		// Handle incoming messages if needed (e.g., ping/pong, subscription changes)
+		_ = messageType
+		_ = message
+	}
+}
+
+// handleClientMessages sends stock update events to WebSocket client
+// Story 4.2, Task 4.3: Broadcast events to connected WebSocket clients
+func (h *productHandler) handleClientMessages(client *wsClient) {
+	for {
+		select {
+		case event, ok := <-client.messageChan:
+			if !ok {
+				return
+			}
+			
+			// Wrap event in the expected format for frontend
+			// Frontend expects: {event: "stock.updated", data: {...}}
+			wrappedEvent := map[string]interface{}{
+				"event": "stock.updated",
+				"data":  event,
+			}
+
+			// Send event to client
+			data, err := json.Marshal(wrappedEvent)
+			if err != nil {
+				slog.Error("Failed to marshal stock event", "error", err, "client", client.id)
+				continue
+			}
+
+			err = client.conn.WriteMessage(websocket.TextMessage, data)
+			if err != nil {
+				slog.Error("Failed to send message to client", "error", err, "client", client.id)
+				return
+			}
+		}
+	}
 }

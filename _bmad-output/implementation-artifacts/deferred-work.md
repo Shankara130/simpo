@@ -151,3 +151,38 @@ This file tracks work items that were identified during reviews but deferred to 
 - **INTEGER OVERFLOW: Pagination calculation edge case** — `apps/backend/internal/handlers/product_handler.go:150-154`
   - Memerlukan 10K+ produk dengan limit kecil untuk trigger integer overflow di `totalPages` calculation.
   - Recommendation: Monitor production data; jika produk mendekati limit, implementasikan safe math division.
+
+## Deferred from: code review of story 4-2-implement-real-time-stock-visibility (2026-05-19)
+
+### Security & Authentication
+
+- **JWT Authentication Implementation pada WebSocket Handler** — \`product_handler.go:218-235\`
+  Issue: Kode memiliki placeholder logic yang mengecek \`userRole\` dan \`userBranchID\` dari Gin context, tetapi untuk WebSocket connections (HTTP upgrade), middleware tidak berjalan. Token dari query parameter tidak pernah di-decode atau divalidasi secara proper.
+  Why deferred: Authentication logic requires architectural decision about JWT validation for WebSocket upgrades (different from regular HTTP requests)
+  Recommendation: Implement proper JWT token decoding and validation from query parameter before accepting WebSocket connection
+
+### Reliability & Performance
+
+- **Redis Reconnection Handling Not Implemented** — \`stock_event_service.go\`
+  Issue: Story specification explicitly notes "⚠️ Subtask 5.5: Redis reconnection handling NOT YET IMPLEMENTED". If Redis connection drops, the broadcaster stops working until server restart.
+  Why deferred: Acknowledged in story as incomplete subtask
+  Recommendation: Implement automatic reconnection to Redis with exponential backoff when connection is lost
+
+### Infrastructure & Security
+
+- **CORS Configuration TODO for Production** — \`product_handler.go:190\`
+  Issue: Code contains \`return true // TODO: Configure CORS properly for production\` which allows all origins
+  Why deferred: Security configuration for production deployment
+  Recommendation: Implement proper CORS validation before production deployment
+
+- **No Connection Limits on WebSocket** — \`product_handler.go:248-350\`
+  Issue: No limit on number of WebSocket connections per user or globally
+  Why deferred: DoS vulnerability mitigation requires infrastructure-level rate limiting
+  Recommendation: Implement connection limits per user and globally to prevent resource exhaustion
+
+### Monitoring & Validation
+
+- **Missing Stock Reconciliation Accuracy Validation** — \`stock_metrics_service.go\`
+  Issue: Framework for tracking accuracy is available, but there's no automated validation that proves the system achieves 99% accuracy as required by AC6
+  Why deferred: Measurement gap, not implementation bug - requires additional monitoring/verification work
+  Recommendation: Implement periodic background jobs that compare Redis cache values against database values to calculate actual reconciliation accuracy

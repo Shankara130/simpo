@@ -211,6 +211,8 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			productsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
 			{
 				productsGroup.GET("", productHandler.ListProducts) // List with search, filters, and pagination
+				// Story 4.2, Task 4.2: WebSocket endpoint for real-time stock updates
+				productsGroup.GET("/stock/subscribe", productHandler.SubscribeStockUpdates)
 			}
 		}
 	}

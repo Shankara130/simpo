@@ -1,9 +1,10 @@
 /**
  * ProductListScreen Component
  * Story 4.1, AC1, AC4, AC7: Product list with search, filters, and pagination
+ * Story 4.2, Task 12: Integrate Real-Time Stock into Product List (AC: 1, 5)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,10 +15,19 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { InventoryService, ProductListItem, ProductListParams } from '../services/inventoryService';
 import { ProductCard } from '../components/ProductCard';
+import {
+  createRealTimeStockService,
+  type RealTimeStockServiceConfig,
+  type RealTimeStockServiceInstance,
+  type StockUpdatedEvent,
+  type ConnectionState,
+} from '../services/realTimeStockService';
 
 interface ProductListScreenProps {
   // Optional initial filters
@@ -52,6 +62,119 @@ export const ProductListScreen: React.FC<ProductListScreenProps> = ({
 
   // Story 4.1, AC2: Search functionality
   const [searchDebounce, setSearchDebounce] = useState<string>('');
+
+  // Story 4.2, Task 12.2: Initialize real-time stock service on mount
+  useEffect(() => {
+    // Get JWT token from storage (in real app, this would come from auth context)
+    const token = 'your-jwt-token'; // TODO: Get from auth context
+
+    // Create real-time stock service
+    const config: RealTimeStockServiceConfig = {
+      wsUrl: 'ws://localhost:8080/api/v1/products/stock/subscribe', // TODO: Use from config
+      token,
+      branches: initialBranchId ? [initialBranchId] : undefined,
+      autoReconnect: true,
+    };
+
+    realTimeStockServiceRef.current = createRealTimeStockService(config);
+
+    // Set up event listeners
+    realTimeStockServiceRef.current.on('connectionStateChange', (state) => {
+      setConnectionState(state);
+    });
+
+    realTimeStockServiceRef.current.on('stockUpdate', handleStockUpdate);
+    realTimeStockServiceRef.current.on('error', (error) => {
+      console.error('[RealTimeStockService] Error:', error);
+    });
+
+    // Start monitoring online/offline status
+    realTimeStockServiceRef.current.startOnlineMonitoring();
+
+    // Connect to WebSocket
+    realTimeStockServiceRef.current.connect();
+
+    // Cleanup on unmount
+    return () => {
+      realTimeStockServiceRef.current?.destroy();
+    };
+  }, [initialBranchId]);
+
+  /**
+   * Handle real-time stock updates from WebSocket
+   * Story 4.2, Task 12.3: Update product stock quantities from WebSocket events
+   */
+  const handleStockUpdate = useCallback((event: StockUpdatedEvent) => {
+    setProducts(prevProducts => {
+      return prevProducts.map(product => {
+        // Only update if the product matches the event
+        if (product.id === event.productId && product.branchId === event.branchId) {
+          // Trigger flash animation
+          triggerFlash(product.id);
+
+          // Return updated product with new stock
+          return {
+            ...product,
+            stockQty: event.newStock,
+            isLowStock: event.newStock < product.reorderThreshold,
+            updatedAt: event.updatedAt,
+          };
+        }
+        return product;
+      });
+    });
+  }, []);
+
+  /**
+   * Trigger flash animation for a product
+   * Story 4.2, Task 12.4: Add visual feedback for stock updates (color flash)
+   */
+  const triggerFlash = useCallback((productId: number) => {
+    setFlashingProducts(prev => new Set([...prev, productId]));
+
+    // Remove flash after animation completes
+    setTimeout(() => {
+      setFlashingProducts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+    }, 2000); // 2 second flash animation
+  }, []);
+
+  /**
+   * Handle app state changes (foreground/background)
+   * Story 4.2, Task 12.5: Clean up subscriptions on unmount
+   */
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        // App coming from background to foreground
+        console.log('[ProductListScreen] App coming to foreground, reconnecting...');
+        realTimeStockServiceRef.current?.reconnect();
+      } else if (
+        nextAppState.match(/inactive|background/) &&
+        appState.current === 'active'
+      ) {
+        // App going to background
+        console.log('[ProductListScreen] App going to background, disconnecting...');
+        realTimeStockServiceRef.current?.disconnect();
+      }
+
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // Story 4.2, Task 12.2-12.5: Real-time stock service integration
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [flashingProducts, setFlashingProducts] = useState<Set<number>>(new Set());
+  const realTimeStockServiceRef = useRef<RealTimeStockServiceInstance | null>(null);
+  const appState = useRef(AppState.currentState);
 
   // Fetch products function
   const fetchProducts = useCallback(async (pageNum = 1, reset = false) => {
@@ -243,11 +366,37 @@ export const ProductListScreen: React.FC<ProductListScreenProps> = ({
 
       {/* Story 4.1, AC3: Filter buttons (placeholder - would show modal in full implementation) */}
       <View style={styles.filterContainer}>
-        <Text style={styles.filterInfo}>
-          {searchDebounce
-            ? `Hasil: ${searchDebounce}`
-            : `Total: ${total} produk`}
-        </Text>
+        <View style={styles.filterInfoContainer}>
+          <Text style={styles.filterInfo}>
+            {searchDebounce
+              ? `Hasil: ${searchDebounce}`
+              : `Total: ${total} produk`}
+          </Text>
+          {/* Story 4.2, Task 12.2: Connection status indicator */}
+          <View style={[
+            styles.connectionStatus,
+            connectionState === 'connected' && styles.connectionStatusConnected,
+            connectionState === 'connecting' && styles.connectionStatusConnecting,
+            connectionState === 'reconnecting' && styles.connectionStatusReconnecting,
+            connectionState === 'error' && styles.connectionStatusError,
+          ]}>
+            <View style={[
+              styles.connectionStatusDot,
+              connectionState === 'connected' && styles.connectionStatusDotConnected,
+            ]} />
+            <Text style={styles.connectionStatusText}>
+              {connectionState === 'connected'
+                ? 'Live'
+                : connectionState === 'connecting'
+                ? 'Menghubung...'
+                : connectionState === 'reconnecting'
+                ? 'Menghubung kembali...'
+                : connectionState === 'error'
+                ? 'Error'
+                : 'Terputus'}
+            </Text>
+          </View>
+        </View>
         <TouchableOpacity
           onPress={() => setShowFilters(!showFilters)}
           style={styles.filterButton}
@@ -385,9 +534,58 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
 
+  filterInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
   filterInfo: {
     fontSize: 13,
     color: '#757575',
+  },
+
+  // Story 4.2, Task 12.2: Connection status indicator styles
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+  },
+
+  connectionStatusConnected: {
+    backgroundColor: '#D1FADF',
+  },
+
+  connectionStatusConnecting: {
+    backgroundColor: '#FFF3CD',
+  },
+
+  connectionStatusReconnecting: {
+    backgroundColor: '#FFF3CD',
+  },
+
+  connectionStatusError: {
+    backgroundColor: '#FEE2E2',
+  },
+
+  connectionStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#9E9E9E',
+  },
+
+  connectionStatusDotConnected: {
+    backgroundColor: '#4CAF50',
+  },
+
+  connectionStatusText: {
+    fontSize: 11,
+    color: '#424242',
+    fontWeight: '500',
   },
 
   filterButton: {

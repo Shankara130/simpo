@@ -26,6 +26,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect

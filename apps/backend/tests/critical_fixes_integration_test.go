@@ -12,6 +12,8 @@ package tests
  */
 
 import (
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"context"
 	"fmt"
 	"sync"
@@ -100,13 +102,13 @@ func TestCriticalFix001_ConcurrentTransactionsNoDeadlock(t *testing.T) {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	// Both cashiers will sell the same products but in different orders
 	// Cashier 1: Product A → Product B → Product C
@@ -208,13 +210,13 @@ func TestCriticalFix002_QuantityValidation(t *testing.T) {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	tests := []struct {
 		name          string
@@ -281,13 +283,13 @@ func TestCriticalFix002_StockUnderflowPrevention(t *testing.T) {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	// First transaction: Sell most of Product E's stock
 	sale1 := &services.SaleRequest{
@@ -343,13 +345,13 @@ func TestCriticalFix003_IdempotencyPreventsDuplicateCharges(t *testing.T) {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	idempotencyKey := "test-003-unique-key-12345"
 
@@ -403,13 +405,13 @@ func TestCriticalFix003_DifferentIdempotencyKeysCreateDifferentTransactions(t *t
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	sale1 := &services.SaleRequest{
 		Items: []*services.SaleItem{
@@ -464,13 +466,13 @@ func TestCriticalFixes_Performance_ConcurrentLoad(t *testing.T) {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionItemRepo := repositories.NewTransactionItemRepository(db)
 
+	// Setup miniredis for stock event service
+		mr, _ := miniredis.Run()
+		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+		stockEventService := services.NewStockEventService(redisClient)
+		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(
-		transactionRepo,
-		transactionItemRepo,
-		productRepo,
-		auditService,
-	)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 
 	// Each cashier makes 10 concurrent transactions
 	const transactionsPerCashier = 10

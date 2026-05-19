@@ -116,17 +116,6 @@ func run() error {
 	whitelistHandler := whitelist.NewHandler(whitelistService)
 	whitelistHandler.SetAuditService(auditService) // Story 1.9: Wire up audit service for whitelist operations
 
-	// Story 3.6: Create transaction repositories, service, and handler
-	transactionRepo := repositories.NewTransactionRepository(database)
-	transactionItemRepo := repositories.NewTransactionItemRepository(database)
-	productRepo := repositories.NewProductRepository(database)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService)
-	transactionHandler := handlers.NewTransactionHandler(transactionService)
-
-	// Story 4.1: Create product service and handler
-	productService := services.NewProductService(productRepo, auditService)
-	productHandler := handlers.NewProductHandler(productService)
-
 	// Story 1.8: Create Redis client and session manager
 	var redisClient *redis.Client
 	if cfg.Redis.Host != "" {
@@ -141,7 +130,37 @@ func run() error {
 	sessionManager := middleware.NewSessionManager(redisClient)
 	userHandler.SetSessionManager(sessionManager)
 
+		// Story 4.2: Create stock event service for real-time stock updates
+		stockEventService := services.NewStockEventService(redisClient)
+		// Story 4.2, Task 15: Create stock cache service for caching stock levels
+			var stockCacheService *services.StockCacheService
+			if redisClient != nil {
+				stockCacheService = services.NewStockCacheService(redisClient)
+			}
+
+	// Story 3.6: Create transaction repositories, service, and handler
+	transactionRepo := repositories.NewTransactionRepository(database)
+	transactionItemRepo := repositories.NewTransactionItemRepository(database)
+	productRepo := repositories.NewProductRepository(database)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
+
+	// Story 4.1: Create product service and handler
+	productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService)
+	productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
+
+
 	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler)
+
+	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
+	if stockEventService != nil {
+		ctx := context.Background()
+		if err := stockEventService.StartBroadcaster(ctx); err != nil {
+			logger.Warn("Failed to start stock event broadcaster", "error", err)
+		} else {
+			logger.Info("Stock event broadcaster started")
+		}
+	}
 
 	port := cfg.Server.Port
 	if port == "" {
@@ -181,6 +200,13 @@ func run() error {
 
 	logger.Info("Received shutdown signal", "signal", sig)
 	logger.Info("Shutting down server gracefully...")
+
+	// Story 4.2, Task 5.6: Stop stock event broadcaster
+	if stockEventService != nil {
+		logger.Info("Stopping stock event broadcaster...")
+		stockEventService.StopBroadcaster()
+		logger.Info("Stock event broadcaster stopped")
+	}
 
 	sqlDB, err := database.DB()
 	if err == nil {

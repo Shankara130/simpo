@@ -12,20 +12,24 @@ import (
 
 // transactionService implements TransactionService interface
 // AC2: Services use repository interfaces (not concrete implementations)
+// Story 4.2, Task 2: StockEventService for publishing stock updates
 type transactionService struct {
 	transactionRepo     repositories.TransactionRepository
 	transactionItemRepo repositories.TransactionItemRepository
 	productRepo         repositories.ProductRepository
 	auditService        AuditService
+	stockEventService   StockEventService
 }
 
 // NewTransactionService creates a new transaction service with dependency injection
 // AC2: Services accept repository interfaces via constructor injection
+// Story 4.2, Task 2: Add stockEventService parameter
 func NewTransactionService(
 	transactionRepo repositories.TransactionRepository,
 	transactionItemRepo repositories.TransactionItemRepository,
 	productRepo repositories.ProductRepository,
 	auditService AuditService,
+	stockEventService StockEventService,
 ) TransactionService {
 	// Fail fast on nil dependencies
 	if transactionRepo == nil {
@@ -40,12 +44,15 @@ func NewTransactionService(
 	if auditService == nil {
 		panic("transactionService: auditService cannot be nil")
 	}
+	// Story 4.2, Task 2: stockEventService is optional (can be nil for graceful degradation)
+	// Events won't be published if not provided, but transactions will still work
 
 	return &transactionService{
 		transactionRepo:     transactionRepo,
 		transactionItemRepo: transactionItemRepo,
 		productRepo:         productRepo,
 		auditService:        auditService,
+		stockEventService:   stockEventService,
 	}
 }
 
@@ -225,6 +232,10 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		return nil, &ServiceError{Op: "process sale", Err: err}
 	}
 
+	// Story 4.2, Task 2.1-2.4: Publish stock events after successful transaction
+	// Stock events are published after transaction commit to ensure consistency
+	s.publishStockUpdateEvents(ctx, aggregatedItems, transaction, cashierID, branchID)
+
 	return transaction, nil
 }
 
@@ -380,6 +391,53 @@ func (s *transactionService) GenerateReceiptData(ctx context.Context, transactio
 	}
 
 	return receipt, nil
+}
+
+// Story 4.2, Task 2.1-2.4: publishStockUpdateEvents publishes stock update events
+// after successful transaction completion
+// This method publishes events for each product in the transaction with old and new stock values
+func (s *transactionService) publishStockUpdateEvents(ctx context.Context, items []*SaleItem, transaction *models.Transaction, cashierID uint, branchID uint) {
+	// Only publish if StockEventService is available
+	if s.stockEventService == nil {
+		return
+	}
+
+	// Get cashier name for audit trail (use transaction number as fallback)
+	cashierName := fmt.Sprintf("Cashier #%d", cashierID)
+
+	// Publish event for each product in the transaction
+	for _, item := range items {
+		// Get current product details to fetch new stock level
+		product, err := s.productRepo.GetByID(ctx, item.ProductID)
+		if err != nil {
+			// Log error but continue with other products
+			continue
+		}
+
+		// Calculate old stock (new stock + quantity sold)
+		oldStock := product.StockQty + item.Quantity
+
+		// Story 4.2, Task 2.2: Publish events for each product in transaction
+		// Story 4.2, Task 2.3: Include old stock, new stock, and change delta
+		event := StockUpdatedEvent{
+			ProductID: product.ID,
+			BranchID:  branchID,
+			SKU:       product.SKU,
+			Name:      product.Name,
+			OldStock:  oldStock,
+			NewStock:  product.StockQty,
+			Change:    -item.Quantity, // Negative for deductions
+			UpdatedBy: cashierName,
+			UpdatedAt: time.Now(),
+		}
+
+		// Publish event asynchronously (don't block transaction)
+		// Story 4.2, Task 2.4: Use transaction context to ensure events only publish on commit
+		// Events are published after successful commit, so we use background context
+		go func(evt StockUpdatedEvent) {
+			_ = s.stockEventService.PublishStockUpdate(context.Background(), evt)
+		}(event)
+	}
 }
 
 // GetTransactionByID retrieves a transaction by ID with relationships
