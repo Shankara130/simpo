@@ -78,7 +78,7 @@ func TestStockEventIntegration_TransactionToBroadcast(t *testing.T) {
 	// Register a mock WebSocket client
 	clientID := "test-client-1"
 	branches := []uint{1}
-	messageChan := make(chan services.StockUpdatedEvent, 10)
+	messageChan := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(clientID, branches, messageChan)
 	defer stockEventService.UnregisterClient(clientID)
 
@@ -165,14 +165,14 @@ func TestStockEventIntegration_StockAdjustmentToBroadcast(t *testing.T) {
 	// Register multiple mock WebSocket clients
 	client1ID := "test-client-branch2"
 	branches2 := []uint{2}
-	messageChan1 := make(chan services.StockUpdatedEvent, 10)
+	messageChan1 := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(client1ID, branches2, messageChan1)
 	defer stockEventService.UnregisterClient(client1ID)
 
 	// Register client for different branch (should NOT receive this event)
 	clientOtherID := "test-client-branch1"
 	branches1 := []uint{1}
-	messageChanOther := make(chan services.StockUpdatedEvent, 10)
+	messageChanOther := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(clientOtherID, branches1, messageChanOther)
 	defer stockEventService.UnregisterClient(clientOtherID)
 
@@ -254,7 +254,7 @@ func TestStockEventIntegration_MultipleTransactionsConcurrent(t *testing.T) {
 
 	// Register mock client to receive events
 	clientID := "test-client-multi"
-	messageChan := make(chan services.StockUpdatedEvent, 100)
+	messageChan := make(chan services.StockEvent, 100)
 	stockEventService.RegisterClient(clientID, []uint{1}, messageChan)
 	defer stockEventService.UnregisterClient(clientID)
 
@@ -348,17 +348,17 @@ func TestStockEventIntegration_BranchFiltering(t *testing.T) {
 
 	// Register clients for different branches
 	client1ID := "client-branch1-only"
-	messageChan1 := make(chan services.StockUpdatedEvent, 10)
+	messageChan1 := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(client1ID, []uint{1}, messageChan1)
 	defer stockEventService.UnregisterClient(client1ID)
 
 	client2ID := "client-branch2-only"
-	messageChan2 := make(chan services.StockUpdatedEvent, 10)
+	messageChan2 := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(client2ID, []uint{2}, messageChan2)
 	defer stockEventService.UnregisterClient(client2ID)
 
 	clientAllID := "client-all-branches"
-	messageChanAll := make(chan services.StockUpdatedEvent, 10)
+	messageChanAll := make(chan services.StockEvent, 10)
 	stockEventService.RegisterClient(clientAllID, []uint{}, messageChanAll) // Empty = all branches
 	defer stockEventService.UnregisterClient(clientAllID)
 

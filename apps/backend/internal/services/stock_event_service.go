@@ -23,6 +23,26 @@ type StockUpdatedEvent struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// StockEvent represents a union type for all stock-related events
+// Story 4.4: Support both stock.updated and stock.low events
+type StockEvent struct {
+	EventType string                `json:"event"` // "stock.updated" or "stock.low"
+	Data      interface{}           `json:"data"`
+}
+
+// LowStockEvent represents a low stock notification event payload
+// Story 4.4, AC2, AC4: Low stock notification event structure
+type LowStockEvent struct {
+	ProductID         uint   `json:"productId"`
+	SKU               string `json:"sku"`
+	ProductName       string `json:"productName"`
+	CurrentStock      int    `json:"currentStock"`
+	ReorderThreshold  int    `json:"reorderThreshold"`
+	SuggestedOrderQty int    `json:"suggestedOrderQty"`
+	BranchID          uint   `json:"branchId"`
+	BranchName        string `json:"branchName"`
+}
+
 // StockEventService defines the interface for stock event publishing and broadcasting
 // Story 4.2, Task 1 & 5: Redis pub/sub service and event broadcaster
 type StockEventService interface {
@@ -44,7 +64,8 @@ type StockEventService interface {
 
 	// RegisterClient registers a WebSocket client for stock updates
 	// Story 4.2, Task 4.3: Implement connection management
-	RegisterClient(clientID string, branches []uint, messageChan chan StockUpdatedEvent)
+	// Story 4.4: Extended to handle both stock.updated and stock.low events
+	RegisterClient(clientID string, branches []uint, messageChan chan<- StockEvent)
 
 	// UnregisterClient removes a WebSocket client
 	UnregisterClient(clientID string)
@@ -64,9 +85,10 @@ type stockEventService struct {
 }
 
 // clientSubscription represents a WebSocket client's subscription
+// Story 4.4: Extended to handle all stock event types
 type clientSubscription struct {
 	Branches     []uint
-	MessageChan  chan<- StockUpdatedEvent
+	MessageChan  chan<- StockEvent
 	Disconnected chan struct{}
 }
 
@@ -123,6 +145,7 @@ func (s *stockEventService) SubscribeToStockUpdates(ctx context.Context, channel
 
 // StartBroadcaster starts the event broadcaster
 // Story 4.2, Task 5.1-5.6: StockEventBroadcaster implementation
+// Story 4.4: Extended to handle stock.low events for low stock notifications
 func (s *stockEventService) StartBroadcaster(ctx context.Context) error {
 	if s.redisClient == nil {
 		return nil
@@ -130,8 +153,9 @@ func (s *stockEventService) StartBroadcaster(ctx context.Context) error {
 
 	s.broadcasterCtx, s.broadcasterCancel = context.WithCancel(ctx)
 
-	// Subscribe to global stock updates channel
-	s.pubsub = s.redisClient.Subscribe(s.broadcasterCtx, "stock.updated")
+	// Subscribe to both stock.updated and stock.low channels
+	// Story 4.4: Subscribe to stock.low channel for low stock notifications
+	s.pubsub = s.redisClient.Subscribe(s.broadcasterCtx, "stock.updated", "stock.low")
 
 	// Start broadcaster goroutine
 	go func() {
@@ -144,15 +168,42 @@ func (s *stockEventService) StartBroadcaster(ctx context.Context) error {
 					continue
 				}
 
-				// Parse event from Redis message (JSON)
-				var event StockUpdatedEvent
-				if err := json.Unmarshal([]byte(msg.Payload), &event); err != nil {
+				// Determine event type based on channel
+				// Story 4.4: Handle both stock.updated and stock.low events
+				var stockEvent StockEvent
+
+				switch msg.Channel {
+				case "stock.updated":
+					// Parse stock updated event
+					var updateEvent StockUpdatedEvent
+					if err := json.Unmarshal([]byte(msg.Payload), &updateEvent); err != nil {
+						continue
+					}
+					stockEvent = StockEvent{
+						EventType: "stock.updated",
+						Data:      updateEvent,
+					}
+
+				case "stock.low":
+					// Parse low stock event (payload is already LowStockNotificationEvent format)
+					// Story 4.4: Handle low stock notification events
+					var lowStockEvent LowStockEvent
+					if err := json.Unmarshal([]byte(msg.Payload), &lowStockEvent); err != nil {
+						continue
+					}
+					stockEvent = StockEvent{
+						EventType: "stock.low",
+						Data:      lowStockEvent,
+					}
+
+				default:
+					// Unknown channel, skip
 					continue
 				}
 
 				// Story 4.2, Task 5.3: Broadcast events to connected WebSocket clients
 				// Story 4.2, Task 5.4: Filter events based on client's subscribed branches
-				s.broadcastToClients(event)
+				s.broadcastToClients(stockEvent)
 			}
 		}
 	}()
@@ -174,7 +225,8 @@ func (s *stockEventService) StopBroadcaster() {
 
 // RegisterClient registers a WebSocket client for stock updates
 // Story 4.2, Task 4.3: Implement connection management
-func (s *stockEventService) RegisterClient(clientID string, branches []uint, messageChan chan StockUpdatedEvent) {
+// Story 4.4: Extended to handle both stock.updated and stock.low events
+func (s *stockEventService) RegisterClient(clientID string, branches []uint, messageChan chan<- StockEvent) {
 	s.clientsMutex.Lock()
 	s.clients[clientID] = clientSubscription{
 		Branches:     branches,
@@ -196,7 +248,7 @@ func (s *stockEventService) UnregisterClient(clientID string) {
 
 // broadcastToClients broadcasts an event to all relevant connected clients
 // Story 4.2, Task 5.4: Filter events based on client's subscribed branches
-func (s *stockEventService) broadcastToClients(event StockUpdatedEvent) {
+func (s *stockEventService) broadcastToClients(event StockEvent) {
 	s.clientsMutex.RLock()
 	// Copy client IDs to avoid holding lock while sending
 	clientIDs := make([]string, 0, len(s.clients))
@@ -236,7 +288,21 @@ func (s *stockEventService) broadcastToClients(event StockUpdatedEvent) {
 
 // shouldSendToClient determines if a client should receive this event
 // Story 4.2, Task 5.4: Filter events based on client's subscribed branches
-func (s *stockEventService) shouldSendToClient(client clientSubscription, event StockUpdatedEvent) bool {
+func (s *stockEventService) shouldSendToClient(client clientSubscription, event StockEvent) bool {
+	// Extract branch ID from event based on event type
+	// Story 4.4: Handle both stock.updated and stock.low events
+	var eventBranchID uint
+
+	switch eventData := event.Data.(type) {
+	case StockUpdatedEvent:
+		eventBranchID = eventData.BranchID
+	case LowStockEvent:
+		eventBranchID = eventData.BranchID
+	default:
+		// Unknown event type, don't send
+		return false
+	}
+
 	// If client has no branch filters, send all events
 	if len(client.Branches) == 0 {
 		return true
@@ -244,7 +310,7 @@ func (s *stockEventService) shouldSendToClient(client clientSubscription, event 
 
 	// Check if event's branch is in client's subscribed branches
 	for _, branchID := range client.Branches {
-		if branchID == event.BranchID {
+		if branchID == eventBranchID {
 			return true
 		}
 	}

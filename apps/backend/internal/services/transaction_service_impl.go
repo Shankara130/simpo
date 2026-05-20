@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/repositories"
 )
@@ -13,23 +15,27 @@ import (
 // transactionService implements TransactionService interface
 // AC2: Services use repository interfaces (not concrete implementations)
 // Story 4.2, Task 2: StockEventService for publishing stock updates
+// Story 4.4: AlertService for low stock notifications
 type transactionService struct {
 	transactionRepo     repositories.TransactionRepository
 	transactionItemRepo repositories.TransactionItemRepository
 	productRepo         repositories.ProductRepository
 	auditService        AuditService
 	stockEventService   StockEventService
+	alertService        AlertService // Story 4.4: For low stock notifications
 }
 
 // NewTransactionService creates a new transaction service with dependency injection
 // AC2: Services accept repository interfaces via constructor injection
 // Story 4.2, Task 2: Add stockEventService parameter
+// Story 4.4: Add alertService parameter for low stock notifications
 func NewTransactionService(
 	transactionRepo repositories.TransactionRepository,
 	transactionItemRepo repositories.TransactionItemRepository,
 	productRepo repositories.ProductRepository,
 	auditService AuditService,
 	stockEventService StockEventService,
+	alertService AlertService, // Story 4.4: AlertService for low stock notifications
 ) TransactionService {
 	// Fail fast on nil dependencies
 	if transactionRepo == nil {
@@ -45,6 +51,7 @@ func NewTransactionService(
 		panic("transactionService: auditService cannot be nil")
 	}
 	// Story 4.2, Task 2: stockEventService is optional (can be nil for graceful degradation)
+	// Story 4.4: alertService is optional (can be nil for graceful degradation)
 	// Events won't be published if not provided, but transactions will still work
 
 	return &transactionService{
@@ -53,6 +60,7 @@ func NewTransactionService(
 		productRepo:         productRepo,
 		auditService:        auditService,
 		stockEventService:   stockEventService,
+		alertService:        alertService,
 	}
 }
 
@@ -159,11 +167,11 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 
 	// Validate payment method
 	allowedPaymentMethods := map[string]bool{
-		"CASH":    true,
+		"CASH":     true,
 		"TRANSFER": true,
 		"E-WALLET": true,
-		"CARD":    true,
-		"QRIS":    true,
+		"CARD":     true,
+		"QRIS":     true,
 	}
 	if !allowedPaymentMethods[sale.PaymentMethod] {
 		return nil, &InvalidInputError{
@@ -234,7 +242,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 
 	// Story 4.2, Task 2.1-2.4: Publish stock events after successful transaction
 	// Stock events are published after transaction commit to ensure consistency
-	s.publishStockUpdateEvents(ctx, aggregatedItems, transaction, cashierID, branchID)
+	s.publishStockUpdateEvents(ctx, aggregatedItems, cashierID, branchID)
 
 	return transaction, nil
 }
@@ -395,8 +403,9 @@ func (s *transactionService) GenerateReceiptData(ctx context.Context, transactio
 
 // Story 4.2, Task 2.1-2.4: publishStockUpdateEvents publishes stock update events
 // after successful transaction completion
+// Story 4.4, Task 4: Add low stock check and notification triggering
 // This method publishes events for each product in the transaction with old and new stock values
-func (s *transactionService) publishStockUpdateEvents(ctx context.Context, items []*SaleItem, transaction *models.Transaction, cashierID uint, branchID uint) {
+func (s *transactionService) publishStockUpdateEvents(ctx context.Context, items []*SaleItem, cashierID uint, branchID uint) {
 	// Only publish if StockEventService is available
 	if s.stockEventService == nil {
 		return
@@ -437,6 +446,18 @@ func (s *transactionService) publishStockUpdateEvents(ctx context.Context, items
 		go func(evt StockUpdatedEvent) {
 			_ = s.stockEventService.PublishStockUpdate(context.Background(), evt)
 		}(event)
+
+		// Story 4.4, Task 4.2-4.4: Check and trigger low stock notification
+		// After stock deduction, check if product is now in low stock state
+		// Only trigger notification if stock falls below threshold
+		// Use async goroutine to avoid blocking transaction completion
+		if s.alertService != nil && product.StockQty < int64(product.ReorderThreshold) {
+			go func(prod *models.Product, bid uint) {
+				// Check if this is a new low stock condition (not already notified)
+				// The actual debounce check happens in PublishLowStockAlert
+				s.publishLowStockNotification(context.Background(), prod, bid)
+			}(product, branchID)
+		}
 	}
 }
 
@@ -551,4 +572,70 @@ func (s *transactionService) generateTransactionNumber(ctx context.Context, bran
 	sequential := "0001" // For MVP, use sequential number
 
 	return fmt.Sprintf("TRX-%s-%s", dateStr, sequential), nil
+}
+
+// publishLowStockNotification publishes a low stock notification event
+// Story 4.4, Task 4.2-4.4: Trigger low stock notification after sale
+// Creates and publishes low stock event with debounce logic
+func (s *transactionService) publishLowStockNotification(ctx context.Context, product *models.Product, branchID uint) {
+	// Story 4.4, Task 4.4: Add metrics tracking (log low stock alerts)
+	// For MVP, we use structured logging for metrics
+	slog.Info("Low stock condition detected",
+		"product_id", product.ID,
+		"sku", product.SKU,
+		"product_name", product.Name,
+		"current_stock", product.StockQty,
+		"reorder_threshold", product.ReorderThreshold,
+		"branch_id", branchID)
+
+	// Create low stock notification event
+	// Story 4.4, Task 2.2-2.3: Event structure with UUID and timestamp
+	// Story 4.4, Patch: Get branch name from product's branch relationship
+	branchName := s.getBranchName(product.BranchID)
+
+	event := &dto.LowStockNotificationEvent{
+		EventID:   fmt.Sprintf("evt_%d", time.Now().UnixNano()),
+		EventType: "stock.low",
+		Timestamp: time.Now().Format(time.RFC3339),
+		Data: dto.ProductLowStockData{
+			ProductID:         product.ID,
+			SKU:               product.SKU,
+			ProductName:       product.Name,
+			CurrentStock:      int(product.StockQty),
+			ReorderThreshold:  product.ReorderThreshold,
+			SuggestedOrderQty: product.ReorderThreshold - int(product.StockQty),
+			BranchID:          product.BranchID,
+			BranchName:        branchName,
+		},
+	}
+
+	// Story 4.4, Task 4.3: Publish notification asynchronously via AlertService
+	if s.alertService != nil {
+		if err := s.alertService.PublishLowStockAlert(ctx, event); err != nil {
+			// Log error but don't fail - notifications are best-effort
+			slog.Error("Failed to publish low stock alert", "error", err, "product_id", product.ID)
+		}
+	}
+}
+
+// getBranchName retrieves branch name for a given branch ID
+// Story 4.4, Patch: Populate BranchName in notification payload
+// For MVP, uses hardcoded mapping. Future: integrate with BranchService
+func (s *transactionService) getBranchName(branchID uint) string {
+	// Simple hardcoded mapping for MVP
+	// TODO: Integrate with BranchService when available
+	branchNames := map[uint]string{
+		1: "Jakarta Branch",
+		2: "Bandung Branch",
+		3: "Surabaya Branch",
+		4: "Medan Branch",
+		5: "Semarang Branch",
+	}
+
+	if name, exists := branchNames[branchID]; exists {
+		return name
+	}
+
+	// Fallback to generic format
+	return fmt.Sprintf("Branch %d", branchID)
 }

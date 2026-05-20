@@ -81,11 +81,11 @@ func (m *MockProductRepository) GetExpiredProducts(ctx context.Context, branchID
 // Test NewProductService with nil dependencies
 func TestNewProductService_PanicOnNilDependencies(t *testing.T) {
 	assert.Panics(t, func() {
-		NewProductService(nil, &MockAuditService{}, nil, nil)
+			NewProductService(nil, &MockAuditService{}, nil, nil, nil)
 	}, "Should panic when productRepo is nil")
 
 	assert.Panics(t, func() {
-		NewProductService(&MockProductRepository{}, nil, nil, nil)
+		NewProductService(&MockProductRepository{}, nil, nil, nil, nil)
 	}, "Should panic when auditService is nil")
 }
 
@@ -94,7 +94,7 @@ func TestProductService_CreateProduct_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		SKU:         "TEST-001",
@@ -121,7 +121,7 @@ func TestProductService_CreateProduct_EmptySKU(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		SKU:      "",
@@ -144,7 +144,7 @@ func TestProductService_CreateProduct_DuplicateSKU(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		SKU:      "TEST-001",
@@ -172,7 +172,7 @@ func TestProductService_CreateProduct_ContextCanceled(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -196,7 +196,7 @@ func TestProductService_UpdateProduct_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	existing := &models.Product{
 		ID:        1,
@@ -231,7 +231,7 @@ func TestProductService_UpdateProduct_CannotChangeSKU(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	existing := &models.Product{
 		ID:        1,
@@ -266,7 +266,7 @@ func TestProductService_CheckAvailability_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,
@@ -289,7 +289,7 @@ func TestProductService_CheckAvailability_InsufficientStock(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,
@@ -312,7 +312,7 @@ func TestProductService_CheckAvailability_ExpiredProduct(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	past := time.Now().Add(-24 * time.Hour)
 	product := &models.Product{
@@ -339,7 +339,7 @@ func TestProductService_GetLowStockProducts_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	products := []*models.Product{
 		{ID: 1, Name: "Product 1", StockQty: 5, ReorderThreshold: 10},
@@ -363,7 +363,7 @@ func TestProductService_ListProducts_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	products := []*models.Product{
 		{ID: 1, Name: "Product 1"},
@@ -393,7 +393,7 @@ func TestProductService_ListProducts_SanitizesWildcardCharacters(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	filter := &ProductFilter{
 		SearchQuery: "test%_wildcards",
@@ -418,7 +418,7 @@ func TestProductService_ListProducts_DefaultPagination(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	// Mock expectations - expect default pagination
 	mockRepo.On("List", mock.Anything, mock.MatchedBy(func(f *repositories.ProductFilter) bool {
@@ -437,7 +437,7 @@ func TestProductService_ListProducts_MaxPaginationLimit(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	filter := &ProductFilter{
 		Limit: 5000, // Exceeds max
@@ -467,7 +467,7 @@ func TestProductService_ManualAdjustStock_Success(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:               1,
@@ -509,7 +509,7 @@ func TestProductService_ManualAdjustStock_NegativeStockRejected(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	req := &StockAdjustmentRequest{
 		ProductID:   1,
@@ -533,7 +533,7 @@ func TestProductService_ManualAdjustStock_MissingReasonRejected(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	req := &StockAdjustmentRequest{
 		ProductID:   1,
@@ -557,7 +557,7 @@ func TestProductService_ManualAdjustStock_ProductNotFound(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	req := &StockAdjustmentRequest{
 		ProductID:   999,
@@ -584,7 +584,7 @@ func TestProductService_ManualAdjustStock_BranchMismatch(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,
@@ -619,7 +619,7 @@ func TestProductService_ManualAdjustStock_InvalidReason(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,
@@ -654,7 +654,7 @@ func TestProductService_ManualAdjustStock_OtherReasonWithoutNotes(t *testing.T) 
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,
@@ -703,7 +703,7 @@ func TestProductService_ManualAdjustStock_ValidReasons(t *testing.T) {
 			// Reset mock for each iteration
 			mockRepo := new(MockProductRepository)
 			mockAudit := new(MockAuditService)
-			service := NewProductService(mockRepo, mockAudit, nil, nil)
+			service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 			req := &StockAdjustmentRequest{
 				ProductID:   1,
@@ -736,7 +736,7 @@ func TestProductService_ManualAdjustStock_LowStockTriggered(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:               1,
@@ -773,7 +773,7 @@ func TestProductService_ManualAdjustStock_ContextCanceled(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -797,7 +797,7 @@ func TestProductService_ManualAdjustStock_AllowsZeroStock(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewProductService(mockRepo, mockAudit, nil, nil)
+	service := NewProductService(mockRepo, mockAudit, nil, nil, nil)
 
 	product := &models.Product{
 		ID:       1,

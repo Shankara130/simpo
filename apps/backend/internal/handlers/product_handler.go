@@ -28,6 +28,7 @@ type ProductHandler interface {
 	ListProducts(c *gin.Context)
 	SubscribeStockUpdates(c *gin.Context) // Story 4.2, Task 4.1-4.6: WebSocket subscription
 	AdjustStock(c *gin.Context)            // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
+	GetLowStockProducts(c *gin.Context)    // Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
 }
 
 // productHandler implements ProductHandler
@@ -39,11 +40,12 @@ type productHandler struct {
 }
 
 // Story 4.2, Task 4.3: Client represents a WebSocket client connection
+// Story 4.4: Extended to handle both stock.updated and stock.low events
 type wsClient struct {
 	id         string
 	branches   []uint
 	conn       *websocket.Conn
-	messageChan chan services.StockUpdatedEvent
+	messageChan chan services.StockEvent
 }
 
 // Story 4.2, Task 4.3: Active WebSocket clients registry with mutex protection
@@ -356,7 +358,7 @@ func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 	clientID := fmt.Sprintf("client-%d", time.Now().UnixNano())
 	
 	// Create message channel for this client (increased to 1000 for backpressure handling)
-	messageChan := make(chan services.StockUpdatedEvent, 1000)
+	messageChan := make(chan services.StockEvent, 1000)
 	
 	client := &wsClient{
 		id:         clientID,
@@ -402,6 +404,7 @@ func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 
 // handleClientMessages sends stock update events to WebSocket client
 // Story 4.2, Task 4.3: Broadcast events to connected WebSocket clients
+// Story 4.4: Extended to handle both stock.updated and stock.low events
 func (h *productHandler) handleClientMessages(client *wsClient) {
 	for {
 		select {
@@ -411,10 +414,10 @@ func (h *productHandler) handleClientMessages(client *wsClient) {
 			}
 
 			// Wrap event in the expected format for frontend
-			// Frontend expects: {event: "stock.updated", data: {...}}
+			// Frontend expects: {event: "stock.updated" | "stock.low", data: {...}}
 			wrappedEvent := map[string]interface{}{
-				"event": "stock.updated",
-				"data":  event,
+				"event": event.EventType,
+				"data":  event.Data,
 			}
 
 			// Send event to client
@@ -507,7 +510,7 @@ func (h *productHandler) AdjustStock(c *gin.Context) {
 	result, err := h.productService.ManualAdjustStock(c.Request.Context(), &req, adminID, adminUsername)
 	if err != nil {
 		// Handle different error types appropriately
-		switch e := err.(type) {
+		switch err.(type) {
 		case *services.ProductNotFoundError:
 			_ = c.Error(errors.NotFound(err.Error()))
 			c.Status(http.StatusNotFound)
@@ -539,4 +542,122 @@ func (h *productHandler) AdjustStock(c *gin.Context) {
 
 	// Story 4.3, Task 4.7: Return success confirmation with RFC 7807 format
 	c.JSON(http.StatusOK, result)
+}
+
+// GetLowStockProducts handles requests for products with low stock
+// Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
+//
+//	@Summary		Get products with low stock
+//	@Description	Retrieves products where current stock is below reorder threshold. Supports optional branch_id filtering for Owners, Cashiers see their assigned branch only.
+//	@Tags			products
+//	@Produce		json
+//	@Param			branch_id	query		int		false	"Filter by branch ID (Owner only, defaults to user's branch)"
+//	@Success		200			{object}	apiErrors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with low stock products list"
+//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
+//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
+//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Router			/api/v1/products/low-stock [get]
+func (h *productHandler) GetLowStockProducts(c *gin.Context) {
+	// Story 4.4, Task 5.2: Extract user context for RBAC
+	userRole, exists := c.Get("user_role")
+	if !exists {
+		_ = c.Error(errors.Unauthorized("User role not found"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	role, ok := userRole.(string)
+	if !ok {
+		_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid user role type")))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Story 4.4, Task 5.2: RBAC - Apply branch access control
+	// Owners can view all branches or filter by branch_id parameter
+	// Cashiers can only view their assigned branch
+	var branchID uint
+	var userBranchID *uint
+	branchIDValue, branchExists := c.Get("branch_id")
+	if branchExists {
+		if bid, ok := branchIDValue.(uint); ok {
+			userBranchID = &bid
+		}
+	}
+
+	// Parse branch_id query parameter
+	branchIDParam := c.Query("branch_id")
+
+	// Story 4.4, Task 5.3: Cashier branch filtering
+	if role == user.RoleCashier {
+		// Cashier must have a branch assignment
+		if userBranchID == nil {
+			_ = c.Error(errors.Forbidden("Cashier must have a branch assignment"))
+			c.Status(http.StatusForbidden)
+			return
+		}
+		// Cashier: use their assigned branch
+		branchID = *userBranchID
+
+		// If cashier provides branch_id param, verify it matches their assignment
+		if branchIDParam != "" {
+			paramBranchID, err := strconv.ParseUint(branchIDParam, 10, 64)
+			if err == nil && uint(paramBranchID) != branchID {
+				_ = c.Error(errors.Forbidden("Cashiers can only view products from their assigned branch"))
+				c.Status(http.StatusForbidden)
+				return
+			}
+		}
+	} else if role == user.RoleOwner {
+		// Owner: use branch_id from query parameter if provided, otherwise 0 (all branches)
+		if branchIDParam != "" {
+			paramBranchID, err := strconv.ParseUint(branchIDParam, 10, 64)
+			if err != nil {
+				_ = c.Error(errors.BadRequest("Invalid branch_id parameter"))
+				c.Status(http.StatusBadRequest)
+				return
+			}
+			branchID = uint(paramBranchID)
+		}
+		// If branchID remains 0, service will return low stock products from all branches
+	} else {
+		_ = c.Error(errors.Forbidden("Invalid user role"))
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	// Story 4.4, Task 5.4: Call service layer
+	products, err := h.productService.GetLowStockProducts(c.Request.Context(), branchID)
+	if err != nil {
+		_ = c.Error(errors.InternalServerError(err))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Transform to DTO with low stock indicator (always true for this endpoint)
+	productItems := make([]dto.ProductListItem, 0, len(products))
+	now := time.Now()
+	for _, p := range products {
+		isExpired := p.ExpiryDate != nil && p.ExpiryDate.Before(now)
+
+		productItems = append(productItems, dto.ProductListItem{
+			ID:               p.ID,
+			SKU:              p.SKU,
+			Name:             p.Name,
+			Description:      p.Description,
+			StockQty:         p.StockQty,
+			Price:            p.Price,
+			ExpiryDate:       p.ExpiryDate,
+			BranchID:         p.BranchID,
+			Category:         p.Category,
+			ReorderThreshold: p.ReorderThreshold,
+			IsLowStock:       true, // Always true for low stock products
+			IsExpired:        isExpired,
+			CreatedAt:        p.CreatedAt,
+			UpdatedAt:        p.UpdatedAt,
+		})
+	}
+
+	// Build response
+	c.JSON(http.StatusOK, errors.Success(productItems))
 }

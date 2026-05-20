@@ -29,6 +29,22 @@ export interface StockUpdatedEvent {
   updatedAt: string;
 }
 
+// Low stock event payload from backend
+// Story 4.4, AC2, AC4: Low stock notification event structure
+export interface LowStockEvent {
+  productId: number;
+  sku: string;
+  productName: string;
+  currentStock: number;
+  reorderThreshold: number;
+  suggestedOrderQty: number;
+  branchId: number;
+  branchName: string;
+}
+
+// Union type for all stock events
+export type StockEvent = StockUpdatedEvent | LowStockEvent;
+
 // Configuration options for the hook
 interface UseStockWebSocketOptions {
   // JWT token for authentication
@@ -43,6 +59,8 @@ interface UseStockWebSocketOptions {
   maxReconnectDelay?: number;
   // Event handler for stock updates
   onStockUpdate?: (event: StockUpdatedEvent) => void;
+  // Story 4.4: Event handler for low stock notifications
+  onLowStock?: (event: LowStockEvent) => void;
   // Connection state change handler
   onConnectionStateChange?: (state: ConnectionState) => void;
   // Error handler
@@ -82,6 +100,7 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
     autoReconnect = true,
     maxReconnectDelay = 30000,
     onStockUpdate,
+    onLowStock,
     onConnectionStateChange,
     onError,
   } = options;
@@ -121,12 +140,13 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
   /**
    * Handle WebSocket message
    * Story 4.2, Task 7.4: Add event handlers for stock updates
+   * Story 4.4: Extended to handle stock.low events for low stock notifications
    */
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
       const data = JSON.parse(event.data);
 
-      // Validate event structure
+      // Validate event structure and handle based on event type
       if (data.event === 'stock.updated' && data.data) {
         const stockEvent: StockUpdatedEvent = data.data;
 
@@ -138,6 +158,14 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
         if (onStockUpdate) {
           onStockUpdate(stockEvent);
         }
+      } else if (data.event === 'stock.low' && data.data) {
+        // Story 4.4: Handle low stock notifications
+        const lowStockEvent: LowStockEvent = data.data;
+
+        // Call external handler if provided
+        if (onLowStock) {
+          onLowStock(lowStockEvent);
+        }
       }
     } catch (error) {
       console.error('[useStockWebSocket] Failed to parse message:', error);
@@ -145,7 +173,7 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
         onError(error as Error);
       }
     }
-  }, [onStockUpdate, onError]);
+  }, [onStockUpdate, onLowStock, onError]);
 
   /**
    * Handle WebSocket close

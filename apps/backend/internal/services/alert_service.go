@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"time"
+
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 )
 
 // AlertService defines the interface for alert business operations
@@ -19,6 +21,14 @@ type AlertService interface {
 	// SendNotification sends alert notifications
 	// Stub for future Redis pub/sub story
 	SendNotification(ctx context.Context, alert interface{}) error
+
+	// PublishLowStockAlert publishes low stock notification to Redis pub/sub
+	// Story 4.4, AC2, AC3, AC6: Publish stock.low event with debounce logic
+	PublishLowStockAlert(ctx context.Context, event *dto.LowStockNotificationEvent) error
+
+	// ClearLowStockState clears low stock state when stock returns to normal
+	// Story 4.4, AC7: Debounce logic - remove tracking when stock >= threshold
+	ClearLowStockState(ctx context.Context, productID uint, branchID uint) error
 }
 
 // LowStockAlert represents a low stock alert

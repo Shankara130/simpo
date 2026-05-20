@@ -74,7 +74,7 @@ func TestStockEventService_SubscribeAndBroadcast(t *testing.T) {
 
 	t.Run("RegisterClient and UnregisterClient", func(t *testing.T) {
 		clientID := uuid.New().String()
-		messageChan := make(chan StockUpdatedEvent, 10)
+		messageChan := make(chan StockEvent, 10)
 		branches := []uint{1, 2, 3}
 
 		// Register client
@@ -101,7 +101,7 @@ func TestStockEventService_BranchFiltering(t *testing.T) {
 	// Test client with no branch filter (receives all events)
 	t.Run("Client with no branch filter receives all events", func(t *testing.T) {
 		clientID := uuid.New().String()
-		messageChan := make(chan StockUpdatedEvent, 10)
+		messageChan := make(chan StockEvent, 10)
 
 		service.RegisterClient(clientID, []uint{}, messageChan)
 
@@ -113,7 +113,7 @@ func TestStockEventService_BranchFiltering(t *testing.T) {
 	// Test client with specific branch filter
 	t.Run("Client with branch filter only receives matching branch events", func(t *testing.T) {
 		clientID := uuid.New().String()
-		messageChan := make(chan StockUpdatedEvent, 10)
+		messageChan := make(chan StockEvent, 10)
 		branches := []uint{1, 2}
 
 		service.RegisterClient(clientID, branches, messageChan)

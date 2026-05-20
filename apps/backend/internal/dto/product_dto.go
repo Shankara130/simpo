@@ -58,6 +58,41 @@ func ValidStockAdjustmentReasons() []StockAdjustmentReason {
 	}
 }
 
+// LowStockNotificationEvent represents a low stock notification event
+// Story 4.4, AC2, AC4: Event structure for low stock notifications
+type LowStockNotificationEvent struct {
+	EventID   string              `json:"eventId"`   // UUID for event tracking
+	EventType string              `json:"eventType"` // "stock.low"
+	Timestamp string              `json:"timestamp"` // ISO 8601 timestamp
+	Data      ProductLowStockData `json:"data"`      // Low stock details
+}
+
+// ProductLowStockData contains product information for low stock notifications
+// Story 4.4, AC4: Product details for notification payload
+type ProductLowStockData struct {
+	ProductID         uint   `json:"productId"`
+	SKU               string `json:"sku"`
+	ProductName       string `json:"productName"`
+	CurrentStock      int    `json:"currentStock"`
+	ReorderThreshold  int    `json:"reorderThreshold"`
+	SuggestedOrderQty int    `json:"suggestedOrderQty"` // threshold - current + buffer
+	BranchID          uint   `json:"branchId"`
+	BranchName        string `json:"branchName"`
+}
+
+// LowStockProductResponse represents a low stock product in API responses
+// Story 4.4, Task 5: API endpoint response structure
+type LowStockProductResponse struct {
+	ProductID         uint   `json:"productId"`
+	SKU                string `json:"sku"`
+	Name               string `json:"name"`
+	CurrentStock       int64  `json:"currentStock"`
+	ReorderThreshold   int    `json:"reorderThreshold"`
+	SuggestedOrderQty  int    `json:"suggestedOrderQty"`
+	BranchID           uint   `json:"branchId"`
+	BranchName         string `json:"branchName"`
+}
+
 // ProductListRequest represents query parameters for product listing
 // Story 4.1, AC2, AC3, AC7: Search, filter, and pagination parameters
 type ProductListRequest struct {
