@@ -13,6 +13,7 @@ type MockAuditService struct {
 	LogSelfRegistrationFunc       func(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
 	LogEmailVerificationFunc       func(ctx context.Context, userID uint, email string, ipAddress string) error
 	LogUserDeactivationFunc       func(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
+	LogStockAdjustmentFunc        func(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -73,6 +74,15 @@ func (m *MockAuditService) LogUserDeactivation(ctx context.Context, adminID uint
 	m.LogCount++
 	if m.LogUserDeactivationFunc != nil {
 		return m.LogUserDeactivationFunc(ctx, adminID, deactivatedUserID, adminUsername, deactivatedUsername, reason, ipAddress)
+	}
+	return nil
+}
+
+// LogStockAdjustment logs manual stock adjustment actions (Story 4.3, AC5)
+func (m *MockAuditService) LogStockAdjustment(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error {
+	m.LogCount++
+	if m.LogStockAdjustmentFunc != nil {
+		return m.LogStockAdjustmentFunc(ctx, adminID, adminUsername, productID, productSKU, oldQty, newQty, reason)
 	}
 	return nil
 }

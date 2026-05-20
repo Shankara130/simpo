@@ -2,6 +2,62 @@ package dto
 
 import "time"
 
+// StockAdjustmentRequest represents a request to manually adjust stock quantity
+// Story 4.3, AC1, AC2, AC3: Manual stock adjustment with reason logging
+type StockAdjustmentRequest struct {
+	ProductID  uint   `json:"productId" binding:"required,min=1"`           // AC1: Product selection required
+	BranchID   uint   `json:"branchId" binding:"required,min=1"`            // AC1: Branch location required
+	NewStockQty int64  `json:"newStockQty" binding:"required,min=0"`             // AC2: New quantity (not increment)
+	Reason     string `json:"reason" binding:"required,min=1"`                   // AC3: Reason required
+	ReasonNotes string `json:"reasonNotes,omitempty"`                            // AC3: Optional details for "Other" reason
+}
+
+// StockAdjustmentResult represents the result of a successful stock adjustment
+// Story 4.3, AC7: Success confirmation with old/new/changed values
+type StockAdjustmentResult struct {
+	ProductID   uint      `json:"productId"`
+	SKU          string    `json:"sku"`
+	Name         string    `json:"name"`
+	OldStockQty  int64     `json:"oldStockQty"`
+	NewStockQty  int64     `json:"newStockQty"`
+	Change       int64     `json:"change"`       // Calculated delta (new - old)
+	Reason       string    `json:"reason"`
+	AdjustedBy   string    `json:"adjustedBy"`
+	AdjustedAt   time.Time `json:"adjustedAt"`
+}
+
+// StockAdjustmentReason defines the allowed reasons for stock adjustment
+// Story 4.3, AC3: Predefined reason categories for audit trail
+type StockAdjustmentReason string
+
+const (
+	// StockAdjustmentDamage indicates products were damaged and removed from stock
+	StockAdjustmentDamage StockAdjustmentReason = "Damage"
+	// StockAdjustmentExpiration indicates products expired and were disposed
+	StockAdjustmentExpiration StockAdjustmentReason = "Expiration"
+	// StockAdjustmentDeliveryReceipt indicates new stock received from supplier
+	StockAdjustmentDeliveryReceipt StockAdjustmentReason = "DeliveryReceipt"
+	// StockAdjustmentPhysicalCount indicates adjustment based on physical inventory count
+	StockAdjustmentPhysicalCount StockAdjustmentReason = "PhysicalCount"
+	// StockAdjustmentTheftLoss indicates stock lost due to theft or loss
+	StockAdjustmentTheftLoss StockAdjustmentReason = "TheftLoss"
+	// StockAdjustmentOther indicates other reasons with additional notes
+	StockAdjustmentOther StockAdjustmentReason = "Other"
+)
+
+// ValidStockAdjustmentReasons returns a list of valid stock adjustment reasons
+// Useful for frontend dropdown population and validation
+func ValidStockAdjustmentReasons() []StockAdjustmentReason {
+	return []StockAdjustmentReason{
+		StockAdjustmentDamage,
+		StockAdjustmentExpiration,
+		StockAdjustmentDeliveryReceipt,
+		StockAdjustmentPhysicalCount,
+		StockAdjustmentTheftLoss,
+		StockAdjustmentOther,
+	}
+}
+
 // ProductListRequest represents query parameters for product listing
 // Story 4.1, AC2, AC3, AC7: Search, filter, and pagination parameters
 type ProductListRequest struct {

@@ -12,8 +12,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import useStockWebSocket from '../../hooks/useStockWebSocket';
-import type { StockUpdatedEvent } from '../../hooks/useStockWebSocket';
+import useStockWebSocket from '../hooks/useStockWebSocket';
+import type { StockUpdatedEvent } from '../hooks/useStockWebSocket';
 
 // Stock history data point
 interface StockHistoryPoint {
@@ -36,6 +36,8 @@ interface Product {
   reorderThreshold: number;
   isLowStock: boolean;
   isExpired: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ProductStockDetailProps {

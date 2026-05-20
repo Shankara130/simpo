@@ -213,6 +213,8 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				productsGroup.GET("", productHandler.ListProducts) // List with search, filters, and pagination
 				// Story 4.2, Task 4.2: WebSocket endpoint for real-time stock updates
 				productsGroup.GET("/stock/subscribe", productHandler.SubscribeStockUpdates)
+				// Story 4.3, Task 4.2: Stock adjustment endpoint with admin permissions
+				productsGroup.POST("/stock/adjust", productHandler.AdjustStock)
 			}
 		}
 	}

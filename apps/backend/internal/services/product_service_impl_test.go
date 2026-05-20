@@ -461,3 +461,369 @@ func TestProductService_ListProducts_MaxPaginationLimit(t *testing.T) {
 func uintPtr(v uint) *uint {
 	return &v
 }
+
+// Test ManualAdjustStock
+func TestProductService_ManualAdjustStock_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:               1,
+		SKU:              "TEST-001",
+		Name:             "Test Product",
+		StockQty:         50,
+		Price:            "50000.00",
+		BranchID:         1,
+		ReorderThreshold: 10,
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 75,
+		Reason:      "DeliveryReceipt",
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+	mockRepo.On("UpdateStock", mock.Anything, uint(1), int64(25)).Return(nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, uint(1), result.ProductID)
+	assert.Equal(t, "TEST-001", result.SKU)
+	assert.Equal(t, int64(50), result.OldStockQty)
+	assert.Equal(t, int64(75), result.NewStockQty)
+	assert.Equal(t, int64(25), result.Change)
+	assert.Equal(t, "DeliveryReceipt", result.Reason)
+	assert.Equal(t, "admin", result.AdjustedBy)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestProductService_ManualAdjustStock_NegativeStockRejected(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: -5, // Negative stock
+		Reason:      "Damage",
+	}
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "new_stock_qty", invErr.Field)
+}
+
+func TestProductService_ManualAdjustStock_MissingReasonRejected(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 50,
+		Reason:      "", // Empty reason
+	}
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "reason", invErr.Field)
+}
+
+func TestProductService_ManualAdjustStock_ProductNotFound(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	req := &StockAdjustmentRequest{
+		ProductID:   999,
+		BranchID:    1,
+		NewStockQty: 50,
+		Reason:      "Damage",
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(999)).Return(nil, errors.New("not found"))
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var prodErr *ProductNotFoundError
+	assert.True(t, errors.As(err, &prodErr))
+	assert.Equal(t, uint(999), prodErr.ProductID)
+}
+
+func TestProductService_ManualAdjustStock_BranchMismatch(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:       1,
+		SKU:      "TEST-001",
+		Name:     "Test Product",
+		StockQty: 50,
+		BranchID: 2, // Product belongs to branch 2
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1, // Trying to adjust for branch 1
+		NewStockQty: 75,
+		Reason:      "Damage",
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "branch_id", invErr.Field)
+}
+
+func TestProductService_ManualAdjustStock_InvalidReason(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:       1,
+		SKU:      "TEST-001",
+		Name:     "Test Product",
+		StockQty: 50,
+		BranchID: 1,
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 75,
+		Reason:      "InvalidReason", // Not in allowed list
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "reason", invErr.Field)
+}
+
+func TestProductService_ManualAdjustStock_OtherReasonWithoutNotes(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:       1,
+		SKU:      "TEST-001",
+		Name:     "Test Product",
+		StockQty: 50,
+		BranchID: 1,
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 75,
+		Reason:      "Other",
+		ReasonNotes: "", // Missing notes for "Other" reason
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	var invErr *InvalidInputError
+	assert.True(t, errors.As(err, &invErr))
+	assert.Equal(t, "reason_notes", invErr.Field)
+}
+
+func TestProductService_ManualAdjustStock_ValidReasons(t *testing.T) {
+	// Arrange
+	product := &models.Product{
+		ID:       1,
+		SKU:      "TEST-001",
+		Name:     "Test Product",
+		StockQty: 50,
+		BranchID: 1,
+	}
+
+	validReasons := []string{"Damage", "Expiration", "DeliveryReceipt", "PhysicalCount", "TheftLoss", "Other"}
+
+	for _, reason := range validReasons {
+		t.Run(reason, func(t *testing.T) {
+			// Reset mock for each iteration
+			mockRepo := new(MockProductRepository)
+			mockAudit := new(MockAuditService)
+			service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+			req := &StockAdjustmentRequest{
+				ProductID:   1,
+				BranchID:    1,
+				NewStockQty: 75,
+				Reason:      reason,
+			}
+
+			if reason == "Other" {
+				req.ReasonNotes = "Additional details"
+			}
+
+			// Mock expectations
+			mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+			mockRepo.On("UpdateStock", mock.Anything, uint(1), int64(25)).Return(nil)
+
+			// Act
+			result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+			// Assert
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.Equal(t, reason, result.Reason)
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestProductService_ManualAdjustStock_LowStockTriggered(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:               1,
+		SKU:              "TEST-001",
+		Name:             "Test Product",
+		StockQty:         50,
+		Price:            "50000.00",
+		BranchID:         1,
+		ReorderThreshold: 10, // Threshold is 10
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 5, // Below threshold
+		Reason:      "Damage",
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+	mockRepo.On("UpdateStock", mock.Anything, uint(1), int64(-45)).Return(nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(5), result.NewStockQty)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestProductService_ManualAdjustStock_ContextCanceled(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 75,
+		Reason:      "DeliveryReceipt",
+	}
+
+	// Act
+	result, err := service.ManualAdjustStock(ctx, req, 1, "admin")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
+
+func TestProductService_ManualAdjustStock_AllowsZeroStock(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockProductRepository)
+	mockAudit := new(MockAuditService)
+	service := NewProductService(mockRepo, mockAudit, nil, nil)
+
+	product := &models.Product{
+		ID:       1,
+		SKU:      "TEST-001",
+		Name:     "Test Product",
+		StockQty: 50,
+		BranchID: 1,
+	}
+
+	req := &StockAdjustmentRequest{
+		ProductID:   1,
+		BranchID:    1,
+		NewStockQty: 0, // Zero stock is allowed
+		Reason:      "Expiration",
+	}
+
+	// Mock expectations
+	mockRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+	mockRepo.On("UpdateStock", mock.Anything, uint(1), int64(-50)).Return(nil)
+
+	// Act
+	result, err := service.ManualAdjustStock(context.Background(), req, 1, "admin")
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(0), result.NewStockQty)
+	mockRepo.AssertExpectations(t)
+}

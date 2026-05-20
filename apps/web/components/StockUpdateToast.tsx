@@ -194,7 +194,7 @@ export function useToastNotifications(maxToasts: number = 5) {
   const [toasts, setToasts] = useState<Array<{
     id: string;
     event: StockUpdatedEvent;
-  }>([]);
+  }>>([]);
 
   const addToast = (event: StockUpdatedEvent) => {
     const id = `${event.productId}-${event.branchId}-${Date.now()}`;

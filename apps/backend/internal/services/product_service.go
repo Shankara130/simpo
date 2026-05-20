@@ -7,6 +7,30 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
 )
 
+// StockAdjustmentRequest represents a request to manually adjust stock quantity
+// Story 4.3, AC1, AC2, AC3, AC4: Manual stock adjustment with reason logging and audit trail
+type StockAdjustmentRequest struct {
+	ProductID   uint
+	BranchID    uint
+	NewStockQty int64
+	Reason      string
+	ReasonNotes string
+}
+
+// StockAdjustmentResult represents the result of a successful stock adjustment
+// Story 4.3, AC7: Success confirmation with old/new/changed values
+type StockAdjustmentResult struct {
+	ProductID  uint
+	SKU        string
+	Name       string
+	OldStockQty int64
+	NewStockQty int64
+	Change     int64
+	Reason     string
+	AdjustedBy string
+	AdjustedAt time.Time
+}
+
 // ProductService defines the interface for product business operations
 // AC1: Service interface for product domain with clear business method signatures
 type ProductService interface {
@@ -21,6 +45,12 @@ type ProductService interface {
 	// UpdateStock updates product stock quantity atomically
 	// Uses atomic increment to prevent race conditions (Epic 2 retro)
 	UpdateStock(ctx context.Context, id uint, quantity int64) error
+
+	// ManualAdjustStock manually adjusts stock quantity with reason logging
+	// Story 4.3, AC1-AC7: Admin-only stock adjustment with audit trail compliance
+	// Validates admin permissions, product existence, branch ownership
+	// Logs adjustment in append-only audit trail, triggers low stock notifications
+	ManualAdjustStock(ctx context.Context, req *StockAdjustmentRequest, adminID uint, adminUsername string) (*StockAdjustmentResult, error)
 
 	// CheckAvailability checks if sufficient stock is available
 	// Returns available quantity (min of stock_qty and requested_qty)

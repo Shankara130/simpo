@@ -28,6 +28,8 @@ const (
 	AuditActionEmailVerified          AuditAction = "EMAIL_VERIFIED"
 	// Story 1.10: User deactivation audit logging
 	AuditActionUserDeactivated        AuditAction = "USER_DEACTIVATED"
+	// Story 4.3: Stock adjustment audit logging (AC5: append-only audit trail)
+	AuditActionStockAdjustment        AuditAction = "STOCK_ADJUSTMENT"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -70,6 +72,11 @@ type AuditService interface {
 	// LogUserDeactivation logs user deactivation actions (Story 1.10, AC5)
 	// Logs admin_user_id, deactivated_user_id, admin_username, deactivated_username, reason, action, timestamp, ip_address
 	LogUserDeactivation(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
+
+	// LogStockAdjustment logs manual stock adjustment actions (Story 4.3, AC5)
+	// Logs admin_user_id, product_id, product_sku, old_qty, new_qty, reason, timestamp
+	// Append-only audit trail for Badan POM compliance (NFR-SEC-004, NFR-SEC-009)
+	LogStockAdjustment(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -291,5 +298,39 @@ func (s *auditService) LogUserDeactivation(ctx context.Context, adminID uint, de
 
 	// TODO: Future story - Add persistent storage (database or log file)
 	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	return nil
+}
+
+// LogStockAdjustment logs manual stock adjustment actions to append-only audit trail (Story 4.3, AC5)
+func (s *auditService) LogStockAdjustment(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &adminID,
+		Username:  adminUsername,
+		Action:    AuditActionStockAdjustment,
+		IPAddress: "", // IP address will be extracted from request context in production
+		Outcome:   "success",
+		Reason:    fmt.Sprintf("Adjusted stock for product '%s' (ID: %d): %d → %d - Reason: %s", productSKU, productID, oldQty, newQty, reason),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 4.3, AC5, NFR-SEC-004, NFR-SEC-009)
+	// Format: AUDIT | timestamp | STOCK_ADJUSTMENT | admin_user_id | product_sku | old_qty | new_qty | reason
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"admin_user_id", adminID,
+		"admin_username", adminUsername,
+		"product_id", productID,
+		"product_sku", productSKU,
+		"old_qty", oldQty,
+		"new_qty", newQty,
+		"reason", reason,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	// Per NFR-SEC-009: 5-year minimum retention for Badan POM compliance
 	return nil
 }

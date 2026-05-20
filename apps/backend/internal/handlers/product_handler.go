@@ -23,9 +23,11 @@ import (
 // ProductHandler defines product handler interface
 // Story 4.1, Task 1: Handler interface for product operations
 // Story 4.2, Task 4: WebSocket handler for real-time stock updates
+// Story 4.3, Task 4: Stock adjustment endpoint with admin permissions
 type ProductHandler interface {
 	ListProducts(c *gin.Context)
 	SubscribeStockUpdates(c *gin.Context) // Story 4.2, Task 4.1-4.6: WebSocket subscription
+	AdjustStock(c *gin.Context)            // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
 }
 
 // productHandler implements ProductHandler
@@ -407,7 +409,7 @@ func (h *productHandler) handleClientMessages(client *wsClient) {
 			if !ok {
 				return
 			}
-			
+
 			// Wrap event in the expected format for frontend
 			// Frontend expects: {event: "stock.updated", data: {...}}
 			wrappedEvent := map[string]interface{}{
@@ -429,4 +431,112 @@ func (h *productHandler) handleClientMessages(client *wsClient) {
 			}
 		}
 	}
+}
+
+// AdjustStock handles manual stock adjustment requests from administrators
+// Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust with role-based access control
+//
+//	@Summary		Manually adjust product stock quantity
+//	@Description	Adjust stock quantity with reason logging for inventory corrections. Admin/Owner only.
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	dto.StockAdjustmentRequest	true	"Stock adjustment request"
+//	@Success		200			{object}	services.StockAdjustmentResult	"Success response with adjustment details"
+//	@Failure		400			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Validation error"
+//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
+//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
+//	@Failure		404			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Not Found"
+//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Router			/api/v1/products/stock/adjust [post]
+func (h *productHandler) AdjustStock(c *gin.Context) {
+	// Story 4.3, Task 4.3: Extract user context (user ID, username, IP address) for audit trail
+	// Get user role from JWT middleware
+	userRole, exists := c.Get("user_role")
+	if !exists {
+		_ = c.Error(errors.Unauthorized("User role not found"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	role, ok := userRole.(string)
+	if !ok {
+		_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid user role type")))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Story 4.3, Task 4.3: RBAC - Only Admin and Owner can adjust stock
+	// Cashiers are NOT allowed (FR13 requirement)
+	if role != user.RoleAdmin && role != user.RoleOwner {
+		_ = c.Error(errors.Forbidden("Only administrators and owners can adjust stock"))
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	// Extract user ID and username for audit trail
+	var adminID uint
+	var adminUsername string
+
+	userIDValue, userIDExists := c.Get("user_id")
+	if userIDExists {
+		if uid, ok := userIDValue.(uint); ok {
+			adminID = uid
+		}
+	}
+
+	usernameValue, usernameExists := c.Get("username")
+	if usernameExists {
+		if username, ok := usernameValue.(string); ok {
+			adminUsername = username
+		}
+	}
+
+	// Get IP address for audit trail
+	ipAddress := c.ClientIP()
+
+	// Story 4.3, Task 4.5: Bind and validate StockAdjustmentDTO from request body
+	var req services.StockAdjustmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(errors.FromGinValidation(err))
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	// Story 4.3, Task 4.6: Call service layer and handle errors
+	result, err := h.productService.ManualAdjustStock(c.Request.Context(), &req, adminID, adminUsername)
+	if err != nil {
+		// Handle different error types appropriately
+		switch e := err.(type) {
+		case *services.ProductNotFoundError:
+			_ = c.Error(errors.NotFound(err.Error()))
+			c.Status(http.StatusNotFound)
+		case *services.InvalidInputError:
+			_ = c.Error(errors.BadRequest(err.Error()))
+			c.Status(http.StatusBadRequest)
+		case *services.InsufficientStockError:
+			_ = c.Error(errors.BadRequest(err.Error()))
+			c.Status(http.StatusBadRequest)
+		default:
+			_ = c.Error(errors.InternalServerError(err))
+			c.Status(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Log the successful adjustment with IP address for complete audit trail
+	slog.Info("Stock adjustment successful",
+		"admin_id", adminID,
+		"admin_username", adminUsername,
+		"ip_address", ipAddress,
+		"product_id", result.ProductID,
+		"sku", result.SKU,
+		"old_stock", result.OldStockQty,
+		"new_stock", result.NewStockQty,
+		"change", result.Change,
+		"reason", result.Reason,
+	)
+
+	// Story 4.3, Task 4.7: Return success confirmation with RFC 7807 format
+	c.JSON(http.StatusOK, result)
 }
