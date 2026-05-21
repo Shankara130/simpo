@@ -78,6 +78,14 @@ func (m *MockProductRepository) GetExpiredProducts(ctx context.Context, branchID
 	return args.Get(0).([]*models.Product), args.Error(1)
 }
 
+func (m *MockProductRepository) GetExpiringProducts(ctx context.Context, branchID uint, startDate, endDate time.Time) ([]*models.Product, error) {
+	args := m.Called(ctx, branchID, startDate, endDate)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Product), args.Error(1)
+}
+
 // Test NewProductService with nil dependencies
 func TestNewProductService_PanicOnNilDependencies(t *testing.T) {
 	assert.Panics(t, func() {

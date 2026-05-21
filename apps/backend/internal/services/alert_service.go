@@ -26,6 +26,10 @@ type AlertService interface {
 	// Story 4.4, AC2, AC3, AC6: Publish stock.low event with debounce logic
 	PublishLowStockAlert(ctx context.Context, event *dto.LowStockNotificationEvent) error
 
+	// PublishExpiryAlert publishes expiry notification to Redis pub/sub
+	// Story 4.5, AC4, AC6: Publish product.expiry event with debounce logic
+	PublishExpiryAlert(ctx context.Context, event *dto.ExpiryAlertEvent) error
+
 	// ClearLowStockState clears low stock state when stock returns to normal
 	// Story 4.4, AC7: Debounce logic - remove tracking when stock >= threshold
 	ClearLowStockState(ctx context.Context, productID uint, branchID uint) error

@@ -213,6 +213,8 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				productsGroup.GET("", productHandler.ListProducts) // List with search, filters, and pagination
 				// Story 4.4, Task 5.1-5.4: Low stock products endpoint
 				productsGroup.GET("/low-stock", productHandler.GetLowStockProducts)
+				// Story 4.5, Task 5.1-5.5: Expiring products endpoint
+				productsGroup.GET("/expiring", productHandler.GetExpiringProducts)
 				// Story 4.2, Task 4.2: WebSocket endpoint for real-time stock updates
 				productsGroup.GET("/stock/subscribe", productHandler.SubscribeStockUpdates)
 				// Story 4.3, Task 4.2: Stock adjustment endpoint with admin permissions

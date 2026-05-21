@@ -186,3 +186,41 @@ This file tracks work items that were identified during reviews but deferred to 
   Issue: Framework for tracking accuracy is available, but there's no automated validation that proves the system achieves 99% accuracy as required by AC6
   Why deferred: Measurement gap, not implementation bug - requires additional monitoring/verification work
   Recommendation: Implement periodic background jobs that compare Redis cache values against database values to calculate actual reconciliation accuracy
+
+## Deferred from: code review of story 4-5-implement-expiry-date-alerts (2026-05-21)
+
+### Architecture & Design
+
+- **Timezone Inconsistency (UTC vs local)** — `expiry_check_service.go:46`
+  Issue: Server uses UTC but users in different timezones (e.g., UTC+7 for Indonesia) may see incorrect expiry dates
+  Why deferred: Pre-existing architectural decision; should be addressed at system level with configurable business timezone
+  Recommendation: Implement system-wide timezone configuration that respects user/branch local time for expiry calculations
+
+- **Debounce Uses Key Instead of Sorted Set** — `expiry_check_service.go:127-143`
+  Issue: Spec requires Redis Sorted Set with timestamp as score, but implementation uses simple key existence with TTL
+  Why deferred: Functional equivalent achieves same result; spec could be clarified to allow simpler implementation
+  Recommendation: Accept current implementation or update spec to allow key-based debounce with TTL
+
+### Infrastructure & Performance
+
+- **Performance Testing Not Verified** — N/A
+  Issue: No performance tests to verify UI response < 500ms requirement (NFR-PERF-006)
+  Why deferred: Testing infrastructure gap; requires performance monitoring and load testing setup
+  Recommendation: Implement performance monitoring and load tests to verify UI response times meet requirement
+
+- **Missing Pagination** — `product_repository_impl.go:253`
+  Issue: No LIMIT clause in GetExpiringProducts query; large datasets could cause OOM
+  Why deferred: Pre-existing pagination gap in repository pattern; should be addressed at system level
+  Recommendation: Implement consistent pagination pattern across all repository queries
+
+- **Unbounded Date Range Query Performance** — `product_repository_impl.go:253`
+  Issue: Large date ranges could return thousands of products without limits
+  Why deferred: Related to pagination gap; needs system-level approach with configurable limits
+  Recommendation: Add configurable max result limits and enforce across all queries
+
+### Configuration Management
+
+- **Magic Numbers in Alert Thresholds** — `expiry_check_service.go:69-76`
+  Issue: Thresholds (7, 14, 30) are hard-coded and not configurable
+  Why deferred: Should be configurable via environment variables or database settings; defer for configuration management task
+  Recommendation: Implement alert threshold configuration system to allow business-specific customization

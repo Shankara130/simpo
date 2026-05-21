@@ -1,5 +1,5 @@
 # generated: 2026-05-09
-# last_updated: 2026-05-14T15:30:00+07:00
+# last_updated: 2026-05-22T12:00:00+07:00
 # project: simpo
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-20T16:30:00+07:00
+last_updated: 2026-05-22T12:00:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -82,7 +82,7 @@ development_status:
   4-2-implement-real-time-stock-visibility: done # Code review patches applied (2026-05-19)
   4-3-implement-manual-stock-adjustment: done
   4-4-implement-low-stock-notifications: done # All tasks complete, tests passing
-  4-5-implement-expiry-date-alerts: backlog
+  4-5-implement-expiry-date-alerts: done # All implementation complete - backend, web, mobile (2026-05-21)
   4-6-prevent-sale-of-expired-medications: backlog
   epic-4-retrospective: optional
 

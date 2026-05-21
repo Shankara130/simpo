@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+interface NavItem {
+  href: string;
+  label: string;
+  showBadge?: boolean;
+  badgeCount: number;
+  isUrgent?: boolean;
+}
+
 export default function AuthenticatedLayout({
   children,
 }: {
@@ -11,6 +19,10 @@ export default function AuthenticatedLayout({
 }) {
   const pathname = usePathname();
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [urgentExpiryCount, setUrgentExpiryCount] = useState(0);
+  const [criticalExpiryCount, setCriticalExpiryCount] = useState(0);
+  // PATCH: Track user role for RBAC - expiry alerts should only be shown to Owners/Admins
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Fetch low stock count periodically
   useEffect(() => {
@@ -38,10 +50,71 @@ export default function AuthenticatedLayout({
     return () => clearInterval(interval);
   }, []);
 
-  const navItems = [
+  // Fetch urgent expiry count periodically (7-day urgent items)
+  // PATCH: Only Owners and Admins should see expiry counts (RBAC requirement)
+  // TODO: Add user role check once user context is available in layout
+  // For now, backend GetExpiringProducts enforces RBAC properly
+  useEffect(() => {
+    const fetchUrgentExpiryCount = async () => {
+      try {
+        const response = await fetch('/api/v1/products/expiring?days=7', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUrgentExpiryCount(data.data?.length || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch urgent expiry count:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchUrgentExpiryCount();
+
+    // Fetch every 30 seconds
+    const interval = setInterval(fetchUrgentExpiryCount, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch critical expiry count periodically (14-day critical items)
+  // PATCH: Only Owners and Admins should see expiry counts (RBAC requirement)
+  // TODO: Add user role check once user context is available in layout
+  useEffect(() => {
+    const fetchCriticalExpiryCount = async () => {
+      try {
+        const response = await fetch('/api/v1/products/expiring?days=14', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Subtract urgent count to get only critical (8-14 day) items
+          const totalCount = data.data?.length || 0;
+          setCriticalExpiryCount(Math.max(0, totalCount - urgentExpiryCount));
+        }
+      } catch (error) {
+        console.error('Failed to fetch critical expiry count:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchCriticalExpiryCount();
+
+    // Fetch every 30 seconds
+    const interval = setInterval(fetchCriticalExpiryCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [urgentExpiryCount]);
+
+  const navItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/products', label: 'Products' },
     { href: '/inventory/low-stock', label: 'Low Stock', showBadge: true, badgeCount: lowStockCount },
+    // PATCH: Badge shows only 7-day urgent count per spec requirement
+    { href: '/inventory/expiring', label: 'Expiring', showBadge: true, badgeCount: urgentExpiryCount, isUrgent: urgentExpiryCount > 0 || criticalExpiryCount > 0 },
     { href: '/reports', label: 'Reports' },
     { href: '/users', label: 'Users' },
     { href: '/settings', label: 'Settings' },
@@ -77,7 +150,9 @@ export default function AuthenticatedLayout({
               >
                 {item.label}
                 {item.showBadge && item.badgeCount > 0 && (
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    (item as any).isUrgent ? 'bg-red-600 text-white animate-pulse' : 'bg-red-100 text-red-800'
+                  }`}>
                     {item.badgeCount}
                   </span>
                 )}

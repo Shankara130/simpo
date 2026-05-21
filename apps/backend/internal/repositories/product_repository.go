@@ -39,6 +39,10 @@ type ProductRepository interface {
 
 	// GetExpiredProducts retrieves products that have expired
 	GetExpiredProducts(ctx context.Context, branchID uint) ([]*models.Product, error)
+
+	// GetExpiringProducts retrieves products expiring within the specified date range
+	// Story 4.5, AC1, AC2, AC3: Find products approaching expiry (30, 14, 7 days)
+	GetExpiringProducts(ctx context.Context, branchID uint, startDate, endDate time.Time) ([]*models.Product, error)
 }
 
 // ProductFilter defines filtering options for product listing

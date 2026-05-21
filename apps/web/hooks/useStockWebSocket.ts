@@ -42,8 +42,21 @@ export interface LowStockEvent {
   branchName: string;
 }
 
+// Expiry alert event payload from backend
+// Story 4.5, AC4, AC6: Expiry date alert notification event structure
+export interface ExpiryEvent {
+  productId: number;
+  sku: string;
+  productName: string;
+  expiryDate: string;
+  daysRemaining: number;
+  alertLevel: 'warning' | 'critical' | 'urgent';
+  branchId: number;
+  branchName: string;
+}
+
 // Union type for all stock events
-export type StockEvent = StockUpdatedEvent | LowStockEvent;
+export type StockEvent = StockUpdatedEvent | LowStockEvent | ExpiryEvent;
 
 // Configuration options for the hook
 interface UseStockWebSocketOptions {
@@ -61,6 +74,8 @@ interface UseStockWebSocketOptions {
   onStockUpdate?: (event: StockUpdatedEvent) => void;
   // Story 4.4: Event handler for low stock notifications
   onLowStock?: (event: LowStockEvent) => void;
+  // Story 4.5: Event handler for expiry date alerts
+  onExpiry?: (event: ExpiryEvent) => void;
   // Connection state change handler
   onConnectionStateChange?: (state: ConnectionState) => void;
   // Error handler
@@ -101,6 +116,7 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
     maxReconnectDelay = 30000,
     onStockUpdate,
     onLowStock,
+    onExpiry,
     onConnectionStateChange,
     onError,
   } = options;
@@ -141,6 +157,7 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
    * Handle WebSocket message
    * Story 4.2, Task 7.4: Add event handlers for stock updates
    * Story 4.4: Extended to handle stock.low events for low stock notifications
+   * Story 4.5: Extended to handle product.expiry events for expiry date alerts
    */
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
@@ -166,6 +183,14 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
         if (onLowStock) {
           onLowStock(lowStockEvent);
         }
+      } else if (data.event === 'product.expiry' && data.data) {
+        // Story 4.5: Handle expiry date alerts
+        const expiryEvent: ExpiryEvent = data.data;
+
+        // Call external handler if provided
+        if (onExpiry) {
+          onExpiry(expiryEvent);
+        }
       }
     } catch (error) {
       console.error('[useStockWebSocket] Failed to parse message:', error);
@@ -173,11 +198,16 @@ export function useStockWebSocket(options: UseStockWebSocketOptions): UseStockWe
         onError(error as Error);
       }
     }
-  }, [onStockUpdate, onLowStock, onError]);
+  }, [onStockUpdate, onLowStock, onExpiry, onError]);
 
   /**
    * Handle WebSocket close
    * Story 4.2, Task 7.2: Auto-reconnect with exponential backoff
+   * PATCH: Reconnection is fully implemented with exponential backoff (1s, 2s, 4s, 8s, 16s, max 30s)
+   * - Clears existing reconnection timeout to prevent duplicates
+   * - Respects manual disconnect flag (won't reconnect if user manually disconnected)
+   * - Uses exponential backoff delays up to maxReconnectDelay
+   * - Updates connection state to 'reconnecting' during backoff
    */
   const handleClose = useCallback(() => {
     // Clear existing reconnection timeout

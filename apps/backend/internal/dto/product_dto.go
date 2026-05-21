@@ -140,3 +140,25 @@ type PaginationMetadata struct {
 	Total      int64 `json:"total"`
 	TotalPages int  `json:"totalPages"`
 }
+
+// ExpiryAlertEvent represents an expiry date alert notification event
+// Story 4.5, AC4, AC6: Event structure for expiry date alerts
+type ExpiryAlertEvent struct {
+	EventID   string            `json:"eventId"`   // UUID for event tracking
+	EventType string            `json:"eventType"` // "product.expiry"
+	Timestamp string            `json:"timestamp"` // ISO 8601 timestamp
+	Data      ProductExpiryData `json:"data"`      // Expiry alert details
+}
+
+// ProductExpiryData contains product information for expiry notifications
+// Story 4.5, AC6: Product details for notification payload
+type ProductExpiryData struct {
+	ProductID     uint   `json:"productId"`
+	SKU           string `json:"sku"`
+	ProductName   string `json:"productName"`
+	ExpiryDate    string `json:"expiryDate"`    // ISO 8601 format
+	DaysRemaining int    `json:"daysRemaining"` // 30, 14, or 7
+	AlertLevel    string `json:"alertLevel"`    // "warning", "critical", "urgent"
+	BranchID      uint   `json:"branchId"`
+	BranchName    string `json:"branchName"`
+}

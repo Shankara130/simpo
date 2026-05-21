@@ -266,3 +266,50 @@ func (s *alertService) ClearLowStockState(ctx context.Context, productID uint, b
 
 	return nil
 }
+
+// PublishExpiryAlert publishes expiry notification to Redis pub/sub
+// Story 4.5, AC4: Event published to Redis pub/sub with event type "product.expiry"
+// Story 4.5, Task 3.1-3.5: Implement Redis pub/sub with debounce tracking
+func (s *alertService) PublishExpiryAlert(ctx context.Context, event *dto.ExpiryAlertEvent) error {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate event
+	if event.Data.ProductID == 0 {
+		return &InvalidInputError{Field: "product_id", Message: "product ID is required"}
+	}
+	if event.Data.BranchID == 0 {
+		return &InvalidInputError{Field: "branch_id", Message: "branch ID is required"}
+	}
+
+	// Story 4.5, Task 3.3: Publish to Redis pub/sub channel: product.expiry
+	if s.redisClient != nil {
+		// Marshal event to JSON
+		eventJSON, err := json.Marshal(event)
+		if err != nil {
+			return fmt.Errorf("failed to marshal expiry alert event: %w", err)
+		}
+
+		// Publish to product.expiry channel
+		channel := "product.expiry"
+		if err := s.redisClient.Publish(ctx, channel, eventJSON).Err(); err != nil {
+			// Return error so caller knows NOT to update debounce tracking
+			// If publish fails, we should allow retry in next check cycle
+			slog.Error("Failed to publish expiry alert", "error", err, "product_id", event.Data.ProductID)
+			return fmt.Errorf("failed to publish expiry alert: %w", err)
+		}
+
+		// Story 4.5, Task 3.3: Log publication with structured logging
+		slog.Info("Expiry alert published",
+			"event_id", event.EventID,
+			"product_id", event.Data.ProductID,
+			"sku", event.Data.SKU,
+			"days_remaining", event.Data.DaysRemaining,
+			"alert_level", event.Data.AlertLevel,
+			"branch_id", event.Data.BranchID)
+	}
+
+	return nil
+}

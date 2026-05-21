@@ -18,6 +18,7 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/db"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/jobs"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/migrate"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/repositories"
@@ -153,6 +154,13 @@ func run() error {
 	productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService, alertService)
 	productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
 
+	// Story 4.5: Create expiry check service and job
+	expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
+	var expiryCheckJob *jobs.ExpiryCheckJob
+	if expiryCheckService != nil {
+		expiryCheckJob = jobs.NewExpiryCheckJob(expiryCheckService, logger)
+	}
+
 
 	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler)
 
@@ -164,6 +172,13 @@ func run() error {
 		} else {
 			logger.Info("Stock event broadcaster started")
 		}
+	}
+
+	// Story 4.5, Task 4.5: Start expiry check job as goroutine
+	if expiryCheckJob != nil {
+		ctx := context.Background()
+		go expiryCheckJob.Start(ctx)
+		logger.Info("Expiry check job started")
 	}
 
 	port := cfg.Server.Port
@@ -210,6 +225,13 @@ func run() error {
 		logger.Info("Stopping stock event broadcaster...")
 		stockEventService.StopBroadcaster()
 		logger.Info("Stock event broadcaster stopped")
+	}
+
+	// Story 4.5, Task 4.3: Stop expiry check job
+	if expiryCheckJob != nil {
+		logger.Info("Stopping expiry check job...")
+		expiryCheckJob.Stop()
+		logger.Info("Expiry check job stopped")
 	}
 
 	sqlDB, err := database.DB()

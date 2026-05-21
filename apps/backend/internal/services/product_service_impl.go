@@ -558,6 +558,32 @@ func (s *productService) GetLowStockProducts(ctx context.Context, branchID uint)
 	return products, nil
 }
 
+// GetExpiringProducts retrieves products expiring within specified days threshold
+// Story 4.5, Task 5.1-5.5: API endpoint for expiring products
+func (s *productService) GetExpiringProducts(ctx context.Context, branchID uint, daysThreshold int) ([]*models.Product, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate days threshold (must be positive, typically 7, 14, or 30)
+	if daysThreshold <= 0 || daysThreshold > 365 {
+		return nil, &InvalidInputError{Field: "days", Message: "days threshold must be between 1 and 365"}
+	}
+
+	// Calculate date range
+	now := time.Now().UTC()
+	endDate := now.AddDate(0, 0, daysThreshold)
+
+	// Get expiring products via repository
+	products, err := s.productRepo.GetExpiringProducts(ctx, branchID, now, endDate)
+	if err != nil {
+		return nil, &ServiceError{Op: "get expiring products", Err: err}
+	}
+
+	return products, nil
+}
+
 // sanitizeSearchInput removes wildcard characters to prevent SQL injection
 // Epic 2 retro: Special Character Sanitization
 func sanitizeSearchInput(input string) string {

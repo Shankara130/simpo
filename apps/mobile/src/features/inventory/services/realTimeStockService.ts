@@ -34,6 +34,19 @@ export interface StockUpdatedEvent {
   updatedAt: string;
 }
 
+// Expiry alert event from backend
+// Story 4.5, Task 11.2: Subscribe to product.expiry events via realTimeStockService
+export interface ExpiryEvent {
+  productId: number;
+  sku: string;
+  productName: string;
+  expiryDate: string;
+  daysRemaining: number;
+  alertLevel: 'warning' | 'critical' | 'urgent';
+  branchId: number;
+  branchName: string;
+}
+
 // Configuration options
 interface RealTimeStockServiceConfig {
   // WebSocket server URL
@@ -53,6 +66,7 @@ interface RealTimeStockServiceConfig {
 interface ServiceEvents {
   'connectionStateChange': (state: ConnectionState) => void;
   'stockUpdate': (event: StockUpdatedEvent) => void;
+  'expiry': (event: ExpiryEvent) => void;
   'error': (error: Error) => void;
 }
 
@@ -217,6 +231,7 @@ class RealTimeStockServiceImpl extends EventEmitter implements RealTimeStockServ
   /**
    * Handle WebSocket message event
    * Story 4.2, Task 11.2: WebSocket connection management
+   * Story 4.5, Task 11.2: Subscribe to product.expiry events via realTimeStockService
    */
   private handleMessage(event: MessageEvent): void {
     try {
@@ -233,6 +248,10 @@ class RealTimeStockServiceImpl extends EventEmitter implements RealTimeStockServ
         if (!this.isOnline) {
           this.queueOfflineEvent(stockEvent);
         }
+      } else if (data.event === 'product.expiry' && data.data) {
+        // Story 4.5, Task 11.2: Handle product.expiry events
+        const expiryEvent: ExpiryEvent = data.data;
+        this.emit('expiry', expiryEvent);
       }
     } catch (error) {
       console.error('[RealTimeStockService] Failed to parse message:', error);

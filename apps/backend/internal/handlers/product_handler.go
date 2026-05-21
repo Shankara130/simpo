@@ -29,6 +29,7 @@ type ProductHandler interface {
 	SubscribeStockUpdates(c *gin.Context) // Story 4.2, Task 4.1-4.6: WebSocket subscription
 	AdjustStock(c *gin.Context)            // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
 	GetLowStockProducts(c *gin.Context)    // Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
+	GetExpiringProducts(c *gin.Context)    // Story 4.5, Task 5.1-5.5: GET /api/v1/products/expiring
 }
 
 // productHandler implements ProductHandler
@@ -661,3 +662,135 @@ func (h *productHandler) GetLowStockProducts(c *gin.Context) {
 	// Build response
 	c.JSON(http.StatusOK, errors.Success(productItems))
 }
+
+// GetExpiringProducts retrieves products expiring within specified days threshold
+// Story 4.5, Task 5.1-5.5: API endpoint for expiring products
+// GET /api/v1/products/expiring?days={30,14,7}&branch_id={id}
+//
+//	@Summary		Get products expiring soon
+//	@Description	Retrieves products expiring within specified days threshold (7, 14, or 30). Supports optional branch_id filtering for Owners, Cashiers see their assigned branch only.
+//	@Tags			products
+//	@Produce		json
+//	@Param			days		query		int		false	"Days threshold (default: 30, max: 365)"
+//	@Param			branch_id	query		int		false	"Filter by branch ID (Owner only, defaults to user's branch)"
+//	@Success		200			{object}	apiErrors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with expiring products list"
+//	@Failure		400			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Validation error - invalid input parameters"
+//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
+//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
+//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Router			/api/v1/products/expiring [get]
+func (h *productHandler) GetExpiringProducts(c *gin.Context) {
+	// Story 4.5, Task 5.2: Extract user context for RBAC
+	userRole, exists := c.Get("user_role")
+	if !exists {
+		_ = c.Error(errors.Unauthorized("User role not found"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	role, ok := userRole.(string)
+	if !ok {
+		_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid user role type")))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Story 4.5, Task 5.4: RBAC - Apply branch access control
+	// Owners can view all branches or filter by branch_id parameter
+	// Cashiers can only view their assigned branch
+	var branchID uint
+	var userBranchID *uint
+	branchIDValue, branchExists := c.Get("branch_id")
+	if branchExists {
+		if bid, ok := branchIDValue.(uint); ok {
+			userBranchID = &bid
+		}
+	}
+
+	// Parse branch_id query parameter
+	branchIDParam := c.Query("branch_id")
+
+	// Story 4.5, Task 5.4: Cashier branch filtering
+	if role == user.RoleCashier {
+		// Cashier must have a branch assignment
+		if userBranchID == nil {
+			_ = c.Error(errors.Forbidden("Cashier must have a branch assignment"))
+			c.Status(http.StatusForbidden)
+			return
+		}
+		// Cashier: use their assigned branch
+		branchID = *userBranchID
+
+		// If cashier provides branch_id param, verify it matches their assignment
+		if branchIDParam != "" {
+			paramBranchID, err := strconv.ParseUint(branchIDParam, 10, 64)
+			if err == nil && uint(paramBranchID) != branchID {
+				_ = c.Error(errors.Forbidden("Cashiers can only view products from their assigned branch"))
+				c.Status(http.StatusForbidden)
+				return
+			}
+		}
+	} else if role == user.RoleOwner {
+		// Owner: use branch_id from query parameter if provided, otherwise 0 (all branches)
+		if branchIDParam != "" {
+			paramBranchID, err := strconv.ParseUint(branchIDParam, 10, 64)
+			if err != nil {
+				_ = c.Error(errors.BadRequest("Invalid branch_id parameter"))
+				c.Status(http.StatusBadRequest)
+				return
+			}
+			branchID = uint(paramBranchID)
+		}
+		// If branchID remains 0, service will return expiring products from all branches
+	} else {
+		_ = c.Error(errors.Forbidden("Invalid user role"))
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	// Story 4.5, Task 5.2: Parse days parameter (default: 30)
+	daysParam := c.DefaultQuery("days", "30")
+	daysThreshold, err := strconv.Atoi(daysParam)
+	if err != nil || daysThreshold < 1 || daysThreshold > 365 {
+		_ = c.Error(errors.BadRequest("Invalid days parameter (must be between 1 and 365)"))
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	// Story 4.5, Task 5.3: Call service layer
+	products, err := h.productService.GetExpiringProducts(c.Request.Context(), branchID, daysThreshold)
+	if err != nil {
+		_ = c.Error(errors.InternalServerError(err))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Transform to DTO with expiry information
+	productItems := make([]dto.ProductListItem, 0, len(products))
+	now := time.Now()
+	for _, p := range products {
+		isExpired := p.ExpiryDate != nil && p.ExpiryDate.Before(now)
+		isLowStock := p.StockQty < int64(p.ReorderThreshold)
+
+		productItems = append(productItems, dto.ProductListItem{
+			ID:               p.ID,
+			SKU:              p.SKU,
+			Name:             p.Name,
+			Description:      p.Description,
+			StockQty:         p.StockQty,
+			Price:            p.Price,
+			ExpiryDate:       p.ExpiryDate,
+			BranchID:         p.BranchID,
+			Category:         p.Category,
+			ReorderThreshold: p.ReorderThreshold,
+			IsLowStock:       isLowStock,
+			IsExpired:        isExpired,
+			CreatedAt:        p.CreatedAt,
+			UpdatedAt:        p.UpdatedAt,
+		})
+	}
+
+	// Build response
+	c.JSON(http.StatusOK, errors.Success(productItems))
+}
+

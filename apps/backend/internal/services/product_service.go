@@ -66,6 +66,10 @@ type ProductService interface {
 	// GetLowStockProducts retrieves products with stock below reorder threshold
 	GetLowStockProducts(ctx context.Context, branchID uint) ([]*models.Product, error)
 
+	// GetExpiringProducts retrieves products expiring within specified days threshold
+	// Story 4.5, Task 5: Add expiring products API endpoint
+	GetExpiringProducts(ctx context.Context, branchID uint, daysThreshold int) ([]*models.Product, error)
+
 	// CheckLowStock checks if a product is in low stock state
 	// Story 4.4, Task 1.1-1.5: Low stock detection with debounce logic
 	// Returns true if stock < threshold AND not already in low stock state (for notification triggering)

@@ -126,14 +126,31 @@ export default function LowStockPage() {
 	};
 
 	// Setup WebSocket for real-time low stock notifications
-	// TODO: Get JWT token from cookies
-	const token = typeof window !== 'undefined' ? null : null; // Placeholder
+	// Helper to extract JWT token from cookies
+	const getJwtToken = (): string | null => {
+		if (typeof window === 'undefined') return null;
+		const cookies = document.cookie.split(';');
+		for (const cookie of cookies) {
+			const [name, value] = cookie.trim().split('=');
+			if (name === 'token' || name === 'jwt') {
+				return value;
+			}
+		}
+		return null;
+	};
 
-	useStockWebSocket({
-		token,
-		branches: selectedBranch ? [selectedBranch] : [],
-		onLowStock: handleLowStockAlert,
-	});
+	const token = getJwtToken();
+
+	// Only connect if we have a token (authenticated user)
+	useEffect(() => {
+		if (token) {
+			useStockWebSocket({
+				token,
+				branches: selectedBranch ? [selectedBranch] : [],
+				onLowStock: handleLowStockAlert,
+			});
+		}
+	}, [token, selectedBranch]);
 
 	const handleBranchChange = (branchId: string) => {
 		const value = branchId === 'all' ? null : parseInt(branchId, 10);

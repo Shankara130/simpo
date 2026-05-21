@@ -247,3 +247,31 @@ func (r *productRepository) GetExpiredProducts(ctx context.Context, branchID uin
 	}
 	return products, nil
 }
+
+// GetExpiringProducts retrieves products expiring within the specified date range
+// Story 4.5, AC1, AC2, AC3: Find products approaching expiry (30, 14, 7 days)
+func (r *productRepository) GetExpiringProducts(ctx context.Context, branchID uint, startDate, endDate time.Time) ([]*models.Product, error) {
+	var products []*models.Product
+	var tx *gorm.DB
+
+	// For branchID=0 (all branches), query across all branches without branch filter
+	// Otherwise, filter by specific branch
+	// PATCH: Explicitly exclude NULL expiry dates to handle edge case and improve query clarity
+	if branchID == 0 {
+		tx = r.db.WithContext(ctx).
+			Preload("Branch").
+			Where("expiry_date IS NOT NULL AND expiry_date >= ? AND expiry_date <= ?", startDate, endDate)
+	} else {
+		tx = r.db.WithContext(ctx).
+			Preload("Branch").
+			Where("branch_id = ? AND expiry_date IS NOT NULL AND expiry_date >= ? AND expiry_date <= ?", branchID, startDate, endDate)
+	}
+
+	err := tx.
+		Order("expiry_date ASC").
+		Find(&products).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get expiring products: %w", err)
+	}
+	return products, nil
+}
