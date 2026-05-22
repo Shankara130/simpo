@@ -63,6 +63,12 @@ type ProductService interface {
 	// GetProductByID retrieves a product by ID with relationships
 	GetProductByID(ctx context.Context, id uint) (*models.Product, error)
 
+	// GetProductBySKU retrieves a product by SKU within a branch
+	// Story 4.6, Task 4.1-4.3: Barcode scan blocking for expired products
+	// Returns ErrProductExpired if product is expired and cannot be sold
+	// Returns ProductNotFoundError if product does not exist
+	GetProductBySKU(ctx context.Context, branchID uint, sku string) (*models.Product, error)
+
 	// GetLowStockProducts retrieves products with stock below reorder threshold
 	GetLowStockProducts(ctx context.Context, branchID uint) ([]*models.Product, error)
 
@@ -74,6 +80,12 @@ type ProductService interface {
 	// Story 4.4, Task 1.1-1.5: Low stock detection with debounce logic
 	// Returns true if stock < threshold AND not already in low stock state (for notification triggering)
 	CheckLowStock(ctx context.Context, productID uint, branchID uint) (bool, error)
+
+	// ValidateProductForSale validates if a product can be sold
+	// Story 4.6, Task 3.1-3.3: Sale blocking for expired products
+	// Returns ErrProductExpired if product is expired
+	// Returns ProductNotFoundError if product doesn't exist
+	ValidateProductForSale(ctx context.Context, productID uint) error
 }
 
 // ProductFilter defines filtering options for product listing

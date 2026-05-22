@@ -146,10 +146,18 @@ func (r *productRepository) List(ctx context.Context, filter *ProductFilter) ([]
 	if filter.LowStock {
 		query = query.Where("stock_qty < reorder_threshold")
 	}
+	// Story 4.6, Task 2.3: Ensure expired products are excluded from "available for sale" queries by default
+	// Expired filter logic:
+	// - Expired: true -> only return expired products (expiry_date < now)
+	// - Expired: false -> only return non-expired products (expiry_date >= now OR expiry_date IS NULL)
+	// - Not specified -> return all products (no filter)
 	if filter.Expired && filter.ExpiryBefore != nil {
 		query = query.Where("expiry_date < ?", *filter.ExpiryBefore)
 	} else if filter.Expired {
 		query = query.Where("expiry_date < ?", time.Now())
+	} else if filter.Expired == false {
+		// Explicitly exclude expired products, include products with no expiry date
+		query = query.Where("expiry_date IS NULL OR expiry_date >= ?", time.Now())
 	}
 
 	// P-008: Sanitize search query - remove wildcard characters

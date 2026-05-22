@@ -25,8 +25,12 @@ func (e *InsufficientStockError) Error() string {
 type ProductExpiredError struct {
 	ProductID   uint
 	ProductName string
+	ProductSKU  string
 	ExpiryDate  string
 }
+
+// ErrProductExpired is an alias for ProductExpiredError (Story 4.6, Task 3.3)
+type ErrProductExpired = ProductExpiredError
 
 func (e *ProductExpiredError) Error() string {
 	return fmt.Sprintf("product '%s' (ID: %d) is expired since %s",

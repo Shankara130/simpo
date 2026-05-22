@@ -20,6 +20,13 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
 )
 
+// RFC 7807 Error Type URIs
+const (
+	// ErrorTypeProductExpired is the URI for product expired errors per RFC 7807
+	// Story 4.6: Barcode scan blocking for expired products
+	ErrorTypeProductExpired = "https://api.simpo.com/errors/product-expired"
+)
+
 // ProductHandler defines product handler interface
 // Story 4.1, Task 1: Handler interface for product operations
 // Story 4.2, Task 4: WebSocket handler for real-time stock updates
@@ -30,6 +37,7 @@ type ProductHandler interface {
 	AdjustStock(c *gin.Context)            // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
 	GetLowStockProducts(c *gin.Context)    // Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
 	GetExpiringProducts(c *gin.Context)    // Story 4.5, Task 5.1-5.5: GET /api/v1/products/expiring
+		GetProductBySKU(c *gin.Context)         // Story 4.6, Task 6: GET /api/v1/products/sku/:sku - Barcode scan with expired blocking
 }
 
 // productHandler implements ProductHandler
@@ -794,3 +802,153 @@ func (h *productHandler) GetExpiringProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, errors.Success(productItems))
 }
 
+
+// GetProductBySKU retrieves a product by SKU (barcode scan)
+// Story 4.6, Task 6.1-6.5: GET /api/v1/products/sku/:sku - Barcode scan with expired blocking
+// Returns RFC 7807 error response for expired products
+//
+//	@Summary		Get product by SKU (barcode scan)
+//	@Description	Retrieves a product by SKU. Used for barcode scanning in POS. Returns error if product is expired.
+//	@Tags			products
+//	@Produce		json
+//	@Param			sku	path		string	true	"Product SKU (barcode)"
+//	@Success		200	{object}	object{product=models.Product}	"Product found"
+//	@Failure		400	{object}	object{type=string,title=string,status=integer,detail=string}	"Product expired (RFC 7807)"
+//	@Failure		404	{object}	object{type=string,title=string,status=integer,detail=string}	"Product not found"
+//	@Router			/api/v1/products/sku/{sku} [get]
+func (h *productHandler) GetProductBySKU(c *gin.Context) {
+	// Extract SKU from path parameter
+	sku := c.Param("sku")
+	if sku == "" {
+		_ = c.Error(errors.BadRequest("SKU parameter is required"))
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	// Validate SKU length to prevent potential issues
+	const MAX_SKU_LENGTH = 200
+	if len(sku) > MAX_SKU_LENGTH {
+		_ = c.Error(errors.BadRequest("SKU parameter too long"))
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	// Story 4.6, Task 5.2: Extract user context for RBAC
+	userRole, exists := c.Get("user_role")
+	if !exists {
+		_ = c.Error(errors.Unauthorized("User role not found"))
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
+	role, ok := userRole.(string)
+	if !ok {
+		_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid user role type")))
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Story 4.6, Task 5.2: RBAC - Apply branch access control
+	// Owners can scan products in any branch or filter by branch_id parameter
+	// Cashiers can only scan products in their assigned branch
+	var branchID uint
+
+	if role == "cashier" {
+		// Cashiers use their assigned branch
+		userBranchIDVal, exists := c.Get("user_branch_id")
+		if !exists {
+			_ = c.Error(errors.Unauthorized("Branch ID not found for cashier"))
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+		userBranchIDValTyped, ok := userBranchIDVal.(uint)
+		if !ok {
+			_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid branch ID type")))
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		branchID = userBranchIDValTyped
+	} else if role == "owner" {
+		// Owners can use branch_id query parameter or their first branch
+		if branchIDParam := c.Query("branch_id"); branchIDParam != "" {
+			branchIDInt, err := strconv.ParseUint(branchIDParam, 10, 32)
+			if err != nil {
+				_ = c.Error(errors.BadRequest("Invalid branch_id parameter"))
+				c.Status(http.StatusBadRequest)
+				return
+			}
+			branchID = uint(branchIDInt)
+		} else {
+			// Get owner's first branch if no branch_id specified
+			userBranches, exists := c.Get("user_branches")
+			if !exists {
+				_ = c.Error(errors.Unauthorized("Branches not found for owner"))
+				c.Status(http.StatusUnauthorized)
+				return
+			}
+			userBranchesTyped, ok := userBranches.([]uint)
+			if !ok {
+				_ = c.Error(errors.InternalServerError(fmt.Errorf("invalid branches type")))
+				c.Status(http.StatusInternalServerError)
+				return
+			}
+			if len(userBranchesTyped) == 0 {
+				_ = c.Error(errors.Unauthorized("No branches assigned to owner"))
+				c.Status(http.StatusUnauthorized)
+				return
+			}
+			branchID = userBranchesTyped[0]
+		}
+	} else {
+		_ = c.Error(errors.Forbidden("Invalid user role"))
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	// Get product by SKU (includes expiry validation)
+	// Story 4.6, Task 4.2: GetProductBySKU validates expiry status
+	product, err := h.productService.GetProductBySKU(c.Request.Context(), branchID, sku)
+	if err != nil {
+		// Story 4.6, Task 6.2-6.5: Return RFC 7807 error response for expired products
+		// Check if the error is an expired product error
+		if productExpiredErr, ok := err.(*services.ErrProductExpired); ok {
+			// Story 4.6, Task 6.3-6.5: RFC 7807 error response for expired products
+			// type: https://api.simpo.com/errors/product-expired
+			// title: "Product Expired"
+			// status: 400
+			// detail: "This product has expired and cannot be sold"
+			c.JSON(http.StatusBadRequest, gin.H{
+				"type":   ErrorTypeProductExpired,
+				"title":  "Product Expired",
+				"status": http.StatusBadRequest,
+				"detail": "This product has expired and cannot be sold",
+				"product": gin.H{
+					"sku":        productExpiredErr.ProductSKU,
+					"name":       productExpiredErr.ProductName,
+					"expiryDate": productExpiredErr.ExpiryDate,
+				},
+			})
+			return
+		}
+
+		// Handle other errors with appropriate status codes
+		if _, ok := err.(*services.InvalidInputError); ok {
+			_ = c.Error(err)
+			c.Status(http.StatusBadRequest)
+			return
+		}
+		if _, ok := err.(*services.ProductNotFoundError); ok {
+			_ = c.Error(err)
+			c.Status(http.StatusNotFound)
+			return
+		}
+		// Handle unexpected errors (database, context, etc.)
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Return product in response
+	// Story 4.6, Task 2: Product includes isExpired field (populated by AfterFind hook)
+	c.JSON(http.StatusOK, product)
+}

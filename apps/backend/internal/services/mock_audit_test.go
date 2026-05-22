@@ -14,6 +14,7 @@ type MockAuditService struct {
 	LogEmailVerificationFunc       func(ctx context.Context, userID uint, email string, ipAddress string) error
 	LogUserDeactivationFunc       func(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
 	LogStockAdjustmentFunc        func(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error
+	LogBlockedSaleAttemptFunc     func(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -83,6 +84,15 @@ func (m *MockAuditService) LogStockAdjustment(ctx context.Context, adminID uint,
 	m.LogCount++
 	if m.LogStockAdjustmentFunc != nil {
 		return m.LogStockAdjustmentFunc(ctx, adminID, adminUsername, productID, productSKU, oldQty, newQty, reason)
+	}
+	return nil
+}
+
+// LogBlockedSaleAttempt logs blocked sale attempts for expired products (Story 4.6, AC6)
+func (m *MockAuditService) LogBlockedSaleAttempt(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error {
+	m.LogCount++
+	if m.LogBlockedSaleAttemptFunc != nil {
+		return m.LogBlockedSaleAttemptFunc(ctx, userID, username, productID, productSKU, productName, expiryDate, reason)
 	}
 	return nil
 }

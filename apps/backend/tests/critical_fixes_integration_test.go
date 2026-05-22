@@ -108,7 +108,8 @@ func TestCriticalFix001_ConcurrentTransactionsNoDeadlock(t *testing.T) {
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	// Both cashiers will sell the same products but in different orders
 	// Cashier 1: Product A → Product B → Product C
@@ -216,7 +217,8 @@ func TestCriticalFix002_QuantityValidation(t *testing.T) {
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	tests := []struct {
 		name          string
@@ -289,7 +291,8 @@ func TestCriticalFix002_StockUnderflowPrevention(t *testing.T) {
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	// First transaction: Sell most of Product E's stock
 	sale1 := &services.SaleRequest{
@@ -351,7 +354,8 @@ func TestCriticalFix003_IdempotencyPreventsDuplicateCharges(t *testing.T) {
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	idempotencyKey := "test-003-unique-key-12345"
 
@@ -411,7 +415,8 @@ func TestCriticalFix003_DifferentIdempotencyKeysCreateDifferentTransactions(t *t
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	sale1 := &services.SaleRequest{
 		Items: []*services.SaleItem{
@@ -472,7 +477,8 @@ func TestCriticalFixes_Performance_ConcurrentLoad(t *testing.T) {
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
 	auditService := services.NewAuditService()
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	// Each cashier makes 10 concurrent transactions
 	const transactionsPerCashier = 10

@@ -87,6 +87,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         return state;
       }
 
+      // Story 4.6, Task 10.1-10.3: Cart validation for expired products
+      // Prevent expired medications from being added to cart
+      if (action.payload.isExpired) {
+        console.warn('Cannot add: Product is expired and cannot be sold', action.payload.name);
+        return state;
+      }
+
       // Check if product already exists in cart
       const existingItemIndex = state.items.findIndex(
         item => item.productId === action.payload.productId

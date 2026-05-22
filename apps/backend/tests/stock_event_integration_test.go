@@ -30,8 +30,8 @@ func setupStockEventTestInfrastructure(t *testing.T, mr *miniredis.Miniredis) (*
 	// Create services with stock event service
 	auditService := services.NewAuditService()
 	stockEventService := services.NewStockEventService(redisClient)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService)
 	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
 
 	return &stockEventService, transactionService, productService, database
 }

@@ -147,28 +147,119 @@ func (m *MockTransactionItemRepository) CreateBatch(ctx context.Context, items [
 	return args.Error(0)
 }
 
+// MockProductService is a mock implementation of ProductService
+// Story 4.6: Added for expired product validation testing
+type MockProductService struct {
+	mock.Mock
+}
+
+func (m *MockProductService) CreateProduct(ctx context.Context, product *models.Product) error {
+	args := m.Called(ctx, product)
+	return args.Error(0)
+}
+
+func (m *MockProductService) UpdateProduct(ctx context.Context, id uint, product *models.Product) error {
+	args := m.Called(ctx, id, product)
+	return args.Error(0)
+}
+
+func (m *MockProductService) UpdateStock(ctx context.Context, id uint, quantity int64) error {
+	args := m.Called(ctx, id, quantity)
+	return args.Error(0)
+}
+
+func (m *MockProductService) ManualAdjustStock(ctx context.Context, req *StockAdjustmentRequest, adminID uint, adminUsername string) (*StockAdjustmentResult, error) {
+	args := m.Called(ctx, req, adminID, adminUsername)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*StockAdjustmentResult), args.Error(1)
+}
+
+func (m *MockProductService) CheckAvailability(ctx context.Context, id uint, requestedQty int64) (int64, error) {
+	args := m.Called(ctx, id, requestedQty)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockProductService) ListProducts(ctx context.Context, filter *ProductFilter) ([]*models.Product, int64, error) {
+	args := m.Called(ctx, filter)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*models.Product), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockProductService) GetProductByID(ctx context.Context, id uint) (*models.Product, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Product), args.Error(1)
+}
+
+func (m *MockProductService) GetLowStockProducts(ctx context.Context, branchID uint) ([]*models.Product, error) {
+	args := m.Called(ctx, branchID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Product), args.Error(1)
+}
+
+func (m *MockProductService) GetExpiringProducts(ctx context.Context, branchID uint, daysThreshold int) ([]*models.Product, error) {
+	args := m.Called(ctx, branchID, daysThreshold)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Product), args.Error(1)
+}
+
+func (m *MockProductService) CheckLowStock(ctx context.Context, productID uint, branchID uint) (bool, error) {
+	args := m.Called(ctx, productID, branchID)
+	return args.Bool(0), args.Error(1)
+}
+
+// Story 4.6: ValidateProductForSale mock implementation
+func (m *MockProductService) ValidateProductForSale(ctx context.Context, productID uint) error {
+	args := m.Called(ctx, productID)
+	return args.Error(0)
+}
+
+// Story 4.6: GetProductBySKU mock implementation
+func (m *MockProductService) GetProductBySKU(ctx context.Context, branchID uint, sku string) (*models.Product, error) {
+	args := m.Called(ctx, branchID, sku)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Product), args.Error(1)
+}
+
 // Test NewTransactionService with nil dependencies
 func TestNewTransactionService_PanicOnNilDependencies(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
+	mockProductService := new(MockProductService)
 	mockTxnRepo := new(MockTransactionRepository)
 
 	assert.Panics(t, func() {
-		NewTransactionService(nil, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+		NewTransactionService(nil, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 	}, "Should panic when transactionRepo is nil")
 
 	assert.Panics(t, func() {
-		NewTransactionService(mockTxnRepo, nil, mockProdRepo, mockAudit, nil, nil)
+		NewTransactionService(mockTxnRepo, nil, mockProdRepo, mockProductService, mockAudit, nil, nil)
 	}, "Should panic when transactionItemRepo is nil")
 
 	assert.Panics(t, func() {
-		NewTransactionService(mockTxnRepo, mockItemRepo, nil, mockAudit, nil, nil)
+		NewTransactionService(mockTxnRepo, mockItemRepo, nil, mockProductService, mockAudit, nil, nil)
 	}, "Should panic when productRepo is nil")
 
 	assert.Panics(t, func() {
-		NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, nil, nil, nil)
-	}, "Should panic when auditService is nil")
+		NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, nil, nil, nil)
+		}, "Should panic when auditService is nil")
+
+	assert.Panics(t, func() {
+		NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, nil, mockAudit, nil, nil)
+	}, "Should panic when productService is nil")
 }
 
 // Test CreateTransaction
@@ -178,7 +269,8 @@ func TestTransactionService_CreateTransaction_Success(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	transaction := &models.Transaction{
 		CashierID:     1,
@@ -206,7 +298,8 @@ func TestTransactionService_ProcessSale_Success(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	sale := &SaleRequest{
 		Items: []*SaleItem{
@@ -224,6 +317,8 @@ func TestTransactionService_ProcessSale_Success(t *testing.T) {
 
 	// Mock expectations
 	mockProdRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
+		// Story 4.6: Mock ValidateProductForSale to return nil (product is valid)
+		mockProductService.On("ValidateProductForSale", mock.Anything, uint(1)).Return(nil)
 	mockTxnRepo.On("ProcessSaleWithStockUpdate", mock.Anything, mock.Anything, mock.Anything, map[uint]int64{1: -2}).Return(nil)
 
 	// Act
@@ -233,6 +328,7 @@ func TestTransactionService_ProcessSale_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.NotEmpty(t, result.TransactionNumber)
+	mockProductService.AssertExpectations(t)
 	mockProdRepo.AssertExpectations(t)
 	mockTxnRepo.AssertExpectations(t)
 }
@@ -243,7 +339,8 @@ func TestTransactionService_ProcessSale_EmptyItems(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	sale := &SaleRequest{
 		Items:         []*SaleItem{},
@@ -266,7 +363,8 @@ func TestTransactionService_ProcessSale_InsufficientStock(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	sale := &SaleRequest{
 		Items: []*SaleItem{
@@ -282,6 +380,8 @@ func TestTransactionService_ProcessSale_InsufficientStock(t *testing.T) {
 	}
 
 	// Mock expectations - ProcessSaleWithStockUpdate will handle stock validation
+	// Story 4.6: Mock ValidateProductForSale to return nil (product is valid, but stock is insufficient)
+	mockProductService.On("ValidateProductForSale", mock.Anything, uint(1)).Return(nil)
 	mockProdRepo.On("GetByID", mock.Anything, uint(1)).Return(product, nil)
 	// ProcessSaleWithStockUpdate returns error for insufficient stock
 	stockErr := fmt.Errorf("insufficient stock for product Test Product (ID: 1). Available: 10, Requested: 50")
@@ -302,7 +402,8 @@ func TestTransactionService_CalculateTotal_EmptyItems(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	items := []*SaleItem{}
 
@@ -321,7 +422,8 @@ func TestTransactionService_GetTransactionByID_ZeroID(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	// Act
 	_, err := service.GetTransactionByID(context.Background(), 0)
@@ -340,7 +442,8 @@ func TestTransactionService_ListTransactions_DefaultPagination(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	transactions := []*models.Transaction{
 		{ID: 1, TransactionNumber: "TRX-001"},
@@ -365,7 +468,8 @@ func TestTransactionService_ListTransactions_MaxPaginationLimit(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	filter := &TransactionFilter{
 		Limit: 5000, // Exceeds max
@@ -391,7 +495,8 @@ func TestTransactionService_ProcessSale_ContextCanceled(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -419,7 +524,8 @@ func TestTransactionService_ListTransactions_WithStatusFilter(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	status := "COMPLETED"
 	branchID := uint(1)
@@ -450,7 +556,8 @@ func TestTransactionService_ListTransactions_WithDateRangeFilter(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	startDate := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
@@ -484,7 +591,8 @@ func TestTransactionService_ListTransactions_DateRangeExceedsMax(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	// Date range exceeding 1 year
 	startDate := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
@@ -516,7 +624,8 @@ func TestTransactionService_ListTransactions_WithSortOrder(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	branchID := uint(1)
 	filter := &TransactionFilter{
@@ -547,7 +656,8 @@ func TestTransactionService_ListTransactions_InvalidSortField(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	branchID := uint(1)
 	filter := &TransactionFilter{
@@ -575,7 +685,8 @@ func TestTransactionService_ListTransactions_RBACBranchFilter(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	cashierBranchID := uint(1)
 	filter := &TransactionFilter{
@@ -604,7 +715,8 @@ func TestTransactionService_GetTransactionByID_Success(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	expectedTransaction := &models.Transaction{
 		ID:                1,
@@ -634,7 +746,8 @@ func TestTransactionService_GetTransactionByID_NotFound(t *testing.T) {
 	mockItemRepo := new(MockTransactionItemRepository)
 	mockProdRepo := new(MockProductRepository)
 	mockAudit := new(MockAuditService)
-	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockAudit, nil, nil)
+	mockProductService := new(MockProductService)
+	service := NewTransactionService(mockTxnRepo, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil)
 
 	mockTxnRepo.On("GetByID", mock.Anything, uint(999)).Return(nil, repositories.ErrNotFound)
 

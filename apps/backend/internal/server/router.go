@@ -219,6 +219,8 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				productsGroup.GET("/stock/subscribe", productHandler.SubscribeStockUpdates)
 				// Story 4.3, Task 4.2: Stock adjustment endpoint with admin permissions
 				productsGroup.POST("/stock/adjust", productHandler.AdjustStock)
+				// Story 4.6, Task 6: Barcode scan endpoint with expired blocking
+				productsGroup.GET("/sku/:sku", productHandler.GetProductBySKU)
 			}
 		}
 	}

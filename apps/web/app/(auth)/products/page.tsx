@@ -409,7 +409,9 @@ export default function ProductsPage() {
                     <tr
                       key={`${product.id}-${product.branchId}`}
                       className={`transition-colors duration-500 ${
-                        flashingProducts.has(product.id)
+                        product.isExpired
+                          ? 'bg-gray-100 opacity-60'
+                          : flashingProducts.has(product.id)
                           ? 'bg-yellow-50'
                           : 'hover:bg-gray-50'
                       }`}

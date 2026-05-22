@@ -16,10 +16,12 @@ import (
 // AC2: Services use repository interfaces (not concrete implementations)
 // Story 4.2, Task 2: StockEventService for publishing stock updates
 // Story 4.4: AlertService for low stock notifications
+// Story 4.6, Task 3: ProductService for expired product validation
 type transactionService struct {
 	transactionRepo     repositories.TransactionRepository
 	transactionItemRepo repositories.TransactionItemRepository
 	productRepo         repositories.ProductRepository
+	productService      ProductService // Story 4.6: For expired product validation
 	auditService        AuditService
 	stockEventService   StockEventService
 	alertService        AlertService // Story 4.4: For low stock notifications
@@ -29,10 +31,12 @@ type transactionService struct {
 // AC2: Services accept repository interfaces via constructor injection
 // Story 4.2, Task 2: Add stockEventService parameter
 // Story 4.4: Add alertService parameter for low stock notifications
+// Story 4.6, Task 3: Add productService parameter for expired product validation
 func NewTransactionService(
 	transactionRepo repositories.TransactionRepository,
 	transactionItemRepo repositories.TransactionItemRepository,
 	productRepo repositories.ProductRepository,
+	productService ProductService, // Story 4.6: For expired product validation
 	auditService AuditService,
 	stockEventService StockEventService,
 	alertService AlertService, // Story 4.4: AlertService for low stock notifications
@@ -50,6 +54,9 @@ func NewTransactionService(
 	if auditService == nil {
 		panic("transactionService: auditService cannot be nil")
 	}
+	if productService == nil {
+		panic("transactionService: productService cannot be nil")
+	}
 	// Story 4.2, Task 2: stockEventService is optional (can be nil for graceful degradation)
 	// Story 4.4: alertService is optional (can be nil for graceful degradation)
 	// Events won't be published if not provided, but transactions will still work
@@ -58,6 +65,7 @@ func NewTransactionService(
 		transactionRepo:     transactionRepo,
 		transactionItemRepo: transactionItemRepo,
 		productRepo:         productRepo,
+		productService:      productService,
 		auditService:        auditService,
 		stockEventService:   stockEventService,
 		alertService:        alertService,
@@ -159,7 +167,38 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		}
 	}
 
-	// Calculate total
+
+
+		// Story 4.6, Task 3.2-3.3: Validate products are not expired before allowing sale
+		// This prevents expired medications from being sold and ensures regulatory compliance
+		// Story 4.6, Task 5: Log blocked sale attempts for audit compliance
+		for _, item := range aggregatedItems {
+			if err := s.productService.ValidateProductForSale(ctx, item.ProductID); err != nil {
+				// Story 4.6, Task 5.1-5.4: Log blocked sale attempt for audit trail
+				// Get product details for audit logging
+				if product, fetchErr := s.productRepo.GetByID(ctx, item.ProductID); fetchErr == nil {
+					expiryDateStr := "N/A"
+					if product.ExpiryDate != nil {
+						expiryDateStr = product.ExpiryDate.Format("2006-01-02")
+					}
+					// Get cashier name for audit trail (use transaction number as fallback)
+					cashierName := fmt.Sprintf("Cashier #%d", cashierID)
+					// Log blocked sale attempt asynchronously (don't block transaction)
+					// Use request context with timeout to prevent goroutine leaks
+					ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+					go func() {
+						defer cancel()
+						_ = s.auditService.LogBlockedSaleAttempt(ctx, cashierID, cashierName,
+							product.ID, product.SKU, product.Name, expiryDateStr, "Product expired and cannot be sold")
+					}()
+				}
+				// Return the domain error from ValidateProductForSale
+				// This could be ErrProductExpired or ProductNotFoundError
+				return nil, err
+			}
+		}
+
+		// Calculate total
 	total, err := s.CalculateTotal(aggregatedItems)
 	if err != nil {
 		return nil, err
@@ -444,7 +483,14 @@ func (s *transactionService) publishStockUpdateEvents(ctx context.Context, items
 		// Story 4.2, Task 2.4: Use transaction context to ensure events only publish on commit
 		// Events are published after successful commit, so we use background context
 		go func(evt StockUpdatedEvent) {
-			_ = s.stockEventService.PublishStockUpdate(context.Background(), evt)
+			if err := s.stockEventService.PublishStockUpdate(context.Background(), evt); err != nil {
+				slog.Error("Failed to publish stock update event",
+					"error", err,
+					"product_id", evt.ProductID,
+					"sku", evt.SKU,
+					"branch_id", evt.BranchID,
+				)
+			}
 		}(event)
 
 		// Story 4.4, Task 4.2-4.4: Check and trigger low stock notification

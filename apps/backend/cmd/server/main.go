@@ -142,17 +142,20 @@ func run() error {
 	// Story 4.4: Create alert service for low stock and expiry notifications
 	alertService := services.NewAlertService(nil, auditService, redisClient)
 
-	// Story 3.6: Create transaction repositories, service, and handler
-	transactionRepo := repositories.NewTransactionRepository(database)
-	transactionItemRepo := repositories.NewTransactionItemRepository(database)
-	productRepo := repositories.NewProductRepository(database)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, auditService, stockEventService, alertService)
-	transactionHandler := handlers.NewTransactionHandler(transactionService)
+		// Story 3.6: Create transaction repositories, service, and handler
+		transactionRepo := repositories.NewTransactionRepository(database)
+		transactionItemRepo := repositories.NewTransactionItemRepository(database)
+		productRepo := repositories.NewProductRepository(database)
 
-	// Story 4.1: Create product service and handler
-	// Story 4.4: Add alertService parameter for low stock notifications
-	productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService, alertService)
-	productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
+		// Story 4.1: Create product service and handler
+		// Story 4.4: Add alertService parameter for low stock notifications
+		// Story 4.6: Moved before transactionService creation (dependency)
+		productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService, alertService)
+		productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
+
+		// Story 4.6: Create transaction service with productService for expired product validation
+		transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService)
+		transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	// Story 4.5: Create expiry check service and job
 	expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)

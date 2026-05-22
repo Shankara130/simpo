@@ -49,6 +49,15 @@ func NewProductService(productRepo repositories.ProductRepository, auditService 
 	}
 }
 
+// formatExpiryDate formats a product's expiry date for error messages
+// Returns "N/A" if expiry date is nil, otherwise returns "YYYY-MM-DD" format
+func formatExpiryDate(product *models.Product) string {
+	if product.ExpiryDate == nil {
+		return "N/A"
+	}
+	return product.ExpiryDate.Format("2006-01-02")
+}
+
 // CreateProduct creates a new product with business validation
 // AC3: Business Logic Encapsulation
 // AC4: Error Handling and Domain Errors
@@ -398,11 +407,12 @@ func (s *productService) CheckAvailability(ctx context.Context, id uint, request
 	}
 
 	// Check expiry
-	if product.ExpiryDate != nil && product.ExpiryDate.Before(time.Now()) {
+	if product.IsExpired() {
 		return 0, &ProductExpiredError{
 			ProductID:   product.ID,
 			ProductName: product.Name,
-			ExpiryDate:  product.ExpiryDate.Format(time.RFC3339),
+			ProductSKU:  product.SKU,
+			ExpiryDate:  formatExpiryDate(product),
 		}
 	}
 
@@ -643,4 +653,80 @@ func (s *productService) CheckLowStock(ctx context.Context, productID uint, bran
 
 	// Not in low stock state, or no AlertService available
 	return false, nil
+}
+
+// ValidateProductForSale validates if a product can be sold
+// Story 4.6, Task 3.1-3.3: Sale blocking for expired products
+// Validates that the product exists and is not expired
+// Returns ErrProductExpired if product is expired
+// Returns ProductNotFoundError if product doesn't exist
+func (s *productService) ValidateProductForSale(ctx context.Context, productID uint) error {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate input
+	if productID == 0 {
+		return &InvalidInputError{Field: "product_id", Message: "product ID is required"}
+	}
+
+	// Get product from repository
+	product, err := s.productRepo.GetByID(ctx, productID)
+	if err != nil {
+		return &ProductNotFoundError{ProductID: productID}
+	}
+
+	// Story 4.6, Task 3.2: Check if product is expired before allowing sale
+	// A product is expired if expiry_date is set AND is before or equal to now
+	if product.IsExpired() {
+		// Story 4.6, Task 3.3: Return domain error if expired
+		return &ErrProductExpired{
+			ProductID:   product.ID,
+			ProductName: product.Name,
+			ProductSKU:  product.SKU,
+			ExpiryDate:  formatExpiryDate(product),
+		}
+	}
+
+	// Product is valid for sale
+	return nil
+}
+
+// GetProductBySKU retrieves a product by SKU within a branch
+// Story 4.6, Task 4.1-4.3: Barcode scan blocking for expired products
+// Returns ErrProductExpired if product is expired and cannot be sold
+// Returns ProductNotFoundError if product does not exist
+func (s *productService) GetProductBySKU(ctx context.Context, branchID uint, sku string) (*models.Product, error) {
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Validate inputs
+	if branchID == 0 {
+		return nil, &InvalidInputError{Field: "branch_id", Message: "branch ID is required"}
+	}
+	if sku == "" {
+		return nil, &InvalidInputError{Field: "sku", Message: "SKU is required"}
+	}
+
+	// Get product via repository
+	product, err := s.productRepo.GetBySKU(ctx, branchID, sku)
+	if err != nil {
+		return nil, &ProductNotFoundError{SKU: sku}
+	}
+
+	// Story 4.6, Task 4.2: Check if product is expired before returning
+	// This prevents expired products from being scanned and added to transactions
+	if product.IsExpired() {
+		return nil, &ErrProductExpired{
+			ProductID:   product.ID,
+			ProductName: product.Name,
+			ProductSKU:  product.SKU,
+			ExpiryDate:  formatExpiryDate(product),
+		}
+	}
+
+	return product, nil
 }

@@ -30,6 +30,8 @@ const (
 	AuditActionUserDeactivated        AuditAction = "USER_DEACTIVATED"
 	// Story 4.3: Stock adjustment audit logging (AC5: append-only audit trail)
 	AuditActionStockAdjustment        AuditAction = "STOCK_ADJUSTMENT"
+	// Story 4.6: Blocked sale attempt audit logging (AC6: regulatory compliance)
+	AuditActionBlockedSaleAttempt     AuditAction = "BLOCKED_SALE_ATTEMPT"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -77,6 +79,11 @@ type AuditService interface {
 	// Logs admin_user_id, product_id, product_sku, old_qty, new_qty, reason, timestamp
 	// Append-only audit trail for Badan POM compliance (NFR-SEC-004, NFR-SEC-009)
 	LogStockAdjustment(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error
+
+	// LogBlockedSaleAttempt logs blocked sale attempts for expired products (Story 4.6, AC6)
+	// Logs user_id, username, product_id, product_sku, product_name, expiry_date, reason, timestamp
+	// Append-only audit trail for Badan POM regulatory compliance (NFR-SEC-004, NFR-SEC-009, NFR-SEC-011)
+	LogBlockedSaleAttempt(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -334,3 +341,43 @@ func (s *auditService) LogStockAdjustment(ctx context.Context, adminID uint, adm
 	// Per NFR-SEC-009: 5-year minimum retention for Badan POM compliance
 	return nil
 }
+
+// LogBlockedSaleAttempt logs blocked sale attempts for expired products to append-only audit trail
+// Story 4.6, AC6: Audit trail logging for blocked sale attempts (regulatory compliance)
+// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+// Per NFR-SEC-009: 5-year minimum retention for Badan POM compliance
+// Per NFR-SEC-011: Expiry date blocking is mandatory with audit logging
+func (s *auditService) LogBlockedSaleAttempt(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &userID,
+		Username:  username,
+		Action:    AuditActionBlockedSaleAttempt,
+		IPAddress: "", // IP address will be extracted from request context in production
+		Outcome:   "blocked",
+		Reason:    fmt.Sprintf("Blocked sale attempt for expired product '%s' (ID: %d, SKU: %s, Expiry: %s): %s", productName, productID, productSKU, expiryDate, reason),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP (Story 4.6, AC6, NFR-SEC-004, NFR-SEC-009, NFR-SEC-011)
+	// Format: AUDIT | timestamp | BLOCKED_SALE_ATTEMPT | user_id | username | product_id | product_sku | product_name | expiry_date | reason | outcome
+	// Use Warn level for audit logs to ensure they're not filtered in production
+	slog.Warn("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"user_id", userID,
+		"username", username,
+		"product_id", productID,
+		"product_sku", productSKU,
+		"product_name", productName,
+		"expiry_date", expiryDate,
+		"reason", reason,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+	// Per NFR-SEC-009: 5-year minimum retention for Badan POM compliance
+	return nil
+}
+

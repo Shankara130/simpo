@@ -17,6 +17,7 @@ export interface Product {
   category?: string;
   createdAt: string;
   updatedAt: string;
+  isExpired?: boolean; // Story 4.6, AC2: Expired status indicator from backend
 }
 
 export interface ProductListResponse {
