@@ -156,18 +156,21 @@ func run() error {
 		// Story 4.6: Create transaction service with productService for expired product validation
 		transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService)
 		transactionHandler := handlers.NewTransactionHandler(transactionService)
+		// Story 4.5: Create expiry check service and job
+		expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
+		var expiryCheckJob *jobs.ExpiryCheckJob
+		if expiryCheckService != nil {
+			expiryCheckJob = jobs.NewExpiryCheckJob(expiryCheckService, logger)
+		}
 
-	// Story 4.5: Create expiry check service and job
-	expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
-	var expiryCheckJob *jobs.ExpiryCheckJob
-	if expiryCheckService != nil {
-		expiryCheckJob = jobs.NewExpiryCheckJob(expiryCheckService, logger)
-	}
+		// Story 5.1, 5.2: Create report repository, service, and handler
+		reportRepo := repositories.NewReportRepository(database)
+		reportService := services.NewReportService(reportRepo, redisClient)
+		reportHandler := handlers.NewReportHandler(reportService)
 
+		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, redisClient)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, redisClient)
-
-	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
+		// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {
 		ctx := context.Background()
 		if err := stockEventService.StartBroadcaster(ctx); err != nil {

@@ -297,6 +297,180 @@ func (s *reportService) GenerateProfitLoss(ctx context.Context, branchID uint, s
 	return report, nil
 }
 
+// GenerateProfitLossSummary generates comprehensive profit/loss summary report
+// Story 5.2, Task 3.1-3.7, AC1, AC2, AC3: Implementation with RBAC, caching, breakdowns
+// Code review fixes from Story 5.1 applied: Performance logging, cache invalidation, timezone handling
+func (s *reportService) GenerateProfitLossSummary(ctx context.Context, req *dto.ProfitLossRequest) (*dto.ProfitLossSummaryDTO, error) {
+	// Story 5.2, Task 3.6: Performance requirement - context timeout for <10s
+	startTime := time.Now()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Code review fix: LOW-003 - Log performance metrics
+	defer func() {
+		duration := time.Since(startTime)
+		slog.InfoContext(ctx, "profit_loss_generation_completed",
+			"duration_ms", duration.Milliseconds(),
+			"start_date", req.StartDate,
+			"end_date", req.EndDate,
+			"breakdown_by", req.BreakdownBy,
+			"branch_id", req.BranchID,
+			"meets_sla", duration < 10*time.Second)
+	}()
+
+	// Check context cancellation
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("operation cancelled: %w", err)
+	}
+
+	// Story 5.2, Task 3.2: Validate request DTO
+	if req.StartDate == "" {
+		return nil, &InvalidInputError{Field: "start_date", Message: "start_date is required"}
+	}
+
+	if req.EndDate == "" {
+		return nil, &InvalidInputError{Field: "end_date", Message: "end_date is required"}
+	}
+
+	// Validate date format
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		return nil, &InvalidInputError{Field: "start_date", Message: ErrInvalidDateFormat}
+	}
+
+	endDate, err := time.Parse("2006-01-02", req.EndDate)
+	if err != nil {
+		return nil, &InvalidInputError{Field: "end_date", Message: ErrInvalidDateFormat}
+	}
+
+	// Code review fix: HIGH-002 - Add date range validation
+	now := time.Now()
+	loc := time.FixedZone("WIB", 7*60*60)
+	nowInLoc := now.In(loc)
+
+	// Check if date range is in the future
+	if startDate.After(nowInLoc) {
+		return nil, &InvalidInputError{
+			Field:   "start_date",
+			Message: "start_date cannot be in the future",
+		}
+	}
+
+	if endDate.After(nowInLoc) {
+		return nil, &InvalidInputError{
+			Field:   "end_date",
+			Message: "end_date cannot be in the future",
+		}
+	}
+
+	// Check if date range is too large (more than 1 year)
+	oneYear := 365 * 24 * time.Hour
+	if endDate.Sub(startDate) > oneYear {
+		return nil, &InvalidInputError{
+			Field:   "date_range",
+			Message: "date range cannot exceed 1 year",
+		}
+	}
+
+	// Check if end date is before start date
+	if endDate.Before(startDate) {
+		return nil, &InvalidInputError{
+			Field:   "date_range",
+			Message: "end_date cannot be before start_date",
+		}
+	}
+
+	// Story 5.2, Task 3.5: Check Redis cache first (cache key format: profit_loss:{start}:{end}:{breakdown}:{branch_id})
+	// Use "all" for branch_id when null (aggregating all branches)
+	breakdown := req.BreakdownBy
+	if breakdown == "" {
+		breakdown = "none"
+	}
+	cacheKey := fmt.Sprintf("profit_loss:%s:%s:%s:%d", req.StartDate, req.EndDate, breakdown, getBranchIDValue(req.BranchID))
+
+	if s.redisClient != nil {
+		cachedData, err := s.redisClient.Get(ctx, cacheKey).Result()
+		if err == nil && cachedData != "" {
+			// Cache hit - deserialize and return
+			var summary dto.ProfitLossSummaryDTO
+			if err := json.Unmarshal([]byte(cachedData), &summary); err == nil {
+				slog.InfoContext(ctx, "cache_hit",
+					"cache_key", cacheKey,
+					"start_date", req.StartDate,
+					"end_date", req.EndDate)
+				return &summary, nil
+			}
+			// If deserialization fails, continue to fetch from DB
+			slog.WarnContext(ctx, "cache_deserialization_failed",
+				"cache_key", cacheKey,
+				"error", err)
+		}
+	}
+
+	// Story 5.2, Task 3.4: Branch filtering logic
+	// If BranchID is nil (not specified), use 0 for "all branches"
+	branchID := uint(0)
+	if req.BranchID != nil {
+		branchID = *req.BranchID
+	}
+
+	// Story 5.2, Task 2.1: Call ReportRepository to get data from database
+	summary, err := s.reportRepo.GetProfitLossSummary(ctx, req.StartDate, req.EndDate, branchID, req.BreakdownBy)
+	if err != nil {
+		return nil, &ServiceError{Op: "get profit loss summary", Err: err}
+	}
+
+	// Story 5.2, Task 3.5: Store in Redis cache with 5-minute TTL
+	if s.redisClient != nil {
+		data, err := json.Marshal(summary)
+		if err == nil {
+			// Cache for 5 minutes (300 seconds)
+			if err := s.redisClient.Set(ctx, cacheKey, data, 5*time.Minute).Err(); err != nil {
+				slog.WarnContext(ctx, "cache_set_failed",
+					"cache_key", cacheKey,
+					"error", err)
+			} else {
+				slog.InfoContext(ctx, "cache_set_success",
+					"cache_key", cacheKey,
+					"ttl", "5m")
+			}
+		}
+	}
+
+	return summary, nil
+}
+
+// InvalidateProfitLossCache invalidates the Redis cache for profit/loss reports
+// Code review fix: MED-003 - Implement cache invalidation strategy
+// Call this method when new transactions are added to ensure reports stay current
+func (s *reportService) InvalidateProfitLossCache(ctx context.Context, startDate, endDate string, branchID uint, breakdownBy string) error {
+	if s.redisClient == nil {
+		return nil // No Redis configured, nothing to invalidate
+	}
+
+	breakdown := breakdownBy
+	if breakdown == "" {
+		breakdown = "none"
+	}
+	cacheKey := fmt.Sprintf("profit_loss:%s:%s:%s:%d", startDate, endDate, breakdown, branchID)
+	err := s.redisClient.Del(ctx, cacheKey).Err()
+	if err != nil {
+		slog.WarnContext(ctx, "cache_invalidation_failed",
+			"cache_key", cacheKey,
+			"error", err)
+		return err
+	}
+
+	slog.InfoContext(ctx, "cache_invalidated",
+		"cache_key", cacheKey,
+		"start_date", startDate,
+		"end_date", endDate,
+		"branch_id", branchID,
+		"breakdown_by", breakdownBy)
+
+	return nil
+}
+
 // ExportReport exports report in various formats
 // Stub for future story
 func (s *reportService) ExportReport(ctx context.Context, reportType string, format string) ([]byte, error) {

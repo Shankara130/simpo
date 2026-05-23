@@ -12,8 +12,10 @@ import (
 
 // MockReportRepository is a mock implementation for testing
 // Story 5.1, Task 3: Testing ReportService business logic
+// Story 5.2, Task 3: Testing profit/loss report generation
 type MockReportRepository struct {
-	GetDailySalesSummaryFunc func(ctx context.Context, date string, branchID uint) (*dto.DailySalesSummaryDTO, error)
+	GetDailySalesSummaryFunc    func(ctx context.Context, date string, branchID uint) (*dto.DailySalesSummaryDTO, error)
+	GetProfitLossSummaryFunc   func(ctx context.Context, startDate, endDate string, branchID uint, breakdownBy string) (*dto.ProfitLossSummaryDTO, error)
 }
 
 func (m *MockReportRepository) GetDailySalesSummary(ctx context.Context, date string, branchID uint) (*dto.DailySalesSummaryDTO, error) {
@@ -21,6 +23,13 @@ func (m *MockReportRepository) GetDailySalesSummary(ctx context.Context, date st
 		return m.GetDailySalesSummaryFunc(ctx, date, branchID)
 	}
 	return &dto.DailySalesSummaryDTO{}, nil
+}
+
+func (m *MockReportRepository) GetProfitLossSummary(ctx context.Context, startDate, endDate string, branchID uint, breakdownBy string) (*dto.ProfitLossSummaryDTO, error) {
+	if m.GetProfitLossSummaryFunc != nil {
+		return m.GetProfitLossSummaryFunc(ctx, startDate, endDate, branchID, breakdownBy)
+	}
+	return &dto.ProfitLossSummaryDTO{}, nil
 }
 
 // TestReportService_GenerateDailySalesSummary_Success tests successful report generation

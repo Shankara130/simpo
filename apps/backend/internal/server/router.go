@@ -21,7 +21,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, redisClient *redis.Client) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -230,6 +230,19 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				productsGroup.POST("/stock/adjust", productHandler.AdjustStock)
 				// Story 4.6, Task 6: Barcode scan endpoint with expired blocking
 				productsGroup.GET("/sku/:sku", productHandler.GetProductBySKU)
+			}
+		}
+
+		// Story 5.1, 5.2: Financial report endpoints - require authentication and RBAC
+		// Only Owner and Admin can access financial reports
+		if reportHandler != nil {
+			reportsGroup := v1.Group("/reports")
+			reportsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 5.1: Daily sales summary report
+				reportsGroup.GET("/daily", reportHandler.GetDailySalesReport)
+				// Story 5.2: Profit/Loss report
+				reportsGroup.GET("/profit-loss", reportHandler.GetProfitLossReport)
 			}
 		}
 	}

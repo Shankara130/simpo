@@ -23,6 +23,15 @@ type ReportService interface {
 	// Deprecated: Use GenerateDailySalesSummary with DTO instead
 	GenerateDailySales(ctx context.Context, branchID uint, startDate, endDate time.Time) (*SalesReport, error)
 
+	// GenerateProfitLossSummary generates comprehensive profit/loss summary report
+	// Story 5.2, Task 3.1-3.7, AC1, AC2, AC3: Returns revenue, COGS, gross profit with breakdowns
+	// Task 3.3: RBAC validation (Owner role required)
+	// Task 3.4: Branch filtering based on user role
+	// Task 3.5: Caching with Redis for 5-minute TTL
+	// Task 3.6: Performance requirement <10 seconds with context timeout
+	// Task 3.7: Calculate gross profit margin percentage
+	GenerateProfitLossSummary(ctx context.Context, req *dto.ProfitLossRequest) (*dto.ProfitLossSummaryDTO, error)
+
 	// GenerateProfitLoss generates profit and loss report
 	// Calculates: Revenue - Cost of Goods Sold
 	GenerateProfitLoss(ctx context.Context, branchID uint, startDate, endDate time.Time) (*ProfitLossReport, error)

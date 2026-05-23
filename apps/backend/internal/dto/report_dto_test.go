@@ -219,3 +219,184 @@ func TestDailySalesSummaryDTOEmptyFields(t *testing.T) {
 func uintPtr(i uint) *uint {
 	return &i
 }
+
+// ==============================================================================
+// Story 5.2: Profit/Loss Report Tests
+// ==============================================================================
+
+// TestProfitLossSummaryDTOSerialization tests JSON serialization for ProfitLossSummaryDTO
+// Story 5.2, Task 1.1, AC1: DTO with period_start, period_end, revenue, cogs, gross_profit, margin
+func TestProfitLossSummaryDTOSerialization(t *testing.T) {
+	// Story 5.2, Task 1.1: Create DTO with all required fields
+	dto := ProfitLossSummaryDTO{
+		PeriodStart:       "2026-05-01",
+		PeriodEnd:         "2026-05-23",
+		BranchID:          2,
+		BranchName:        "Apotek Sehat - Jakarta Pusat",
+		Revenue:           "45000000.00",
+		CostOfGoodsSold:   "27000000.00",
+		GrossProfit:       "18000000.00",
+		GrossProfitMargin: 40.0,
+		BreakdownBy:       "category",
+		Breakdowns: []ProfitLossBreakdown{
+			{
+				Category:         "Obat Keras",
+				Revenue:          "20000000.00",
+				CostOfGoodsSold:  "12000000.00",
+				GrossProfit:      "8000000.00",
+				MarginPercentage: 40.0,
+			},
+		},
+		GeneratedAt: time.Date(2026, 5, 23, 15, 30, 0, 0, time.UTC),
+	}
+
+	// Story 5.2, Task 1.5: Test JSON serialization with camelCase tags
+	data, err := json.Marshal(dto)
+	require.NoError(t, err, "JSON marshaling should succeed")
+
+	// Verify JSON structure
+	var unmarshaled map[string]interface{}
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err, "JSON unmarshaling should succeed")
+
+	// Story 5.2, Task 1.5: Verify camelCase field names
+	assert.Equal(t, "2026-05-01", unmarshaled["periodStart"], "periodStart should be camelCase")
+	assert.Equal(t, "2026-05-23", unmarshaled["periodEnd"], "periodEnd should be camelCase")
+	assert.Equal(t, "45000000.00", unmarshaled["revenue"], "revenue should be present")
+	assert.Equal(t, "27000000.00", unmarshaled["costOfGoodsSold"], "costOfGoodsSold should be camelCase")
+	assert.Equal(t, "18000000.00", unmarshaled["grossProfit"], "grossProfit should be camelCase")
+	assert.Equal(t, 40.0, unmarshaled["grossProfitMargin"], "grossProfitMargin should be camelCase")
+	assert.Equal(t, "category", unmarshaled["breakdownBy"], "breakdownBy should be camelCase")
+	assert.Equal(t, float64(2), unmarshaled["branchId"], "branchId should be camelCase")
+	assert.Equal(t, "Apotek Sehat - Jakarta Pusat", unmarshaled["branchName"], "branchName should be camelCase")
+}
+
+// TestProfitLossBreakdownSerialization tests JSON serialization for ProfitLossBreakdown
+// Story 5.2, Task 1.2, AC2: Breakdown by category with revenue, cogs, gross_profit, margin
+func TestProfitLossBreakdownSerialization(t *testing.T) {
+	// Story 5.2, Task 1.2: Create breakdown struct
+	breakdown := ProfitLossBreakdown{
+		Category:         "Obat Keras",
+		Revenue:          "20000000.00",
+		CostOfGoodsSold:  "12000000.00",
+		GrossProfit:      "8000000.00",
+		MarginPercentage: 40.0,
+	}
+
+	// Test JSON serialization
+	data, err := json.Marshal(breakdown)
+	require.NoError(t, err, "JSON marshaling should succeed")
+
+	var unmarshaled map[string]interface{}
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err, "JSON unmarshaling should succeed")
+
+	// Story 5.2, Task 1.5: Verify camelCase field names
+	assert.Equal(t, "Obat Keras", unmarshaled["category"], "category should be present")
+	assert.Equal(t, "20000000.00", unmarshaled["revenue"], "revenue should be present")
+	assert.Equal(t, "12000000.00", unmarshaled["costOfGoodsSold"], "costOfGoodsSold should be camelCase")
+	assert.Equal(t, "8000000.00", unmarshaled["grossProfit"], "grossProfit should be camelCase")
+	assert.Equal(t, 40.0, unmarshaled["marginPercentage"], "marginPercentage should be camelCase")
+}
+
+// TestBranchBreakdownSerialization tests JSON serialization for BranchBreakdown
+// Story 5.2, Task 1.3, AC2: Breakdown by branch location
+func TestBranchBreakdownSerialization(t *testing.T) {
+	// Story 5.2, Task 1.3: Create branch breakdown struct
+	breakdown := BranchBreakdown{
+		BranchID:         2,
+		BranchName:       "Apotek Sehat - Jakarta Pusat",
+		Revenue:          "45000000.00",
+		CostOfGoodsSold:  "27000000.00",
+		GrossProfit:      "18000000.00",
+		MarginPercentage: 40.0,
+	}
+
+	// Test JSON serialization
+	data, err := json.Marshal(breakdown)
+	require.NoError(t, err, "JSON marshaling should succeed")
+
+	var unmarshaled map[string]interface{}
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err, "JSON unmarshaling should succeed")
+
+	// Story 5.2, Task 1.5: Verify camelCase field names
+	assert.Equal(t, float64(2), unmarshaled["branchId"], "branchId should be camelCase")
+	assert.Equal(t, "Apotek Sehat - Jakarta Pusat", unmarshaled["branchName"], "branchName should be camelCase")
+	assert.Equal(t, "45000000.00", unmarshaled["revenue"], "revenue should be present")
+	assert.Equal(t, 40.0, unmarshaled["marginPercentage"], "marginPercentage should be camelCase")
+}
+
+// TestPaymentMethodBreakdownPLSerialization tests JSON serialization for PaymentMethodBreakdownPL
+// Story 5.2, Task 1.4, AC2: Breakdown by payment method
+func TestPaymentMethodBreakdownPLSerialization(t *testing.T) {
+	// Story 5.2, Task 1.4: Create payment method breakdown struct
+	breakdown := PaymentMethodBreakdownPL{
+		PaymentMethod:    "CASH",
+		Revenue:          "8000000.00",
+		CostOfGoodsSold:  "4800000.00",
+		GrossProfit:      "3200000.00",
+		MarginPercentage: 40.0,
+	}
+
+	// Test JSON serialization
+	data, err := json.Marshal(breakdown)
+	require.NoError(t, err, "JSON marshaling should succeed")
+
+	var unmarshaled map[string]interface{}
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err, "JSON unmarshaling should succeed")
+
+	// Story 5.2, Task 1.5: Verify camelCase field names
+	assert.Equal(t, "CASH", unmarshaled["paymentMethod"], "paymentMethod should be camelCase")
+	assert.Equal(t, "8000000.00", unmarshaled["revenue"], "revenue should be present")
+	assert.Equal(t, 40.0, unmarshaled["marginPercentage"], "marginPercentage should be camelCase")
+}
+
+// TestProfitLossRequestValidation tests ProfitLossRequest DTO validation
+// Story 5.2, Task 3.2, AC1: Request DTO with start_date, end_date, breakdown_by, branch_id
+func TestProfitLossRequestValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     ProfitLossRequest
+		expectError bool
+	}{
+		{
+			name: "Valid request with all fields",
+			request: ProfitLossRequest{
+				StartDate:   "2026-05-01",
+				EndDate:     "2026-05-23",
+				BreakdownBy: "category",
+				BranchID:    uintPtr(2),
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid request without optional fields",
+			request: ProfitLossRequest{
+				StartDate: "2026-05-01",
+				EndDate:   "2026-05-23",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Verify request structure
+			assert.NotEmpty(t, tt.request.StartDate, "StartDate should not be empty")
+			assert.NotEmpty(t, tt.request.EndDate, "EndDate should not be empty")
+
+			// Test JSON serialization
+			data, err := json.Marshal(tt.request)
+			require.NoError(t, err, "JSON marshaling should succeed")
+
+			var unmarshaled ProfitLossRequest
+			err = json.Unmarshal(data, &unmarshaled)
+			require.NoError(t, err, "JSON unmarshaling should succeed")
+
+			assert.Equal(t, tt.request.StartDate, unmarshaled.StartDate, "StartDate should match")
+			assert.Equal(t, tt.request.EndDate, unmarshaled.EndDate, "EndDate should match")
+		})
+	}
+}
