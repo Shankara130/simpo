@@ -3,13 +3,24 @@ package services
 import (
 	"context"
 	"time"
+
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 )
 
 // ReportService defines the interface for report business operations
-// AC1: Service interface for report domain with clear business method signatures
+// Story 5.1, Task 3.1: Service interface for financial reporting logic
 type ReportService interface {
-	// GenerateDailySales generates daily sales summary report
+	// GenerateDailySalesSummary generates comprehensive daily sales summary report
+	// Story 5.1, Task 3.1, AC1: Returns total sales, payment breakdown, top products, hourly sales
+	// Task 3.3: RBAC validation (Owner role required)
+	// Task 3.4: Branch filtering based on user role
+	// Task 3.5: Caching with Redis for 5-minute TTL
+	// Task 3.6: Performance requirement <10 seconds with context timeout
+	GenerateDailySalesSummary(ctx context.Context, req *dto.DailySalesRequest) (*dto.DailySalesSummaryDTO, error)
+
+	// GenerateDailySales generates daily sales summary report (legacy method for backwards compatibility)
 	// Filters by date range and branch
+	// Deprecated: Use GenerateDailySalesSummary with DTO instead
 	GenerateDailySales(ctx context.Context, branchID uint, startDate, endDate time.Time) (*SalesReport, error)
 
 	// GenerateProfitLoss generates profit and loss report
@@ -20,6 +31,21 @@ type ReportService interface {
 	// Stub for future story
 	ExportReport(ctx context.Context, reportType string, format string) ([]byte, error)
 }
+
+// Constants for report-related errors
+const (
+	// ErrUnauthorizedReportAccess is returned when user lacks permission for reports
+	// Story 5.1, Security Requirements: Only Owner and Admin can access financial reports
+	ErrUnauthorizedReportAccess = "unauthorized: insufficient permissions to access financial reports"
+
+	// ErrInvalidDateFormat is returned when date format is invalid
+	// Story 5.1, AC1: Date must be in YYYY-MM-DD format
+	ErrInvalidDateFormat = "invalid date format: use YYYY-MM-DD"
+
+	// ErrReportGenerationTimeout is returned when report generation exceeds timeout
+	// Story 5.1, Task 3.6: Performance requirement <10 seconds
+	ErrReportGenerationTimeout = "report generation timeout: exceeded 10 seconds"
+)
 
 // SalesReport represents daily sales summary report
 type SalesReport struct {

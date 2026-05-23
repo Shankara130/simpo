@@ -68,8 +68,28 @@ func (m *MockProductService) GetProductByID(ctx context.Context, id uint) (*mode
 	return &models.Product{}, nil
 }
 
+func (m *MockProductService) GetProductBySKU(ctx context.Context, branchID uint, sku string) (*models.Product, error) {
+	return &models.Product{}, nil
+}
+
 func (m *MockProductService) GetLowStockProducts(ctx context.Context, branchID uint) ([]*models.Product, error) {
 	return []*models.Product{}, nil
+}
+
+func (m *MockProductService) CheckLowStock(ctx context.Context, productID uint, branchID uint) (bool, error) {
+	return false, nil
+}
+
+func (m *MockProductService) GetExpiringProducts(ctx context.Context, branchID uint, daysThreshold int) ([]*models.Product, error) {
+	return []*models.Product{}, nil
+}
+
+func (m *MockProductService) ValidateProductForSale(ctx context.Context, productID uint) error {
+	return nil
+}
+
+func (m *MockProductService) ManualAdjustStock(ctx context.Context, req *services.StockAdjustmentRequest, userID uint, username string) (*services.StockAdjustmentResult, error) {
+	return &services.StockAdjustmentResult{}, nil
 }
 
 // TestProductHandler_ListProducts_Success tests successful product listing with pagination
