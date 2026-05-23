@@ -50,31 +50,31 @@ func TestService_GetReadiness(t *testing.T) {
 		{
 			name: "all checks pass",
 			checkers: []Checker{
-				&mockChecker{name: "db", result: CheckResult{Status: CheckPass, Message: "OK"}},
+				&mockChecker{name: "database", result: CheckResult{Status: CheckPass, Message: "OK"}},
 			},
 			expectedStatus: StatusHealthy,
 		},
 		{
 			name: "one check fails",
 			checkers: []Checker{
-				&mockChecker{name: "db", result: CheckResult{Status: CheckFail, Message: "Failed"}},
+				&mockChecker{name: "database", result: CheckResult{Status: CheckFail, Message: "Failed"}},
 			},
 			expectedStatus: StatusUnhealthy,
 		},
 		{
 			name: "one check warns",
 			checkers: []Checker{
-				&mockChecker{name: "db", result: CheckResult{Status: CheckWarn, Message: "Slow"}},
+				&mockChecker{name: "redis", result: CheckResult{Status: CheckWarn, Message: "Slow"}},
 			},
 			expectedStatus: StatusDegraded,
 		},
 		{
 			name: "mixed - fail takes precedence",
 			checkers: []Checker{
-				&mockChecker{name: "db", result: CheckResult{Status: CheckPass, Message: "OK"}},
-				&mockChecker{name: "cache", result: CheckResult{Status: CheckFail, Message: "Failed"}},
+				&mockChecker{name: "database", result: CheckResult{Status: CheckPass, Message: "OK"}},
+				&mockChecker{name: "redis", result: CheckResult{Status: CheckFail, Message: "Failed"}},
 			},
-			expectedStatus: StatusUnhealthy,
+			expectedStatus: StatusDegraded, // Database healthy but redis failed = degraded
 		},
 	}
 

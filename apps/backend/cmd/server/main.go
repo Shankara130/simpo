@@ -165,7 +165,7 @@ func run() error {
 	}
 
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler)
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

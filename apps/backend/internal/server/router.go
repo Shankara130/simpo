@@ -21,7 +21,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -49,13 +49,22 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		dbChecker := health.NewDatabaseChecker(db)
 		checkers = append(checkers, dbChecker)
 	}
+	// Story 9.1: Add Redis checker if Redis is configured
+	if redisClient != nil {
+		redisChecker := health.NewRedisChecker(redisClient)
+		checkers = append(checkers, redisChecker)
+	}
 	healthService := health.NewService(checkers, cfg.App.Version, cfg.App.Environment)
 	healthHandler := health.NewHandler(healthService)
 
+	// Legacy health endpoints (keep for backward compatibility)
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/live", healthHandler.Live)
 	router.GET("/health/ready", healthHandler.Ready)
 	router.GET("/health/db", healthHandler.Database) // Story 2.4: Database-specific health check
+
+	// Story 9.1: API versioned health endpoint
+	router.GET("/api/v1/health", healthHandler.Health)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -85,8 +94,8 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 
 	// Story 1.8: Create Redis client for session tracking and token blocklist
 	// Story 1.8, Task 1: Session tracking mechanism (Redis)
-	var redisClient *redis.Client
-	if cfg.Redis.Host != "" {
+	// Use passed redisClient if available, otherwise create local one (backward compatibility)
+	if redisClient == nil && cfg.Redis.Host != "" {
 		redisClient = redis.NewClient(&redis.Options{
 			Addr:     cfg.Redis.Host + ":" + cfg.Redis.Port,
 			Password: cfg.Redis.Password,

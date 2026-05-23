@@ -1,7 +1,9 @@
 package health
 
 import (
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,17 +19,34 @@ func NewHandler(service Service) *Handler {
 }
 
 // Health godoc
-// @Summary      Basic health check
-// @Description  Check if the application is running
+// @Summary      API health check endpoint
+// @Description  Check if the application is running and its dependencies (Story 9.1 - API versioned endpoint)
 // @Tags         Health
 // @Accept       json
 // @Produce      json
-// @Success      200  {object}  HealthResponse
-// @Router       /health [get]
+// @Success      200  {object}  HealthResponse  "System is healthy - all critical dependencies connected"
+// @Failure      503  {object}  HealthResponse  "System is unhealthy - critical dependency disconnected"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /api/v1/health [get]
 func (h *Handler) Health(c *gin.Context) {
 	ctx := c.Request.Context()
 	response := h.service.GetHealth(ctx)
-	c.JSON(http.StatusOK, response)
+
+	// Story 9.1, AC8: Log health check requests for audit purposes with explicit timestamp
+	slog.Info("Health check",
+		"timestamp", time.Now().Format(time.RFC3339),
+		"path", "/api/v1/health",
+		"status", response.Status,
+		"database", response.Database,
+		"redis", response.Redis,
+	)
+
+	statusCode := http.StatusOK
+	if response.Status == StatusUnhealthy {
+		statusCode = http.StatusServiceUnavailable
+	}
+
+	c.JSON(statusCode, response)
 }
 
 // Live godoc

@@ -23,8 +23,10 @@ type HealthResponse struct {
 	Version     string                 `json:"version"`
 	Timestamp   time.Time              `json:"timestamp"`
 	Uptime      string                 `json:"uptime"`
-	Checks      map[string]CheckResult `json:"checks"`
-	Environment string                 `json:"environment"`
+	Database    string                 `json:"database"`    // "connected" | "disconnected"
+	Redis       string                 `json:"redis"`       // "connected" | "disconnected"
+	Checks      map[string]CheckResult `json:"checks"`      // Detailed check results
+	Environment string                 `json:"environment,omitempty"` // Optional: not in AC2 spec
 }
 
 type CheckResult struct {

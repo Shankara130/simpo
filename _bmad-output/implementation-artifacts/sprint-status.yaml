@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-22T19:00:00+07:00
+last_updated: 2026-05-23T14:13:00+07:00
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -121,7 +121,7 @@ development_status:
 
   # Epic 9: API Foundation & Core Services
   epic-9: in-progress
-  9-1-implement-api-health-check-endpoint: backlog
+  9-1-implement-api-health-check-endpoint: done
   9-2-implement-api-documentation-with-swagger: backlog
   9-3-implement-rate-limiting-middleware: backlog
   9-4-implement-cors-middleware-for-cross-origin-requests: backlog

@@ -31,7 +31,16 @@ func (d *DatabaseChecker) Check(ctx context.Context) CheckResult {
 		}
 	}
 
-	if err := sqlDB.PingContext(ctx); err != nil {
+	// Use the context timeout from handler (AC1: 400ms max for total response)
+	// Only add timeout if parent context has no deadline
+	pingCtx := ctx
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		pingCtx, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
+		defer cancel()
+	}
+
+	if err := sqlDB.PingContext(pingCtx); err != nil {
 		return CheckResult{
 			Status:  CheckFail,
 			Message: "Database connection failed",
@@ -39,7 +48,7 @@ func (d *DatabaseChecker) Check(ctx context.Context) CheckResult {
 	}
 
 	var result int
-	if err := d.db.WithContext(ctx).Raw("SELECT 1").Scan(&result).Error; err != nil {
+	if err := d.db.WithContext(pingCtx).Raw("SELECT 1").Scan(&result).Error; err != nil {
 		return CheckResult{
 			Status:  CheckFail,
 			Message: "Database query failed",
@@ -50,10 +59,9 @@ func (d *DatabaseChecker) Check(ctx context.Context) CheckResult {
 	status := CheckPass
 	message := "Database connection healthy"
 
-	if duration > 500*time.Millisecond {
-		status = CheckFail
-		message = "Database response time too slow"
-	} else if duration > 100*time.Millisecond {
+	// AC1: Health check should respond within 500ms total
+	// Individual check taking >300ms is a concern
+	if duration > 300*time.Millisecond {
 		status = CheckWarn
 		message = "Database response time degraded"
 	}

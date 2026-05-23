@@ -41,49 +41,147 @@ func NewService(checkers []Checker, version, environment string) Service {
 }
 
 func (s *service) GetHealth(ctx context.Context) HealthResponse {
+	// Story 9.1, AC1: Enforce 400ms timeout to ensure total response stays under 500ms
+	healthCtx, cancel := context.WithTimeout(ctx, 400*time.Millisecond)
+	defer cancel()
+
+	checks := make(map[string]CheckResult)
+
+	// Run all checkers with nil check
+	for _, checker := range s.checkers {
+		if checker == nil {
+			continue // Skip nil checkers to prevent panic
+		}
+		result := checker.Check(healthCtx)
+		checks[checker.Name()] = result
+	}
+
+	// Calculate overall status and extract database/redis status
+	status, database, redis := s.calculateStatus(checks)
+
 	return HealthResponse{
-		Status:      StatusHealthy,
+		Status:      status,
 		Version:     s.version,
 		Timestamp:   time.Now(),
 		Uptime:      s.formatUptime(),
+		Database:    database,
+		Redis:       redis,
+		Checks:      checks,
 		Environment: s.environment,
-		Checks:      make(map[string]CheckResult),
 	}
 }
 
+// calculateStatus determines overall health status and extracts database/redis connectivity
+func (s *service) calculateStatus(checks map[string]CheckResult) (HealthStatus, string, string) {
+	const (
+		DatabaseCheckerName = "database"
+		RedisCheckerName    = "redis"
+	)
+
+	var dbStatus, redisStatus string
+	dbUnhealthy, redisUnhealthy := false, false
+
+	// Extract database status using direct map access
+	if dbResult, ok := checks[DatabaseCheckerName]; ok {
+		if dbResult.Status == CheckPass {
+			dbStatus = "connected"
+		} else {
+			dbStatus = "disconnected"
+			dbUnhealthy = true
+		}
+	}
+
+	// Extract redis status using direct map access
+	if redisResult, ok := checks[RedisCheckerName]; ok {
+		if redisResult.Status == CheckPass {
+			redisStatus = "connected"
+		} else {
+			redisStatus = "disconnected"
+			redisUnhealthy = true
+		}
+	}
+
+	// If no database check, assume connected (for environments where DB check is disabled)
+	if dbStatus == "" {
+		dbStatus = "connected"
+	}
+
+	// If no redis check (not configured), show as connected (AC4: Redis is optional)
+	if redisStatus == "" {
+		redisStatus = "connected"
+	}
+
+	// Calculate overall status
+	var overallStatus HealthStatus
+	if dbUnhealthy {
+		// Database is critical - unhealthy if disconnected
+		overallStatus = StatusUnhealthy
+	} else if redisUnhealthy {
+		// Database connected but redis disconnected - degraded (AC5)
+		overallStatus = StatusDegraded
+	} else {
+		// All critical dependencies healthy
+		overallStatus = StatusHealthy
+	}
+
+	return overallStatus, dbStatus, redisStatus
+}
+
 func (s *service) GetLiveness(ctx context.Context) HealthResponse {
+	// Liveness check - just verify the service is running
+	// Include database/redis status if checkers available
+	checks := make(map[string]CheckResult)
+	for _, checker := range s.checkers {
+		if checker == nil {
+			continue
+		}
+		result := checker.Check(ctx)
+		checks[checker.Name()] = result
+	}
+
+	// Extract database and redis status for consistency
+	_, database, redis := s.calculateStatus(checks)
+
 	return HealthResponse{
 		Status:      StatusHealthy,
 		Version:     s.version,
 		Timestamp:   time.Now(),
 		Uptime:      s.formatUptime(),
+		Database:    database,
+		Redis:       redis,
+		Checks:      checks,
 		Environment: s.environment,
-		Checks:      make(map[string]CheckResult),
 	}
 }
 
 func (s *service) GetReadiness(ctx context.Context) HealthResponse {
+	// Story 9.1, AC1: Enforce 400ms timeout to ensure total response stays under 500ms
+	readinessCtx, cancel := context.WithTimeout(ctx, 400*time.Millisecond)
+	defer cancel()
+
 	checks := make(map[string]CheckResult)
-	overallStatus := StatusHealthy
 
+	// Run all checkers with nil check
 	for _, checker := range s.checkers {
-		result := checker.Check(ctx)
-		checks[checker.Name()] = result
-
-		if result.Status == CheckFail {
-			overallStatus = StatusUnhealthy
-		} else if result.Status == CheckWarn && overallStatus != StatusUnhealthy {
-			overallStatus = StatusDegraded
+		if checker == nil {
+			continue
 		}
+		result := checker.Check(readinessCtx)
+		checks[checker.Name()] = result
 	}
 
+	// Calculate overall status and extract database/redis status
+	status, database, redis := s.calculateStatus(checks)
+
 	return HealthResponse{
-		Status:      overallStatus,
+		Status:      status,
 		Version:     s.version,
 		Timestamp:   time.Now(),
 		Uptime:      s.formatUptime(),
-		Environment: s.environment,
+		Database:    database,
+		Redis:       redis,
 		Checks:      checks,
+		Environment: s.environment,
 	}
 }
 
