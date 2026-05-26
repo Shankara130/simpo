@@ -21,7 +21,8 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, redisClient *redis.Client) *gin.Engine {
+// Story 6.1: Added systemSettingsHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -193,10 +194,16 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		adminGroup := v1.Group("/admin")
 		adminGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
 		{
-			// Admin settings endpoint (placeholder for future admin functionality)
-			adminGroup.GET("/settings", func(c *gin.Context) {
-				c.JSON(200, gin.H{"message": "admin settings"})
-			})
+			// Story 6.1: System settings endpoints - SYSTEM_ADMIN only
+			if systemSettingsHandler != nil {
+				adminGroup.GET("/settings", systemSettingsHandler.GetSettings)
+				adminGroup.PUT("/settings", systemSettingsHandler.UpdateSettings)
+			}
+		}
+
+		// Story 6.1: Public settings endpoint (no authentication required - for receipts/reports)
+		if systemSettingsHandler != nil {
+			v1.GET("/settings/public", systemSettingsHandler.GetPublicSettings)
 		}
 
 		// Story 3.6: Transaction endpoints - require authentication

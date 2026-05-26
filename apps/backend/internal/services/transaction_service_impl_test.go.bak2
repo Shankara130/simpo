@@ -242,11 +242,11 @@ func TestNewTransactionService_PanicOnNilDependencies(t *testing.T) {
 	mockTxnRepo := new(MockTransactionRepository)
 
 	assert.Panics(t, func() {
-		NewTransactionService(nil, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil, nil)
+		NewTransactionService(nil, mockItemRepo, mockProdRepo, mockProductService, mockAudit, nil, nil, nil, nil)
 	}, "Should panic when transactionRepo is nil")
 
 	assert.Panics(t, func() {
-		NewTransactionService(mockTxnRepo, nil, mockProdRepo, mockProductService, mockAudit, nil, nil, nil)
+		NewTransactionService(mockTxnRepo, nil, mockProdRepo, mockProductService, mockAudit, nil, nil, nil, nil)
 	}, "Should panic when transactionItemRepo is nil")
 
 	assert.Panics(t, func() {

@@ -39,6 +39,9 @@ const (
 
 	// Reporting actions
 	AuditActionExportReport        AuditAction = "EXPORT_REPORT"
+
+	// Story 6.1, AC7: System settings actions
+	AuditActionSettingsUpdated     AuditAction = "SETTINGS_UPDATED"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -105,6 +108,11 @@ type AuditService interface {
 	// Append-only audit trail for Badan POM regulatory compliance (NFR-SEC-004, NFR-SEC-009)
 	// Story 5.4, Task 4.5: Added ipAddress parameter for IP address extraction from request context
 	LogReportExport(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string, ipAddress string) error
+
+	// LogSettingsUpdate logs system settings changes (Story 6.1, AC7)
+	// Logs admin_user_id, changes (JSON), timestamp, ip_address
+	// Append-only audit trail for Badan POM regulatory compliance
+	LogSettingsUpdate(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error
 }
 
 // auditService implements AuditService with persistent audit trail storage
@@ -495,6 +503,38 @@ func (s *auditService) LogBlockedSaleAttempt(ctx context.Context, userID uint, u
 
 	// Story 5.4, Task 4.6: Update existing TODO comments to reference this story (Story 5.4)
 	// TODO comment cleanup done - now using persistent storage
+
+	return nil
+}
+
+// LogSettingsUpdate logs system settings changes to append-only audit trail
+// Story 6.1, AC7: Audit trail for configuration changes
+// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+// Logs admin_user_id, username, changes (JSON), timestamp, ip_address
+func (s *auditService) LogSettingsUpdate(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error {
+	entry := AuditLogEntry{
+		UserID:    &adminID,
+		Username:  adminUsername,
+		Action:    AuditActionSettingsUpdated,
+		IPAddress: ipAddress,
+		Outcome:   "success",
+		Reason:    changesJSON, // Store changes as JSON in reason field
+		Timestamp: time.Now(),
+	}
+
+	// Story 5.4: Persist to database
+	_ = s.persistToDatabase(ctx, entry)
+
+	// Keep stdout logging as fallback for MVP
+	slog.Info("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"admin_user_id", adminID,
+		"admin_username", adminUsername,
+		"changes", changesJSON,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
 
 	return nil
 }

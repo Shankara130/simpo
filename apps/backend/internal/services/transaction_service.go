@@ -64,6 +64,11 @@ type ReceiptData struct {
 	DiscountAmount    string
 	Total             string
 	PaymentMethod     string
+	// Story 6.1, AC6: Business info from system settings for receipts
+	BusinessName      string
+	BusinessAddress   string
+	BusinessPhone     string
+	BusinessEmail     string
 }
 
 // ReceiptItem represents a single item in receipt

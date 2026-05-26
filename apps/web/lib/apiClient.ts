@@ -103,6 +103,74 @@ apiClient.interceptors.response.use(
 export default apiClient;
 
 /**
+ * System Settings API
+ */
+
+export interface SystemSettingsRequest {
+  businessName: string;
+  address?: string;
+  phone?: string;
+  email: string;
+  logoUrl?: string;
+}
+
+export interface SystemSettingsResponse {
+  businessName: string;
+  address: string;
+  phone: string;
+  email: string;
+  logoUrl?: string;
+  updatedAt: string;
+  updatedBy: number;
+}
+
+export interface PublicSettingsResponse {
+  businessName: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
+export interface SettingsUpdateResponse {
+  message: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+/**
+ * Get all system settings (Admin only)
+ */
+export async function getSystemSettings(): Promise<SystemSettingsResponse> {
+  const response = await apiClient.get<{ success: boolean; data: SystemSettingsResponse }>('/settings');
+  if (!response.data.success) {
+    throw new ApiError('Failed to get system settings');
+  }
+  return response.data.data;
+}
+
+/**
+ * Update system settings (Admin only)
+ */
+export async function updateSystemSettings(settings: SystemSettingsRequest): Promise<SettingsUpdateResponse> {
+  const response = await apiClient.put<{ success: boolean; data: SettingsUpdateResponse }>('/settings', settings);
+  if (!response.data.success) {
+    throw new ApiError('Failed to update system settings');
+  }
+  return response.data.data;
+}
+
+/**
+ * Get public settings (no authentication required)
+ */
+export async function getPublicSettings(): Promise<PublicSettingsResponse> {
+  const response = await apiClient.get<{ success: boolean; data: PublicSettingsResponse }>('/settings/public');
+  if (!response.data.success) {
+    throw new ApiError('Failed to get public settings');
+  }
+  return response.data.data;
+}
+
+/**
  * Helper function to get token from cookie (for client-side)
  * Note: In production, cookies should be httpOnly for security
  */

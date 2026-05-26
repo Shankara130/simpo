@@ -17,6 +17,7 @@ import (
 // Story 4.2, Task 2: StockEventService for publishing stock updates
 // Story 4.4: AlertService for low stock notifications
 // Story 4.6, Task 3: ProductService for expired product validation
+// Story 6.1, Task 7: SystemService for business info in receipts
 type transactionService struct {
 	transactionRepo     repositories.TransactionRepository
 	transactionItemRepo repositories.TransactionItemRepository
@@ -25,6 +26,7 @@ type transactionService struct {
 	auditService        AuditService
 	stockEventService   StockEventService
 	alertService        AlertService // Story 4.4: For low stock notifications
+	systemService       SystemService // Story 6.1: For business settings in receipts
 }
 
 // NewTransactionService creates a new transaction service with dependency injection
@@ -32,6 +34,7 @@ type transactionService struct {
 // Story 4.2, Task 2: Add stockEventService parameter
 // Story 4.4: Add alertService parameter for low stock notifications
 // Story 4.6, Task 3: Add productService parameter for expired product validation
+// Story 6.1, Task 7: Add systemService parameter for business settings in receipts
 func NewTransactionService(
 	transactionRepo repositories.TransactionRepository,
 	transactionItemRepo repositories.TransactionItemRepository,
@@ -40,6 +43,7 @@ func NewTransactionService(
 	auditService AuditService,
 	stockEventService StockEventService,
 	alertService AlertService, // Story 4.4: AlertService for low stock notifications
+	systemService SystemService, // Story 6.1: SystemService for business info in receipts
 ) TransactionService {
 	// Fail fast on nil dependencies
 	if transactionRepo == nil {
@@ -59,6 +63,7 @@ func NewTransactionService(
 	}
 	// Story 4.2, Task 2: stockEventService is optional (can be nil for graceful degradation)
 	// Story 4.4: alertService is optional (can be nil for graceful degradation)
+	// Story 6.1, Task 7: systemService is optional (can be nil for graceful degradation)
 	// Events won't be published if not provided, but transactions will still work
 
 	return &transactionService{
@@ -69,6 +74,7 @@ func NewTransactionService(
 		auditService:        auditService,
 		stockEventService:   stockEventService,
 		alertService:        alertService,
+		systemService:       systemService,
 	}
 }
 
@@ -398,6 +404,7 @@ func (s *transactionService) addDecimal(a, b string) string {
 // GenerateReceiptData generates receipt structure for printing
 // PATCH: Authorization note - Branch ownership check should be performed at handler layer
 // The service layer returns transaction data; authorization is the handler's responsibility
+// Story 6.1, Task 7: Include business info from system settings (AC6)
 func (s *transactionService) GenerateReceiptData(ctx context.Context, transactionID uint) (*ReceiptData, error) {
 	// Check context cancellation
 	if err := ctx.Err(); err != nil {
@@ -410,6 +417,35 @@ func (s *transactionService) GenerateReceiptData(ctx context.Context, transactio
 		return nil, err
 	}
 
+	// Fetch business info from system settings (Story 6.1, AC6)
+	businessName := "Simpo Pharmacy" // Default fallback
+	businessAddress := ""
+	businessPhone := ""
+	businessEmail := ""
+
+	if s.systemService != nil {
+		if name, err := s.systemService.GetBusinessName(ctx); err == nil {
+			businessName = name
+		} else {
+			slog.Warn("Failed to fetch business name from system settings, using default", "error", err)
+		}
+		if address, err := s.systemService.GetBusinessAddress(ctx); err == nil {
+			businessAddress = address
+		} else {
+			slog.Warn("Failed to fetch business address from system settings", "error", err)
+		}
+		if phone, err := s.systemService.GetBusinessPhone(ctx); err == nil {
+			businessPhone = phone
+		} else {
+			slog.Warn("Failed to fetch business phone from system settings", "error", err)
+		}
+		if email, err := s.systemService.GetBusinessEmail(ctx); err == nil {
+			businessEmail = email
+		} else {
+			slog.Warn("Failed to fetch business email from system settings", "error", err)
+		}
+	}
+
 	// Build receipt data
 	receipt := &ReceiptData{
 		TransactionNumber: transaction.TransactionNumber,
@@ -420,6 +456,10 @@ func (s *transactionService) GenerateReceiptData(ctx context.Context, transactio
 		DiscountAmount:    transaction.Discount,
 		Total:             transaction.Total,
 		PaymentMethod:     transaction.PaymentMethod,
+		BusinessName:      businessName,
+		BusinessAddress:   businessAddress,
+		BusinessPhone:     businessPhone,
+		BusinessEmail:     businessEmail,
 	}
 
 	if transaction.CustomerName != nil {

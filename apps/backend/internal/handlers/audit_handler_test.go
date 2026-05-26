@@ -595,3 +595,7 @@ func (m *MockAuditServiceForHandler) LogReportExport(ctx context.Context, userID
 	}
 	return nil
 }
+
+func (m *MockAuditServiceForHandler) LogSettingsUpdate(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error {
+	return nil
+}

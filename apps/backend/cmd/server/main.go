@@ -145,6 +145,10 @@ func run() error {
 	// Story 4.4: Create alert service for low stock and expiry notifications
 	alertService := services.NewAlertService(nil, auditService, redisClient)
 
+	// Story 6.1: Create system settings repository, service, and handler
+	systemSettingRepo := repositories.NewSystemSettingRepository(database)
+	systemService := services.NewSystemService(systemSettingRepo, auditService)
+
 		// Story 3.6: Create transaction repositories, service, and handler
 		transactionRepo := repositories.NewTransactionRepository(database)
 		transactionItemRepo := repositories.NewTransactionItemRepository(database)
@@ -157,7 +161,7 @@ func run() error {
 		productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
 
 		// Story 4.6: Create transaction service with productService for expired product validation
-		transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService)
+		transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService, systemService)
 		transactionHandler := handlers.NewTransactionHandler(transactionService)
 		// Story 4.5: Create expiry check service and job
 		expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
@@ -184,14 +188,18 @@ func run() error {
 		fileStorage := services.NewInMemoryFileStorage(exportStoragePath, 100) // 100MB max
 
 		// Story 5.3: Create export service with file storage
-		exportService := services.NewExportService(reportService, fileStorage)
+			// Story 6.1, AC6: Add systemService for business info in reports
+			exportService := services.NewExportService(reportService, fileStorage, systemService)
 
 		reportHandler := handlers.NewReportHandler(reportService, exportService, auditService)
 
 		// Story 5.4: Create audit handler for audit log query and export APIs
 		auditHandler := handlers.NewAuditHandler(auditRepo, auditService)
 
-		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, redisClient)
+		// Story 6.1: Create system settings handler
+		systemSettingsHandler := handlers.NewSystemSettingsHandler(systemService)
+
+		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, redisClient)
 
 		// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

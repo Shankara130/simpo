@@ -18,12 +18,14 @@ import (
 
 // ExportServiceImpl implements ExportService interface
 // Story 5.3, Task 1.1-1.5, AC1: Export service implementation
+// Story 6.1, AC6: Added SystemService for dynamic business info in reports
 // Code review fix: CRITICAL-002 - Added in-memory job tracking for MVP
 // Code review fix: CRITICAL-007 - Added mutex for thread-safe job map access
 // TODO: Future story - Replace with database persistence for production async exports
 type ExportServiceImpl struct {
 	reportService  ReportService
 	fileStorage    FileStorageService
+	systemService  SystemService // Story 6.1, AC6: For fetching business info from system settings
 	pdfGenerator   *utils.PDFGenerator
 	excelGenerator *utils.ExcelGenerator
 	// In-memory job tracking for MVP scope (should be database-backed in production)
@@ -33,25 +35,26 @@ type ExportServiceImpl struct {
 
 // NewExportService creates a new export service instance
 // Story 5.3, Task 1.1: Constructor with dependency injection
-func NewExportService(reportService ReportService, fileStorage FileStorageService) ExportService {
-	// Initialize PDFGenerator with default company details
-	// In production, these should come from configuration
+// Story 6.1, AC6: Added SystemService parameter
+func NewExportService(reportService ReportService, fileStorage FileStorageService, systemService SystemService) ExportService {
+	// Initialize with default company details
+	// Story 6.1, AC6: Generators will be created dynamically with system settings at call time
 	pdfGen := utils.NewPDFGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		"Simpo Pharmacy", // Default fallback
+		"",
+		"",
 	)
 
-	// Initialize ExcelGenerator with same company details
 	excelGen := utils.NewExcelGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		"Simpo Pharmacy", // Default fallback
+		"",
+		"",
 	)
 
 	return &ExportServiceImpl{
 		reportService:  reportService,
 		fileStorage:    fileStorage,
+		systemService:  systemService,
 		pdfGenerator:   pdfGen,
 		excelGenerator: excelGen,
 		jobs:          make(map[string]*dto.ExportJob), // Initialize job tracking
@@ -95,8 +98,13 @@ func (s *ExportServiceImpl) ExportDailySalesToPDF(ctx context.Context, req *dto.
 	default:
 	}
 
-	// Generate PDF using PDFGenerator (will be implemented in Task 2)
-	pdfData, err := generateDailySalesPDF(reportData)
+	// Generate PDF using PDFGenerator
+	// Story 6.1, AC6: Fetch business info from system settings for reports
+	businessName, _ := s.systemService.GetBusinessName(ctx)
+	businessAddress, _ := s.systemService.GetBusinessAddress(ctx)
+	businessPhone, _ := s.systemService.GetBusinessPhone(ctx)
+
+	pdfData, err := generateDailySalesPDF(reportData, businessName, businessAddress, businessPhone)
 	if err != nil {
 		return nil, &ServiceError{
 			Op:  "ExportDailySalesToPDF",
@@ -181,8 +189,13 @@ func (s *ExportServiceImpl) ExportDailySalesToExcel(ctx context.Context, req *dt
 	default:
 	}
 
-	// Generate Excel using ExcelGenerator (will be implemented in Task 3)
-	excelData, err := generateDailySalesExcel(reportData)
+	// Generate Excel using ExcelGenerator
+	// Story 6.1, AC6: Fetch business info from system settings for reports
+	businessName, _ := s.systemService.GetBusinessName(ctx)
+	businessAddress, _ := s.systemService.GetBusinessAddress(ctx)
+	businessPhone, _ := s.systemService.GetBusinessPhone(ctx)
+
+	excelData, err := generateDailySalesExcel(reportData, businessName, businessAddress, businessPhone)
 	if err != nil {
 		return nil, &ServiceError{
 			Op:  "ExportDailySalesToExcel",
@@ -284,9 +297,14 @@ func (s *ExportServiceImpl) ExportProfitLossToPDF(ctx context.Context, req *dto.
 	default:
 	}
 
-	// Generate PDF using PDFGenerator (will be implemented in Task 2)
+	// Generate PDF using PDFGenerator
 	dateRange := fmt.Sprintf("%s_to_%s", reportData.PeriodStart, reportData.PeriodEnd)
-	pdfData, err := generateProfitLossPDF(reportData)
+	// Story 6.1, AC6: Fetch business info from system settings for reports
+	businessName, _ := s.systemService.GetBusinessName(ctx)
+	businessAddress, _ := s.systemService.GetBusinessAddress(ctx)
+	businessPhone, _ := s.systemService.GetBusinessPhone(ctx)
+
+	pdfData, err := generateProfitLossPDF(reportData, businessName, businessAddress, businessPhone)
 	if err != nil {
 		return nil, &ServiceError{
 			Op:  "ExportProfitLossToPDF",
@@ -388,9 +406,14 @@ func (s *ExportServiceImpl) ExportProfitLossToExcel(ctx context.Context, req *dt
 	default:
 	}
 
-	// Generate Excel using ExcelGenerator (will be implemented in Task 3)
+	// Generate Excel using ExcelGenerator
 	dateRange := fmt.Sprintf("%s_to_%s", reportData.PeriodStart, reportData.PeriodEnd)
-	excelData, err := generateProfitLossExcel(reportData)
+	// Story 6.1, AC6: Fetch business info from system settings for reports
+	businessName, _ := s.systemService.GetBusinessName(ctx)
+	businessAddress, _ := s.systemService.GetBusinessAddress(ctx)
+	businessPhone, _ := s.systemService.GetBusinessPhone(ctx)
+
+	excelData, err := generateProfitLossExcel(reportData, businessName, businessAddress, businessPhone)
 	if err != nil {
 		return nil, &ServiceError{
 			Op:  "ExportProfitLossToExcel",
@@ -664,12 +687,13 @@ type FileStorageService interface {
 
 // generateDailySalesPDF generates daily sales PDF using PDFGenerator
 // Story 5.3, Task 2.3-2.9: PDF generation with Maroto library
-func generateDailySalesPDF(data *dto.DailySalesSummaryDTO) ([]byte, error) {
-	// Create PDFGenerator with default company details
+// Story 6.1, AC6: Accept business info parameters from system settings
+func generateDailySalesPDF(data *dto.DailySalesSummaryDTO, businessName, businessAddress, businessPhone string) ([]byte, error) {
+	// Create PDFGenerator with business info from system settings
 	pdfGen := utils.NewPDFGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		businessName,
+		businessAddress,
+		businessPhone,
 	)
 
 	// Calculate average transaction
@@ -733,12 +757,13 @@ func generateDailySalesPDF(data *dto.DailySalesSummaryDTO) ([]byte, error) {
 
 // generateDailySalesExcel generates daily sales Excel using ExcelGenerator
 // Story 5.3, Task 3.3-3.10: Excel generation with Excelize library
-func generateDailySalesExcel(data *dto.DailySalesSummaryDTO) ([]byte, error) {
-	// Create ExcelGenerator with default company details
+// Story 6.1, AC6: Accept business info parameters from system settings
+func generateDailySalesExcel(data *dto.DailySalesSummaryDTO, businessName, businessAddress, businessPhone string) ([]byte, error) {
+	// Create ExcelGenerator with business info from system settings
 	excelGen := utils.NewExcelGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		businessName,
+		businessAddress,
+		businessPhone,
 	)
 
 	// Calculate average transaction
@@ -802,12 +827,13 @@ func generateDailySalesExcel(data *dto.DailySalesSummaryDTO) ([]byte, error) {
 
 // generateProfitLossPDF generates profit/loss PDF using PDFGenerator
 // Story 5.3, Task 2: PDF generation with Maroto library
-func generateProfitLossPDF(data *dto.ProfitLossSummaryDTO) ([]byte, error) {
-	// Create PDFGenerator with default company details
+// Story 6.1, AC6: Accept business info parameters from system settings
+func generateProfitLossPDF(data *dto.ProfitLossSummaryDTO, businessName, businessAddress, businessPhone string) ([]byte, error) {
+	// Create PDFGenerator with business info from system settings
 	pdfGen := utils.NewPDFGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		businessName,
+		businessAddress,
+		businessPhone,
 	)
 
 	// Convert DTO to PDF data structure
@@ -840,12 +866,13 @@ func generateProfitLossPDF(data *dto.ProfitLossSummaryDTO) ([]byte, error) {
 
 // generateProfitLossExcel generates profit/loss Excel using ExcelGenerator
 // Story 5.3, Task 3: Excel generation with Excelize library
-func generateProfitLossExcel(data *dto.ProfitLossSummaryDTO) ([]byte, error) {
-	// Create ExcelGenerator with default company details
+// Story 6.1, AC6: Accept business info parameters from system settings
+func generateProfitLossExcel(data *dto.ProfitLossSummaryDTO, businessName, businessAddress, businessPhone string) ([]byte, error) {
+	// Create ExcelGenerator with business info from system settings
 	excelGen := utils.NewExcelGenerator(
-		"Apotek Sehat",
-		"Jl. Kesehatan No. 123, Jakarta",
-		"021-12345678",
+		businessName,
+		businessAddress,
+		businessPhone,
 	)
 
 	// Convert DTO to Excel data structure

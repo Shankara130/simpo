@@ -16,6 +16,7 @@ type MockAuditService struct {
 	LogStockAdjustmentFunc        func(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string, ipAddress string) error
 	LogBlockedSaleAttemptFunc     func(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string, ipAddress string) error
 	LogReportExportFunc           func(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string, ipAddress string) error
+	LogSettingsUpdateFunc         func(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -106,6 +107,15 @@ func (m *MockAuditService) LogReportExport(ctx context.Context, userID uint, use
 	m.LogCount++
 	if m.LogReportExportFunc != nil {
 		return m.LogReportExportFunc(ctx, userID, username, reportType, format, dateRange, outcome, ipAddress)
+	}
+	return nil
+}
+
+// LogSettingsUpdate logs system settings changes (Story 6.1, AC7)
+func (m *MockAuditService) LogSettingsUpdate(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error {
+	m.LogCount++
+	if m.LogSettingsUpdateFunc != nil {
+		return m.LogSettingsUpdateFunc(ctx, adminID, adminUsername, changesJSON, ipAddress)
 	}
 	return nil
 }
