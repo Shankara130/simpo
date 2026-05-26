@@ -15,6 +15,7 @@ type MockAuditService struct {
 	LogUserDeactivationFunc       func(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
 	LogStockAdjustmentFunc        func(ctx context.Context, adminID uint, adminUsername string, productID uint, productSKU string, oldQty int64, newQty int64, reason string) error
 	LogBlockedSaleAttemptFunc     func(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error
+	LogReportExportFunc           func(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string) error
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -93,6 +94,15 @@ func (m *MockAuditService) LogBlockedSaleAttempt(ctx context.Context, userID uin
 	m.LogCount++
 	if m.LogBlockedSaleAttemptFunc != nil {
 		return m.LogBlockedSaleAttemptFunc(ctx, userID, username, productID, productSKU, productName, expiryDate, reason)
+	}
+	return nil
+}
+
+// LogReportExport logs report export actions (Story 5.3, AC4 - Code review fix: CRITICAL-004)
+func (m *MockAuditService) LogReportExport(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string) error {
+	m.LogCount++
+	if m.LogReportExportFunc != nil {
+		return m.LogReportExportFunc(ctx, userID, username, reportType, format, dateRange, outcome)
 	}
 	return nil
 }

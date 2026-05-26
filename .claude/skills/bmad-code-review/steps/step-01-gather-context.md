@@ -1,8 +1,8 @@
 ---
-diff_output: '' # set at runtime
-spec_file: '' # set at runtime (path or empty)
-review_mode: '' # set at runtime: "full" or "no-spec"
-story_key: '' # set at runtime when discovered from sprint status
+diff_output: '/Users/shankara/.claude/projects/-Volumes-RX7-128GB-SATA-Project-simpo/306ddc86-a9a5-422e-88a6-9bca550bd405/tool-results/b3fj5aii5.txt' # set at runtime
+spec_file: '/Volumes/RX7 128GB SATA/Project/simpo/_bmad-output/implementation-artifacts/5-3-implement-report-export-functionality.md' # set at runtime (path or empty)
+review_mode: 'full' # set at runtime: "full" or "no-spec"
+story_key: '5-3-implement-report-export-functionality' # set at runtime when discovered from sprint status
 ---
 
 # Step 1: Gather Context

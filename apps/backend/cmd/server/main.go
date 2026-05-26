@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -165,8 +166,25 @@ func run() error {
 
 		// Story 5.1, 5.2: Create report repository, service, and handler
 		reportRepo := repositories.NewReportRepository(database)
-		reportService := services.NewReportService(reportRepo, redisClient)
-		reportHandler := handlers.NewReportHandler(reportService)
+		reportService := services.NewReportService(transactionRepo, productRepo, reportRepo, auditService, redisClient)
+
+		// Story 5.3, Task 6: Create file storage service for exports
+		exportStoragePath := os.Getenv("EXPORT_STORAGE_PATH")
+		if exportStoragePath == "" {
+			exportStoragePath = "/tmp/simpo-exports"
+		}
+			// Code review fix: CRITICAL-003 (Round 4) - Validate export storage path is within expected boundaries
+			// Code review fix: CRITICAL-001 (Round 5) - Fix logic flaw: must be relative OR under /tmp
+			if strings.Contains(exportStoragePath, "..") || (strings.HasPrefix(exportStoragePath, "/") && !strings.HasPrefix(exportStoragePath, "/tmp/")) {
+				slog.Error("Invalid EXPORT_STORAGE_PATH: must be relative path (./) or within /tmp/")
+				os.Exit(1)
+			}
+		fileStorage := services.NewInMemoryFileStorage(exportStoragePath, 100) // 100MB max
+
+		// Story 5.3: Create export service with file storage
+		exportService := services.NewExportService(reportService, fileStorage)
+
+		reportHandler := handlers.NewReportHandler(reportService, exportService, auditService)
 
 		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, redisClient)
 

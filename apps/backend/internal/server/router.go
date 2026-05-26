@@ -233,7 +233,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			}
 		}
 
-		// Story 5.1, 5.2: Financial report endpoints - require authentication and RBAC
+		// Story 5.1, 5.2, 5.3: Financial report endpoints - require authentication and RBAC
 		// Only Owner and Admin can access financial reports
 		if reportHandler != nil {
 			reportsGroup := v1.Group("/reports")
@@ -243,6 +243,9 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				reportsGroup.GET("/daily", reportHandler.GetDailySalesReport)
 				// Story 5.2: Profit/Loss report
 				reportsGroup.GET("/profit-loss", reportHandler.GetProfitLossReport)
+				// Story 5.3, Task 4.1-4.8: Report export endpoints (PDF and Excel)
+				reportsGroup.GET("/daily/export", reportHandler.ExportDailySalesReport)
+				reportsGroup.GET("/profit-loss/export", reportHandler.ExportProfitLossReport)
 			}
 		}
 	}

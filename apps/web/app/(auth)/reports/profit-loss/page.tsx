@@ -85,57 +85,106 @@ export default function ProfitLossPage() {
     }
   };
 
-  // Story 5.2, Task 7.4: Export to CSV function (interim solution for Excel export)
-  const exportToCSV = () => {
+  // Story 5.2, Task 7.3: Export to PDF function (backend API)
+  const exportToPDF = async () => {
     if (!report) return;
 
-    // Create CSV content
-    let csv = 'Profit/Loss Report\n';
-    csv += `Period: ${report.periodStart} to ${report.periodEnd}\n`;
-    csv += `Branch: ${report.branchName}\n\n`;
+    try {
+      setLoading(true);
 
-    // Summary
-    csv += 'Summary\n';
-    csv += 'Metric,Amount\n';
-    csv += `Revenue,${report.revenue}\n`;
-    csv += `Cost of Goods Sold,${report.costOfGoodsSold}\n`;
-    csv += `Gross Profit,${report.grossProfit}\n`;
-    csv += `Gross Margin,${report.grossProfitMargin.toFixed(2)}%\n\n`;
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        format: 'pdf',
+      });
 
-    // Breakdown data based on selected breakdown type
-    if (breakdownBy === 'category' && report.breakdowns) {
-      csv += 'Breakdown by Category\n';
-      csv += 'Category,Revenue,Cost of Goods Sold,Gross Profit,Margin %\n';
-      report.breakdowns.forEach((item) => {
-        csv += `${item.category},${item.revenue},${item.costOfGoodsSold},${item.grossProfit},${item.marginPercentage.toFixed(2)}\n`;
+      if (breakdownBy) {
+        params.append('breakdown_by', breakdownBy);
+      }
+
+      if (selectedBranch !== undefined) {
+        params.append('branch_id', selectedBranch.toString());
+      }
+
+      const response = await fetch(`/api/v1/reports/profit-loss/export?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
-    } else if (breakdownBy === 'branch' && report.branchBreakdowns) {
-      csv += 'Breakdown by Branch\n';
-      csv += 'Branch,Revenue,Cost of Goods Sold,Gross Profit,Margin %\n';
-      report.branchBreakdowns.forEach((item) => {
-        csv += `${item.branchName},${item.revenue},${item.costOfGoodsSold},${item.grossProfit},${item.marginPercentage.toFixed(2)}\n`;
-      });
-    } else if (breakdownBy === 'payment_method' && report.paymentBreakdowns) {
-      csv += 'Breakdown by Payment Method\n';
-      csv += 'Payment Method,Revenue,Cost of Goods Sold,Gross Profit,Margin %\n';
-      report.paymentBreakdowns.forEach((item) => {
-        csv += `${item.paymentMethod},${item.revenue},${item.costOfGoodsSold},${item.grossProfit},${item.marginPercentage.toFixed(2)}\n`;
-      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ProfitLossReport_${startDate}_to_${endDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      alert('PDF berhasil diekspor!');
+    } catch (err) {
+      console.error('Export PDF error:', err);
+      alert('Gagal mengekspor PDF. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Story 5.2, Task 7.5: Include report metadata in export
-    csv += `\nGenerated: ${new Date(report.generatedAt).toLocaleString()}\n`;
+  // Story 5.2, Task 7.4: Export to Excel function (backend API)
+  const exportToExcel = async () => {
+    if (!report) return;
 
-    // Create download link
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `profit-loss-report-${report.periodStart}-to-${report.periodEnd}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    try {
+      setLoading(true);
+
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        format: 'xlsx',
+      });
+
+      if (breakdownBy) {
+        params.append('breakdown_by', breakdownBy);
+      }
+
+      if (selectedBranch !== undefined) {
+        params.append('branch_id', selectedBranch.toString());
+      }
+
+      const response = await fetch(`/api/v1/reports/profit-loss/export?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export Excel');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ProfitLossReport_${startDate}_to_${endDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      alert('Excel berhasil diekspor!');
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('Gagal mengekspor Excel. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Story 5.2, Task 6.5: Generate report function
@@ -254,16 +303,16 @@ export default function ProfitLossPage() {
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <h3 className="text-lg font-semibold mb-3">Export Report</h3>
           <div className="flex gap-2">
-            {/* Story 5.2, Task 7.3: Export PDF (placeholder with print dialog) */}
+            {/* Story 5.3, Task 7.3: Export PDF via backend API */}
             <button
-              onClick={() => window.print()}
+              onClick={exportToPDF}
               className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
               Export PDF
             </button>
-            {/* Story 5.2, Task 7.4: Export Excel (CSV download as interim solution) */}
+            {/* Story 5.3, Task 7.4: Export Excel via backend API */}
             <button
-              onClick={exportToCSV}
+              onClick={exportToExcel}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
             >
               Export Excel

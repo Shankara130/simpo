@@ -32,6 +32,8 @@ const (
 	AuditActionStockAdjustment        AuditAction = "STOCK_ADJUSTMENT"
 	// Story 4.6: Blocked sale attempt audit logging (AC6: regulatory compliance)
 	AuditActionBlockedSaleAttempt     AuditAction = "BLOCKED_SALE_ATTEMPT"
+	// Story 5.3: Report export audit logging (regulatory compliance)
+	AuditActionExportReport            AuditAction = "EXPORT_REPORT"
 )
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
@@ -84,6 +86,11 @@ type AuditService interface {
 	// Logs user_id, username, product_id, product_sku, product_name, expiry_date, reason, timestamp
 	// Append-only audit trail for Badan POM regulatory compliance (NFR-SEC-004, NFR-SEC-009, NFR-SEC-011)
 	LogBlockedSaleAttempt(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string) error
+
+	// LogReportExport logs report export events (Story 5.3, Task 4.7)
+	// Logs user_id, username, report_type, format, date_range, timestamp
+	// Append-only audit trail for Badan POM regulatory compliance (NFR-SEC-004, NFR-SEC-009)
+	LogReportExport(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string) error
 }
 
 // auditService implements AuditService with in-memory logging for MVP
@@ -342,6 +349,38 @@ func (s *auditService) LogStockAdjustment(ctx context.Context, adminID uint, adm
 	return nil
 }
 
+// LogReportExport logs report export events for regulatory compliance
+// Story 5.3, Task 4.7: Add export event logging to audit trail
+func (s *auditService) LogReportExport(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string) error {
+	// Create audit log entry
+	entry := AuditLogEntry{
+		UserID:    &userID,
+		Username:  username,
+		Action:    AuditActionExportReport,
+		IPAddress: "", // IP address will be extracted from request context in production
+		Outcome:   outcome,
+		Reason:    fmt.Sprintf("Exported report: type=%s, format=%s, range=%s", reportType, format, dateRange),
+		Timestamp: time.Now(),
+	}
+
+	// Log to stdout in structured format for MVP
+	// Format: AUDIT | timestamp | EXPORT_REPORT | user_id | username | report_type | format | date_range | outcome
+	slog.Warn("AUDIT",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"user_id", userID,
+		"username", username,
+		"report_type", reportType,
+		"format", format,
+		"date_range", dateRange,
+		"outcome", entry.Outcome,
+	)
+
+	// TODO: Future story - Add persistent storage (database or log file)
+	return nil
+}
+
+
 // LogBlockedSaleAttempt logs blocked sale attempts for expired products to append-only audit trail
 // Story 4.6, AC6: Audit trail logging for blocked sale attempts (regulatory compliance)
 // Per NFR-SEC-004: audit trail must be append-only (no delete/update)
@@ -380,4 +419,6 @@ func (s *auditService) LogBlockedSaleAttempt(ctx context.Context, userID uint, u
 	// Per NFR-SEC-009: 5-year minimum retention for Badan POM compliance
 	return nil
 }
+
+
 

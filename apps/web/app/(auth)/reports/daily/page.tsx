@@ -208,47 +208,100 @@ export default function DailySalesReportPage() {
 
   /**
    * Export report to PDF
-   * Story 5.1, Task 7.1, 7.3: PDF export functionality
-   * Note: Full implementation requires jsPDF or react-pdf library
+   * Story 5.3, Task 7.3: PDF export via backend API
    */
-  const exportToPDF = () => {
-    // Placeholder for PDF export
-    // In full implementation:
-    // 1. Import jsPDF or similar library
-    // 2. Create PDF with report data, charts, and company branding
-    // 3. Include metadata: date, branch, timestamp
-    // 4. Download PDF file
+  const exportToPDF = async () => {
+    try {
+      setLoading(true);
 
-    alert('Fitur export PDF akan segera tersedia. Untuk sementara, silakan gunakan fitur print browser (Ctrl+P / Cmd+P).');
+      // Build query parameters
+      const params = new URLSearchParams({
+        date: selectedDate,
+        format: 'pdf',
+      });
+      if (selectedBranchId) {
+        params.append('branch_id', selectedBranchId.toString());
+      }
+
+      // Call backend API
+      const response = await fetch(`/api/v1/reports/daily/export?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengekspor PDF');
+      }
+
+      // Get blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `DailySalesReport_${selectedDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('PDF berhasil diekspor!');
+    } catch (err) {
+      console.error('Export PDF error:', err);
+      alert('Gagal mengekspor PDF. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**
    * Export report to Excel
-   * Story 5.1, Task 7.2, 7.4: Excel export functionality
-   * Note: Full implementation requires xlsx or exceljs library
+   * Story 5.3, Task 7.4: Excel export via backend API
    */
-  const exportToExcel = () => {
-    // Placeholder for Excel export
-    // In full implementation:
-    // 1. Import xlsx or exceljs library
-    // 2. Create workbook with multiple sheets (Summary, Payment Breakdown, Top Products, Hourly Sales)
-    // 3. Include raw data for accountant analysis
-    // 4. Add metadata sheet with report parameters
-    // 5. Download Excel file
+  const exportToExcel = async () => {
+    try {
+      setLoading(true);
 
-    // Simple CSV export as interim solution
-    if (!report) return;
+      // Build query parameters
+      const params = new URLSearchParams({
+        date: selectedDate,
+        format: 'xlsx',
+      });
+      if (selectedBranchId) {
+        params.append('branch_id', selectedBranchId.toString());
+      }
 
-    const csvContent = generateCSV(report);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `laporan-penjualan-${selectedDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Call backend API
+      const response = await fetch(`/api/v1/reports/daily/export?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengekspor Excel');
+      }
+
+      // Get blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `DailySalesReport_${selectedDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('Excel berhasil diekspor!');
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('Gagal mengekspor Excel. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**

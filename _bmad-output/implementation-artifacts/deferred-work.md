@@ -224,3 +224,46 @@ This file tracks work items that were identified during reviews but deferred to 
   Issue: Thresholds (7, 14, 30) are hard-coded and not configurable
   Why deferred: Should be configurable via environment variables or database settings; defer for configuration management task
   Recommendation: Implement alert threshold configuration system to allow business-specific customization
+
+## Deferred from: code review of 5-3-implement-report-export-functionality (2026-05-26)
+
+- Logo support not implemented - Feature enhancement beyond current story scope
+- Missing lock in job status updates - Pre-existing pattern in codebase
+- Inconsistent error types - Existing codebase pattern, not introduced by this change
+- Missing documentation - Code quality item, not functional issue
+- Hardcoded company information - Product decision needed for config system architecture
+- Inconsistent timezone handling - Assumes WIB by design for Indonesian pharmacy system
+- System config integration - Architecture decision needed for multi-tenant support
+- Missing rate limiting - Applies globally to all endpoints, not just this change
+- Async export not fully implemented - Task 5 explicitly deferred for MVP scope
+
+
+- Company branding hardcoded values — Deferred for MVP; requires dedicated story for config system architecture. Current hardcoded values acceptable for initial release.
+
+
+## Deferred from: code review of 5-3-implement-report-export-functionality (2026-05-26 - Round 5)
+
+- Hardcoded company information — Requires dedicated config system architecture story
+- Logo support not implemented — Feature enhancement beyond current story scope
+- Incomplete async export implementation — Task 5 explicitly deferred for MVP
+- Missing file cleanup (actual deletion) — MVP placeholder; needs FileStorageService implementation
+- Timezone inconsistency — Assumes WIB by design for Indonesian pharmacy system
+- Code duplication — Existing pattern in handlers; refactoring deferred
+- Inconsistent error handling patterns — Existing codebase pattern
+- Unused validation function — validateAndParseDate exists but export handlers use different path
+- Missing audit logging on failure paths — Intentional design to avoid blocking operations
+
+## Deferred from: code review of 5-3-implement-report-export-functionality (2026-05-26 - Round 6)
+
+- SQL injection risk via breakdown_by — Service layer should handle; whitelist validation already in place
+- Missing rate limiting on exports — Applies globally to all endpoints, requires architecture decision
+- Memory leak in job storage — Commented as TODO for future story with database persistence
+- Audit log failures don't block operations — Intentional design choice to avoid blocking user operations
+- Hardcoded company information — Product decision needed for config system architecture
+- Missing file size validation in handler — Already validated in service layer (50MB limit)
+- Code duplication in export handlers — Pre-existing pattern, acceptable for MVP
+- Inconsistent date validation usage — Already noted; can be refactored later
+- Missing input sanitization for user role — Minor issue; audit logs are internal-only
+- Missing Content-Length header — Browser handles this automatically for HTTP responses
+- Timezone inconsistency — Assumes WIB by design for Indonesian pharmacy system
+
