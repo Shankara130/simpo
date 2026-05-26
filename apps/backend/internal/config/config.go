@@ -82,6 +82,9 @@ type MigrationsConfig struct {
 type HealthConfig struct {
 	Timeout              int  `mapstructure:"timeout" yaml:"timeout"`
 	DatabaseCheckEnabled bool `mapstructure:"database_check_enabled" yaml:"database_check_enabled"`
+	// Story 6.2: Alert thresholds for health monitoring
+	ErrorRateMax float64 `mapstructure:"error_rate_max" yaml:"error_rate_max"` // 0.1% = 0.001
+	DiskFreeMin  float64 `mapstructure:"disk_free_min" yaml:"disk_free_min"`   // 20% = 0.20
 }
 
 // RedisConfig represents Redis configuration for session tracking and token blocklist
@@ -99,6 +102,10 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+
+	// Story 6.2: Set default values for health alert thresholds
+	v.SetDefault("health.error_rate_max", 0.1)  // 0.1% threshold
+	v.SetDefault("health.disk_free_min", 20.0)  // 20% free threshold
 
 	bindEnvVariables(v)
 

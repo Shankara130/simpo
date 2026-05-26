@@ -12,6 +12,7 @@ import (
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/handlers"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/health"
@@ -66,6 +67,24 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 
 	// Story 9.1: API versioned health endpoint
 	router.GET("/api/v1/health", healthHandler.Health)
+
+	// Story 6.2: Create admin health monitoring components
+	metricsCollector := health.NewMetricsCollector(time.Now(), cfg.App.Version, cfg.App.Environment)
+	// Use config values with fallback defaults (ensures alerts work even if config is missing)
+	errorRateMax := cfg.Health.ErrorRateMax
+	if errorRateMax == 0 {
+		errorRateMax = 0.1 // Default: 0.1% error rate threshold
+	}
+	diskFreeMin := cfg.Health.DiskFreeMin
+	if diskFreeMin == 0 {
+		diskFreeMin = 20.0 // Default: 20% free disk space threshold
+	}
+
+	alertService := health.NewAlertService(dto.AlertThresholdsConfig{
+		ErrorRateMax: errorRateMax,
+		DiskFreeMin:  diskFreeMin,
+	})
+	adminHealthHandler := handlers.NewAdminHealthHandler(healthService, metricsCollector, alertService, checkers)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -199,6 +218,10 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				adminGroup.GET("/settings", systemSettingsHandler.GetSettings)
 				adminGroup.PUT("/settings", systemSettingsHandler.UpdateSettings)
 			}
+			// Story 6.2: Admin health monitoring endpoints - ADMIN and SYSTEM_ADMIN only
+			adminGroup.GET("/health/dashboard", adminHealthHandler.GetDashboard)
+			adminGroup.GET("/health/alerts", adminHealthHandler.GetAlerts)
+			adminGroup.GET("/health/metrics", adminHealthHandler.GetMetrics)
 		}
 
 		// Story 6.1: Public settings endpoint (no authentication required - for receipts/reports)
