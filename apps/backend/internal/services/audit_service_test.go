@@ -10,7 +10,7 @@ import (
 // TestAuditService_LogBlockedSaleAttempt tests logging blocked sale attempts
 func TestAuditService_LogBlockedSaleAttempt(t *testing.T) {
 	// Arrange
-	service := NewAuditService()
+	service := NewAuditService(nil) // Pass nil for repository in tests (uses stdout fallback)
 
 	// Act
 	err := service.LogBlockedSaleAttempt(
@@ -22,6 +22,7 @@ func TestAuditService_LogBlockedSaleAttempt(t *testing.T) {
 		"Expired Medicine",   // productName
 		"2024-01-01",         // expiryDate
 		"Product expired and cannot be sold", // reason
+		"127.0.0.1",          // ipAddress (Story 5.4, Task 4.5)
 	)
 
 	// Assert

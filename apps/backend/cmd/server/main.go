@@ -91,7 +91,9 @@ func run() error {
 	userService := user.NewService(userRepo)
 
 	// Create audit service for login audit logging (Story 1.5, AC7)
-	auditService := services.NewAuditService()
+	// Story 5.4: Create audit repository for persistent audit trail storage
+	auditRepo := repositories.NewAuditRepository(database)
+	auditService := services.NewAuditService(auditRepo)
 
 	// Create auth service with audit logging (Story 1.5, username-based login)
 	authServiceForJWT := auth.NewServiceWithRepo(&cfg.JWT, database)
@@ -186,7 +188,10 @@ func run() error {
 
 		reportHandler := handlers.NewReportHandler(reportService, exportService, auditService)
 
-		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, redisClient)
+		// Story 5.4: Create audit handler for audit log query and export APIs
+		auditHandler := handlers.NewAuditHandler(auditRepo, auditService)
+
+		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, redisClient)
 
 		// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

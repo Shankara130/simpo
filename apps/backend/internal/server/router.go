@@ -21,7 +21,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, redisClient *redis.Client) *gin.Engine {
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -246,6 +246,21 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				// Story 5.3, Task 4.1-4.8: Report export endpoints (PDF and Excel)
 				reportsGroup.GET("/daily/export", reportHandler.ExportDailySalesReport)
 				reportsGroup.GET("/profit-loss/export", reportHandler.ExportProfitLossReport)
+			}
+
+			// Story 5.4: Audit log endpoints - require authentication and RBAC
+			// Only Owner, Admin, and SystemAdmin can access audit logs
+			if auditHandler != nil {
+				auditGroup := v1.Group("/audit")
+				auditGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 5.4, Task 5: Query audit logs with filters and pagination
+					auditGroup.GET("/logs", auditHandler.GetAuditLogs)
+					// Story 5.4, Task 6: Export audit logs in CSV or JSON format
+					auditGroup.GET("/logs/export", auditHandler.GetAuditLogsExport)
+					// Story 5.4, Task 7: Manual retention cleanup (SystemAdmin only)
+					auditGroup.POST("/cleanup", auditHandler.CleanupAuditLogs)
+				}
 			}
 		}
 	}

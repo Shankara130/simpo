@@ -189,7 +189,7 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 					go func() {
 						defer cancel()
 						_ = s.auditService.LogBlockedSaleAttempt(ctx, cashierID, cashierName,
-							product.ID, product.SKU, product.Name, expiryDateStr, "Product expired and cannot be sold")
+							product.ID, product.SKU, product.Name, expiryDateStr, "Product expired and cannot be sold", "") // Story 5.4, Task 4.5: Empty IP (service layer has no HTTP context)
 					}()
 				}
 				// Return the domain error from ValidateProductForSale

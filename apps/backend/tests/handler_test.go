@@ -76,7 +76,7 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	userService := user.NewService(userRepo)
 
 	// Create audit service (Story 1.5)
-	auditService := services.NewAuditService()
+	auditService := services.NewAuditService(nil)
 
 	userHandler := user.NewHandler(userService, authService, auditService)
 
@@ -87,7 +87,7 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	// Create transaction handler (Story 3.6)
 	transactionHandler := handlers.NewTransactionHandler(nil) // Use nil for tests
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil, transactionHandler, nil, nil, nil)
+	router := server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil, transactionHandler, nil, nil, nil, nil)
 
 	return router
 }
@@ -110,7 +110,7 @@ func setupRateLimitTestRouter(t *testing.T) *gin.Engine {
 	userService := user.NewService(userRepo)
 
 	// Create audit service (Story 1.5)
-	auditService := services.NewAuditService()
+	auditService := services.NewAuditService(nil)
 
 	userHandler := user.NewHandler(userService, authService, auditService)
 
@@ -121,7 +121,7 @@ func setupRateLimitTestRouter(t *testing.T) *gin.Engine {
 	// Create transaction handler (Story 3.6)
 	transactionHandler := handlers.NewTransactionHandler(nil) // Use nil for tests
 
-	return server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil, transactionHandler, nil, nil, nil)
+	return server.SetupRouter(userHandler, newAuthHandler, authService, testCfg, database, nil, transactionHandler, nil, nil, nil, nil)
 }
 
 func TestRegisterHandler(t *testing.T) {

@@ -107,9 +107,9 @@ func TestCriticalFix001_ConcurrentTransactionsNoDeadlock(t *testing.T) {
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	// Both cashiers will sell the same products but in different orders
 	// Cashier 1: Product A → Product B → Product C
@@ -216,9 +216,9 @@ func TestCriticalFix002_QuantityValidation(t *testing.T) {
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	tests := []struct {
 		name          string
@@ -290,9 +290,9 @@ func TestCriticalFix002_StockUnderflowPrevention(t *testing.T) {
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	// First transaction: Sell most of Product E's stock
 	sale1 := &services.SaleRequest{
@@ -353,9 +353,9 @@ func TestCriticalFix003_IdempotencyPreventsDuplicateCharges(t *testing.T) {
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	idempotencyKey := "test-003-unique-key-12345"
 
@@ -414,9 +414,9 @@ func TestCriticalFix003_DifferentIdempotencyKeysCreateDifferentTransactions(t *t
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	sale1 := &services.SaleRequest{
 		Items: []*services.SaleItem{
@@ -476,9 +476,9 @@ func TestCriticalFixes_Performance_ConcurrentLoad(t *testing.T) {
 		redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 		stockEventService := services.NewStockEventService(redisClient)
 		defer mr.Close()
-	auditService := services.NewAuditService()
-	productService := services.NewProductService(productRepo, auditService, stockEventService, nil)
-	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService)
+	auditService := services.NewAuditService(nil)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, nil, nil) // stockCacheService and alertService set to nil for testing
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, nil) // alertService set to nil for testing
 
 	// Each cashier makes 10 concurrent transactions
 	const transactionsPerCashier = 10

@@ -589,7 +589,7 @@ func (h *ReportHandler) ExportDailySalesReport(c *gin.Context) {
 	if userID != nil {
 		auditUserID = *userID
 	}
-	if err := h.auditService.LogReportExport(context.Background(), auditUserID, username, "daily_sales", format, dateRange, "success"); err != nil {
+	if err := h.auditService.LogReportExport(context.Background(), auditUserID, username, "daily_sales", format, dateRange, "success", c.ClientIP()); err != nil {
 		// CRITICAL FIX: Log audit failures for regulatory compliance
 		// Code review fix: MEDIUM-018 (Round 4) - Use proper logging instead of fmt.Printf
 		slog.Error("Audit log failed for daily_sales export", "user_id", userID, "error", err)
@@ -831,7 +831,7 @@ func (h *ReportHandler) ExportProfitLossReport(c *gin.Context) {
 	if userID != nil {
 		auditUserID = *userID
 	}
-	if err := h.auditService.LogReportExport(context.Background(), auditUserID, username, "profit_loss", format, dateRange, "success"); err != nil {
+	if err := h.auditService.LogReportExport(context.Background(), auditUserID, username, "profit_loss", format, dateRange, "success", c.ClientIP()); err != nil {
 		// CRITICAL FIX: Log audit failures for regulatory compliance
 		// Code review fix: MEDIUM-018 (Round 4) - Use proper logging instead of fmt.Printf
 		slog.Error("Audit log failed for profit_loss export", "user_id", userID, "error", err)

@@ -67,7 +67,7 @@ func setupReportTestRouter(reportService services.ReportService, userRole string
 	mockExportService := &mockExportServiceForTest{}
 
 	// Create mock audit service for testing (Code review fix: CRITICAL-004)
-	mockAuditService := services.NewAuditService()
+	mockAuditService := services.NewAuditService(nil)
 
 	handler := NewReportHandler(reportService, mockExportService, mockAuditService)
 	router.GET("/api/v1/reports/daily", handler.GetDailySalesReport)
@@ -332,7 +332,7 @@ func setupExportTestRouter(userRole string, branchID uint, exportService service
 	mockReportService := &MockReportServiceForHandler{}
 
 	// Create mock audit service for testing (Code review fix: CRITICAL-004)
-	mockAuditService := services.NewAuditService()
+	mockAuditService := services.NewAuditService(nil)
 
 	handler := NewReportHandler(mockReportService, exportService, mockAuditService)
 	router.GET("/api/v1/reports/daily/export", handler.ExportDailySalesReport)
