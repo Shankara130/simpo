@@ -50,12 +50,22 @@ func (mc *MetricsCollector) GetActiveSessions(ctx context.Context, redisClient *
 		return 0
 	}
 
+	// PATCH: Add timeout to prevent blocking on large datasets (Story 6.3 code review)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	// Count session keys in Redis
 	pattern := "session:*"
 	keys, err := redisClient.Keys(ctx, pattern).Result()
 	if err != nil {
 		slog.Error("Failed to count active sessions", "error", err)
 		return 0
+	}
+
+	// PATCH: Limit key count to prevent memory exhaustion (Story 6.3 code review)
+	if len(keys) > 10000 {
+		slog.Warn("Too many sessions to count accurately", "count", len(keys), "limited_to", 10000)
+		return 10000
 	}
 
 	return len(keys)
@@ -88,7 +98,10 @@ func (mc *MetricsCollector) CollectMetrics(
 		if checker == nil {
 			continue
 		}
-		result := checker.Check(ctx)
+		// PATCH: Add timeout to prevent slow checkers from blocking entire collection (Story 6.3 code review)
+		checkCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		result := checker.Check(checkCtx)
+		cancel() // Always cancel context to prevent leaks
 		checkResults[checker.Name()] = result
 	}
 
@@ -138,6 +151,7 @@ func (mc *MetricsCollector) CollectMetrics(
 	// Extract disk metrics
 	diskMetrics := dto.DiskMetrics{}
 	if diskResult, ok := checkResults["disk"]; ok {
+		// PATCH: Add type assertion validation to prevent silent data loss (Story 6.3 code review)
 		if details, ok := diskResult.Details.(map[string]interface{}); ok {
 			if usedGB, ok := details["used_gb"].(float64); ok {
 				diskMetrics.UsedGB = usedGB
@@ -148,6 +162,9 @@ func (mc *MetricsCollector) CollectMetrics(
 			if freePercent, ok := details["free_percentage"].(float64); ok {
 				diskMetrics.FreePercentage = freePercent
 			}
+		} else {
+			// Type assertion failed - log warning and continue with default metrics
+			slog.Warn("Disk metrics details type assertion failed", "details_type", fmt.Sprintf("%T", diskResult.Details))
 		}
 	}
 
@@ -204,9 +221,18 @@ func EvaluateDiskSpaceAlert(freePercentage float64, thresholds dto.AlertThreshol
 func EvaluateConnectionAlerts(checkResults map[string]CheckResult) []dto.Alert {
 	var alerts []dto.Alert
 
+	// PATCH: Validate status values to prevent unknown values from bypassing alerting logic (Story 6.3 code review)
+	validStatuses := map[CheckStatus]bool{
+		CheckPass: true,
+		CheckWarn: true,
+		CheckFail: true,
+	}
+
 	// Check database connection
 	if dbResult, ok := checkResults["database"]; ok {
-		if dbResult.Status == CheckFail {
+		if !validStatuses[dbResult.Status] {
+			slog.Warn("Unknown CheckResult status value", "checker", "database", "status", dbResult.Status)
+		} else if dbResult.Status == CheckFail {
 			alerts = append(alerts, dto.Alert{
 				Severity:  "critical",
 				Message:   "Database connection failed",

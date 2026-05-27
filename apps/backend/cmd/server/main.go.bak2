@@ -220,16 +220,6 @@ func run() error {
 		ctx := context.Background()
 		go expiryCheckJob.Start(ctx)
 		logger.Info("Expiry check job started")
-
-		// Story 6.3: Start backup scheduler if enabled
-		if cfg.Backup.Enabled {
-			ctx := context.Background()
-			if err := backupService.StartScheduler(ctx); err != nil {
-				logger.Warn("Failed to start backup scheduler", "error", err)
-			} else {
-				logger.Info("Backup scheduler started", "schedule", cfg.Backup.Schedule)
-			}
-		}
 	}
 
 	port := cfg.Server.Port
@@ -283,17 +273,6 @@ func run() error {
 		logger.Info("Stopping expiry check job...")
 		expiryCheckJob.Stop()
 		logger.Info("Expiry check job stopped")
-
-		// Story 6.3: Stop backup scheduler
-		if backupService != nil {
-			logger.Info("Stopping backup scheduler...")
-			ctx := context.Background()
-			if err := backupService.StopScheduler(ctx); err != nil {
-				logger.Warn("Failed to stop backup scheduler", "error", err)
-			} else {
-				logger.Info("Backup scheduler stopped")
-			}
-		}
 	}
 
 	sqlDB, err := database.DB()

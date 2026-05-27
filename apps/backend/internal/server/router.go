@@ -23,7 +23,8 @@ import (
 
 // SetupRouter creates and configures the Gin router
 // Story 6.1: Added systemSettingsHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, redisClient *redis.Client) *gin.Engine {
+// Story 6.3: Added backupHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -70,6 +71,18 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 
 	// Story 6.2: Create admin health monitoring components
 	metricsCollector := health.NewMetricsCollector(time.Now(), cfg.App.Version, cfg.App.Environment)
+
+	// Story 6.3: Wire backup service to metrics collector for health monitoring
+	if backupHandler != nil {
+		metricsCollector.SetBackupService(backupHandler.GetBackupService())
+	}
+	// Story 6.3: Wire backup service to metrics collector
+	if backupHandler != nil {
+		// Get backup service from handler if available
+			// The backup service is embedded in the handler, so we pass the handler
+			// The collector will use reflection to access the service
+			metricsCollector.SetBackupService(backupHandler)
+	}
 	// Use config values with fallback defaults (ensures alerts work even if config is missing)
 	errorRateMax := cfg.Health.ErrorRateMax
 	if errorRateMax == 0 {

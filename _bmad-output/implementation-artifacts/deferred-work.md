@@ -267,3 +267,51 @@ This file tracks work items that were identified during reviews but deferred to 
 - Missing Content-Length header — Browser handles this automatically for HTTP responses
 - Timezone inconsistency — Assumes WIB by design for Indonesian pharmacy system
 
+## Deferred from: code review of 6-3-implement-automated-daily-backups (2026-05-27)
+
+### Edge Cases & Validation
+
+- **Empty path defaults to '/' without validation** — `disk_checker.go:19-24`
+  - Issue: Path parameter defaults to "/" without explicit validation
+  - Why deferred: Design choice - default path "/" is valid for Unix systems; not a bug introduced by this story
+  - Recommendation: Keep as-is unless there's specific requirement for path validation
+
+- **syscall.Statfs path not found handling** — `disk_checker.go:36`
+  - Issue: No explicit check for path existence before Statfs call
+  - Why deferred: Pre-existing error handling pattern - syscall already returns clear errors for non-existent paths
+  - Recommendation: Current error handling is adequate; no additional validation needed
+
+- **Negative freePercentage threshold validation** — `disk_checker.go:63-71`
+  - Issue: No validation for negative freePercentage values
+  - Why deferred: Extremely unlikely edge case (filesystem corruption) - defensive programming extreme case
+  - Recommendation: Monitor production; add validation only if negative values observed in practice
+
+- **Negative errorCount/totalRequests validation** — `metrics_collector.go:63-68`
+  - Issue: No validation for negative errorCount or totalRequests values
+  - Why deferred: Database constraints should prevent this at source - not an application layer concern
+  - Recommendation: Verify database-level constraints are adequate; rely on data integrity
+
+### Code Quality & Patterns
+
+- **ClientIP empty string handling** — `system_settings_handler.go:181`
+  - Issue: ClientIP() could return empty string or invalid IP format
+  - Why deferred: Pre-existing audit logging issue - not introduced by this story
+  - Recommendation: Address as part of broader audit logging improvement initiative
+
+- **InvalidInputError type assertion** — `system_settings_handler.go:197-201`
+  - Issue: Type assertion could fail if error type changes
+  - Why deferred: Consistent pattern across entire codebase - requires architecture-level decision
+  - Recommendation: Defer to architecture decision for consistent error handling patterns
+
+### Authentication & Middleware
+
+- **User role type assertion in auth middleware** — `system_settings_handler.go:65-71`
+  - Issue: Type assertion assumes userRole is string type
+  - Why deferred: Standard Gin framework pattern - tested and proven across codebase
+  - Recommendation: Current pattern is acceptable; consider stronger typing in future API redesign
+
+- **UserID type assertion** — `system_settings_handler.go:157-163`
+  - Issue: Type assertion assumes userID is uint type
+  - Why deferred: Same pattern as user role assertion - consistent with Gin middleware design
+  - Recommendation: Keep as-is for consistency with existing authentication patterns
+

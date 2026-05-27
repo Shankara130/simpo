@@ -47,6 +47,25 @@ func (d *diskChecker) Check(ctx context.Context) CheckResult {
 	// Blocks is total file system blocks
 	// Bsize is block size in bytes
 	totalBytes := stat.Blocks * uint64(stat.Bsize)
+
+	// PATCH: Check for integer overflow (Story 6.3 code review)
+	if stat.Blocks > 0 && totalBytes/stat.Blocks != uint64(stat.Bsize) {
+		slog.Error("Integer overflow in disk size calculation", "path", d.path, "blocks", stat.Blocks, "bsize", stat.Bsize)
+		return CheckResult{
+			Status:  CheckFail,
+			Message: fmt.Sprintf("Disk size calculation overflow for %s", d.path),
+		}
+	}
+
+	// PATCH: Check for division by zero (Story 6.3 code review)
+	if totalBytes == 0 {
+		slog.Error("Invalid filesystem stats: total bytes is zero", "path", d.path)
+		return CheckResult{
+			Status:  CheckFail,
+			Message: fmt.Sprintf("Invalid filesystem stats for %s: total bytes is zero", d.path),
+		}
+	}
+
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	usedBytes := totalBytes - freeBytes
 

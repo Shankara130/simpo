@@ -32,6 +32,7 @@ type HealthMetrics struct {
 	API      APIMetrics      `json:"api"`
 	Errors   ErrorsMetrics   `json:"errors"`
 	Disk     DiskMetrics     `json:"disk"`
+	Backup   BackupMetrics   `json:"backup"` // Story 6.3: Backup status metrics
 }
 
 // DatabaseMetrics represents database health information
@@ -69,6 +70,18 @@ type DiskMetrics struct {
 	UsedGB         float64 `json:"used_gb"`
 	TotalGB        float64 `json:"total_gb"`
 	FreePercentage float64 `json:"free_percentage"`
+}
+
+// BackupMetrics represents backup status information
+// Story 6.3, Task 6: Backup health monitoring integration
+type BackupMetrics struct {
+	IsRunning      bool      `json:"is_running"`
+	LastBackupTime string    `json:"last_backup_time,omitempty"` // ISO 8601 format
+	LastStatus     string    `json:"last_status"`                // success, failed, pending
+	NextBackupTime string    `json:"next_backup_time,omitempty"` // ISO 8601 format
+	SuccessRate    float64   `json:"success_rate"`               // Percentage (0-100)
+	TotalBackups   int       `json:"total_backups"`              // Total number of backups
+	TotalSize      int64     `json:"total_size_bytes"`           // Total size of all backups
 }
 
 // Alert represents a system health alert

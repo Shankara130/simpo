@@ -120,6 +120,8 @@ export default function AuthenticatedLayout({
     // Story 6.2: Health monitoring link - Admin only (RBAC enforced on backend)
     // TODO: Hide for non-admin users once user role context is available
     { href: '/admin/health', label: 'System Health' },
+    // Story 6.3: Backup management link - Admin only (RBAC enforced on backend)
+    { href: '/admin/backups', label: 'Backups' },
     { href: '/settings', label: 'Settings' },
   ];
 
