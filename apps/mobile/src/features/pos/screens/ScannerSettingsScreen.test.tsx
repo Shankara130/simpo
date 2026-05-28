@@ -18,6 +18,14 @@ jest.mock('../services/ScannerConfigService', () => ({
     load: jest.fn(),
     save: jest.fn(),
     reset: jest.fn(),
+    // Story 7.3: Bluetooth methods
+    loadPairedDevices: jest.fn(),
+    savePairedDevices: jest.fn(),
+    loadLastConnectedDevice: jest.fn(),
+    saveLastConnectedDevice: jest.fn(),
+    clearLastConnectedDevice: jest.fn(),
+    loadBluetoothConfig: jest.fn(),
+    saveBluetoothConfig: jest.fn(),
   },
 }));
 
@@ -39,6 +47,8 @@ describe('ScannerSettingsScreen', () => {
   describe('initialization', () => {
     it('should render loading state initially', async () => {
       (ScannerConfigService.load as jest.Mock).mockResolvedValue(DEFAULT_SCANNER_CONFIG);
+      (ScannerConfigService.loadBluetoothConfig as jest.Mock).mockResolvedValue({ autoReconnect: true, maxReconnectAttempts: 5, reconnectDelays: [1000, 2000, 4000, 8000], connectionTimeout: 10000 });
+      (ScannerConfigService.loadPairedDevices as jest.Mock).mockResolvedValue([]);
 
       const { getByText } = renderWithNavigation(<ScannerSettingsScreen />);
 
@@ -47,6 +57,8 @@ describe('ScannerSettingsScreen', () => {
 
     it('should load settings on mount', async () => {
       (ScannerConfigService.load as jest.Mock).mockResolvedValue(DEFAULT_SCANNER_CONFIG);
+      (ScannerConfigService.loadBluetoothConfig as jest.Mock).mockResolvedValue({ autoReconnect: true, maxReconnectAttempts: 5, reconnectDelays: [1000, 2000, 4000, 8000], connectionTimeout: 10000 });
+      (ScannerConfigService.loadPairedDevices as jest.Mock).mockResolvedValue([]);
 
       const { getByText, findByText, queryByText } = renderWithNavigation(
         <ScannerSettingsScreen />

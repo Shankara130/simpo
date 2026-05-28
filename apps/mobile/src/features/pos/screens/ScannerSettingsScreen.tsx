@@ -1,7 +1,8 @@
 /**
  * ScannerSettingsScreen Component
- * Configuration UI for USB barcode scanner settings
+ * Configuration UI for USB and Bluetooth barcode scanner settings
  * Story 7.2: USB Barcode Scanner Integration
+ * Story 7.3: Bluetooth Barcode Scanner Support
  */
 
 import React, { useState, useEffect } from 'react';
@@ -19,7 +20,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { ScannerConfig, DEFAULT_SCANNER_CONFIG } from '../types/scanner.types';
+import { ScannerConfig, DEFAULT_SCANNER_CONFIG, BluetoothDevice, BluetoothConnectionState, BluetoothConfig, DEFAULT_BLUETOOTH_CONFIG } from '../types/scanner.types';
 import { ScannerConfigService } from '../services/ScannerConfigService';
 
 type ScannerSettingsNavigationProp = StackNavigationProp<any, 'ScannerSettings'>;
@@ -36,6 +37,12 @@ export const ScannerSettingsScreen: React.FC<ScannerSettingsScreenProps> = () =>
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Story 7.3: Bluetooth scanner state
+  const [bluetoothConfig, setBluetoothConfig] = useState<BluetoothConfig>(DEFAULT_BLUETOOTH_CONFIG);
+  const [pairedDevices, setPairedDevices] = useState<BluetoothDevice[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanInProgress, setScanInProgress] = useState(false);
+
   // Load settings on mount
   useEffect(() => {
     loadSettings();
@@ -46,6 +53,13 @@ export const ScannerSettingsScreen: React.FC<ScannerSettingsScreenProps> = () =>
       setIsLoading(true);
       const savedConfig = await ScannerConfigService.load();
       setConfig(savedConfig);
+
+      // Story 7.3: Load Bluetooth settings
+      const savedBluetoothConfig = await ScannerConfigService.loadBluetoothConfig();
+      setBluetoothConfig(savedBluetoothConfig);
+
+      const savedPairedDevices = await ScannerConfigService.loadPairedDevices();
+      setPairedDevices(savedPairedDevices);
     } catch (error) {
       console.error('Failed to load scanner config:', error);
       // Use defaults on error
@@ -147,6 +161,82 @@ export const ScannerSettingsScreen: React.FC<ScannerSettingsScreenProps> = () =>
         },
       ]
     );
+  };
+
+  // Story 7.3: Bluetooth scanner handlers
+  const handleStartDiscovery = async () => {
+    setScanInProgress(true);
+    // Simulate device discovery (in production, would use BluetoothManager)
+    setTimeout(() => {
+      // Mock discovered devices
+      setScanInProgress(false);
+      Alert.alert('Discovery Complete', 'No new devices found (demo mode)');
+    }, 3000);
+  };
+
+  const handleConnectDevice = async (device: BluetoothDevice) => {
+    Alert.alert('Connect Device', `Connect to ${device.name}?`, [
+      {
+        text: 'Batal',
+        style: 'cancel',
+      },
+      {
+        text: 'Connect',
+        onPress: async () => {
+          // In production, would use BluetoothManager.connectToDevice()
+          Alert.alert('Connected', `Connected to ${device.name}`);
+        },
+      },
+    ]);
+  };
+
+  const handleDisconnectDevice = async (device: BluetoothDevice) => {
+    Alert.alert('Disconnect Device', `Disconnect from ${device.name}?`, [
+      {
+        text: 'Batal',
+        style: 'cancel',
+      },
+      {
+        text: 'Disconnect',
+        onPress: async () => {
+          // In production, would use BluetoothManager.disconnectDevice()
+          Alert.alert('Disconnected', `Disconnected from ${device.name}`);
+        },
+      },
+    ]);
+  };
+
+  const handleForgetDevice = async (device: BluetoothDevice) => {
+    Alert.alert('Forget Device', `Remove ${device.name} from paired devices?`, [
+      {
+        text: 'Batal',
+        style: 'cancel',
+      },
+      {
+        text: 'Forget',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const updatedDevices = pairedDevices.filter((d) => d.id !== device.id);
+            setPairedDevices(updatedDevices);
+            await ScannerConfigService.savePairedDevices(updatedDevices);
+            Alert.alert('Removed', `${device.name} has been removed`);
+          } catch (error) {
+            Alert.alert('Gagal', 'Failed to remove device');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleToggleAutoReconnect = async (value: boolean) => {
+    try {
+      const updatedConfig = { ...bluetoothConfig, autoReconnect: value };
+      setBluetoothConfig(updatedConfig);
+      await ScannerConfigService.saveBluetoothConfig(updatedConfig);
+    } catch (error) {
+      Alert.alert('Gagal', 'Failed to save Bluetooth settings');
+    }
   };
 
   if (isLoading) {
@@ -292,6 +382,123 @@ export const ScannerSettingsScreen: React.FC<ScannerSettingsScreenProps> = () =>
               Range: 50 - 500 ms (Default: {DEFAULT_SCANNER_CONFIG.maxScanTimeMs} ms)
             </Text>
           </View>
+        </View>
+
+        {/* Story 7.3: Bluetooth Scanner Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="bluetooth" size={24} color="#4CAF50" />
+            <View style={styles.sectionHeaderContent}>
+              <Text style={styles.sectionTitle}>Bluetooth Scanner</Text>
+              <Text style={styles.sectionDescription}>
+                Kelola perangkat scanner Bluetooth yang terhubung
+              </Text>
+            </View>
+          </View>
+
+          {/* Auto-reconnect toggle */}
+          <View style={styles.switchContainer}>
+            <View style={styles.switchContent}>
+              <Text style={styles.switchLabel}>Auto-reconnect</Text>
+              <Text style={styles.switchHint}>
+                Otomatis reconnect ke scanner terakhir saat aplikasi dibuka
+              </Text>
+            </View>
+            <Switch
+              value={bluetoothConfig.autoReconnect}
+              onValueChange={handleToggleAutoReconnect}
+              testID="bluetooth-auto-reconnect-switch"
+            />
+          </View>
+
+          {/* Device discovery button */}
+          <TouchableOpacity
+            style={[styles.actionButton, styles.discoveryButton]}
+            onPress={handleStartDiscovery}
+            disabled={scanInProgress}
+            testID="bluetooth-discovery-button"
+          >
+            {scanInProgress ? (
+              <>
+                <ActivityIndicator size="small" color="#4CAF50" />
+                <Text style={styles.actionButtonText}>Scanning...</Text>
+              </>
+            ) : (
+              <>
+                <Icon name="search" size={20} color="#4CAF50" />
+                <Text style={styles.actionButtonText}>Cari Perangkat Baru</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Paired devices list */}
+          {pairedDevices.length > 0 && (
+            <View style={styles.deviceListContainer}>
+              <Text style={styles.deviceListTitle}>Perangkat Terhubung</Text>
+              {pairedDevices.map((device) => (
+                <View key={device.id} style={styles.deviceItem}>
+                  <View style={styles.deviceInfo}>
+                    <Icon
+                      name={device.connected ? 'bluetooth-connected' : 'bluetooth'}
+                      size={24}
+                      color={device.connected ? '#4CAF50' : '#999'}
+                    />
+                    <View style={styles.deviceDetails}>
+                      <Text style={styles.deviceName}>{device.name}</Text>
+                      <Text style={styles.deviceStatus}>
+                        {device.connected ? 'Terhubung' : 'Tidak Terhubung'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.deviceActions}>
+                    {device.connected ? (
+                      <TouchableOpacity
+                        style={styles.deviceActionBtn}
+                        onPress={() => handleDisconnectDevice(device)}
+                        testID={`disconnect-${device.id}`}
+                      >
+                        <Icon name="bluetooth-disabled" size={20} color="#F44336" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.deviceActionBtn}
+                        onPress={() => handleConnectDevice(device)}
+                        testID={`connect-${device.id}`}
+                      >
+                        <Icon name="bluetooth" size={20} color="#4CAF50" />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.deviceActionBtn}
+                      onPress={() => handleForgetDevice(device)}
+                      testID={`forget-${device.id}`}
+                    >
+                      <Icon name="delete" size={20} color="#999" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Troubleshooting guide */}
+          <TouchableOpacity
+            style={styles.troubleshootButton}
+            onPress={() => {
+              Alert.alert(
+                'Troubleshooting Bluetooth',
+                'Jika scanner Bluetooth tidak terdeteksi:\n\n' +
+                '1. Pastikan Bluetooth aktif di perangkat\n' +
+                '2. Pastikan scanner dalam mode pairing\n' +
+                '3. Coba restart scanner\n' +
+                '4. Clear cache Bluetooth di pengaturan sistem\n' +
+                '5. Pastikan izin Bluetooth diberikan'
+              );
+            }}
+          >
+            <Icon name="help-outline" size={18} color="#4CAF50" />
+            <Text style={styles.troubleshootText}>Troubleshooting Bluetooth</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Test Scan Button */}
@@ -454,6 +661,93 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
     borderRadius: 8,
     padding: 16,
+  },
+
+  // Story 7.3: Bluetooth styles
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionHeaderContent: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  switchContent: {
+    flex: 1,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  discoveryButton: {
+    backgroundColor: '#FFF',
+    borderColor: '#4CAF50',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  deviceListContainer: {
+    marginTop: 16,
+  },
+  deviceListTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  deviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  deviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  deviceDetails: {
+    marginLeft: 12,
+  },
+  deviceName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  deviceStatus: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  deviceActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  deviceActionBtn: {
+    padding: 8,
+  },
+  troubleshootButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  troubleshootText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 4,
   },
   testButtonText: {
     fontSize: 16,

@@ -4,6 +4,7 @@
  * Layout: Top control bar, Product list, Cart summary (CartList + CartTotal), Action buttons
  * Story 3.6: Transaction Processing Integration
  * Story 7.2: USB Barcode Scanner Integration
+ * Story 7.3: Bluetooth Barcode Scanner Support
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -22,6 +23,8 @@ import { ScannerFeedback } from '../components/ScannerFeedback';
 import { useReceiptPrinter } from '../hooks/useReceiptPrinter';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useKeyboardInput } from '../hooks/useKeyboardInput';
+import { useBluetoothScanner } from '../hooks/useBluetoothScanner';
+import { BluetoothConnectionState } from '../types/scanner.types';
 import { ReceiptData } from '../types/receipt.types';
 import { PrinterStatus } from '../hardware/printer';
 import { ScannerState } from '../types/scanner.types';
@@ -115,6 +118,39 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   const keyboardInput = useKeyboardInput({
     onCharReceived: scanner.handleScannerInput,
     enabled: true, // Scanner input always enabled when on POSScreen
+  });
+
+  // Story 7.3: Bluetooth scanner hook - manages Bluetooth device connections
+  const bluetoothScanner = useBluetoothScanner({
+    autoReconnect: true, // Auto-reconnect to last-used scanner on app start
+    onDataReceived: async (barcode: string) => {
+      // Bluetooth scanner sends complete barcode strings (unlike USB which sends character-by-character)
+      // Process directly through product lookup since we know it's from a scanner
+      try {
+        // Fetch product by barcode (same logic as USB scanner)
+        const product = await ProductService.getProductByBarcode(barcode);
+
+        // Add to cart
+        handleAddToCart(product);
+
+        // Update scanner state for feedback
+        setScannerState('success');
+        setTimeout(() => setScannerState('idle'), 1500);
+      } catch (error) {
+        // Update scanner state for error feedback
+        setScannerState('error');
+        setTimeout(() => setScannerState('idle'), 3000);
+
+        // Display error message to user
+        const errorMessage = error instanceof Error ? error.message : 'Gagal memindai barcode';
+        Alert.alert('Scan Gagal', errorMessage);
+      }
+    },
+    onError: (error) => {
+      // Display connection error to user
+      const errorMessage = error.message || 'Bluetooth scanner error';
+      Alert.alert('Bluetooth Scanner Error', errorMessage);
+    },
   });
 
   const handleAddToCart = (product: Product) => {
@@ -394,13 +430,24 @@ export const POSScreen: React.FC<POSScreenProps> = ({
         />
 
         {/* Printer Status Indicator */}
-        <View style={styles.printerStatusContainer}>
-          <PrinterStatusComponent
-            status={printerStatus}
-            printerName={printerName}
-            compact={true}
-            testID="pos-printer-status"
-          />
+        <View style={styles.statusRow}>
+          <View style={styles.printerStatusContainer}>
+            <PrinterStatusComponent
+              status={printerStatus}
+              printerName={printerName}
+              compact={true}
+              testID="pos-printer-status"
+            />
+          </View>
+
+          {/* Story 7.3: Bluetooth Connection Status Indicator */}
+          {bluetoothScanner.connectedDevice && (
+            <View style={styles.bluetoothStatusContainer}>
+              <Text style={styles.bluetoothStatusText}>
+                Bluetooth: {bluetoothScanner.connectedDevice.name}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Center Product Area (55%) */}
@@ -456,6 +503,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+  },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+
+  bluetoothStatusContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+
+  bluetoothStatusText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 
   productArea: {

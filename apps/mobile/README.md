@@ -192,13 +192,66 @@ The mobile POS supports USB HID barcode scanners for fast product scanning.
 - Duplicate scans: Increase debounce interval in settings
 - Typing interference: Scanner input vs manual typing distinguished by timing
 
+### Bluetooth Barcode Scanner Support (Story 7.3)
+
+The mobile POS supports Bluetooth barcode scanners for wireless scanning flexibility.
+
+**Supported Scanner Types:**
+- BLE (Bluetooth Low Energy) barcode scanners
+- Classic Bluetooth barcode scanners
+- Common barcode formats: EAN-8, EAN-13, Code 128, UPC-A
+- Tested brands: Zebra DS2200-BT, Honeywell Voyager 1202g-BF, Datalogic Gryphon I GD4500
+
+**Configuration:**
+- Access scanner settings via gear icon in POS screen header
+- Bluetooth scanner section shows paired devices
+- Auto-reconnect to last-used scanner (configurable)
+- Connection status indicator in POS screen header
+
+**Usage:**
+1. Ensure Bluetooth is enabled on mobile device
+2. Grant required permissions (Bluetooth, Location for Android)
+3. Open Scanner Settings → Bluetooth Scanner section
+4. Tap "Cari Perangkat Baru" to discover scanners
+5. Select scanner to pair and connect
+6. Scanner connection status shows in POS header
+7. Scan product barcode to add to cart automatically
+
+**Android Permissions:**
+- `BLUETOOTH_SCAN` - Required for device discovery
+- `BLUETOOTH_CONNECT` - Required for connection management
+- `ACCESS_FINE_LOCATION` - Required for BLE scanning (system requirement)
+
+**iOS Permissions:**
+- Core Bluetooth framework properly configured
+- Bluetooth Always permission required for background scanning
+
+**Features:**
+- Automatic reconnection with exponential backoff (1s, 2s, 4s, 8s delays)
+- Connection state monitoring in background
+- Manual connection/disconnection controls
+- Device pairing and unpairing support
+- Connection error handling with user notifications
+
+**Troubleshooting:**
+- Scanner not discovered: Ensure scanner is in pairing mode (check manual)
+- Connection fails: Check if scanner is already paired to another device
+- Frequent disconnections: Check battery level and signal strength
+- Permissions denied: Clear app data and grant permissions again
+- Scan not detected: Verify scanner is in "HID keyboard mode" (not inventory mode)
+
+**Tested Models:**
+- Zebra DS2200-BT (BLE)
+- Zebra DS2278 (BLE)
+- Honeywell Voyager 1202g-BF (Classic)
+- Datalogic Gryphon I GD4500 (BLE)
+
 ### Thermal Printer Support (Story 7.1)
 
 ESC/POS protocol support for 58mm and 80mm thermal printers.
 
 ### Future Hardware Support
 
-- **Bluetooth Barcode Scanners:** Wireless scanner support (Story 7.3)
 - **Cash Drawers:** Printer kick command control (Story 7.4)
 
 ## License

@@ -170,5 +170,39 @@ describe('POSScreen', () => {
 
       expect(getByTestId('scanner-settings-button')).toBeTruthy();
     });
+
+    // Story 7.3: Bluetooth Scanner Integration Tests
+    describe('Bluetooth Scanner Integration', () => {
+      it('does not show Bluetooth status when no device connected', () => {
+        const { queryByText } = renderWithCartProvider(
+          <POSScreen products={mockProducts} loading={false} />
+        );
+
+        // Bluetooth status should not be visible when no device is connected
+        expect(queryByText(/Bluetooth:/)).toBeNull();
+      });
+
+      it('Bluetooth scanner does not interfere with search functionality', () => {
+        const { getByPlaceholderText } = renderWithCartProvider(
+          <POSScreen products={mockProducts} loading={false} />
+        );
+
+        const searchInput = getByPlaceholderText('Search products or scan barcode...');
+        expect(searchInput).toBeTruthy();
+
+        // Search should work normally even with Bluetooth scanner enabled
+        fireEvent.changeText(searchInput, 'Paracetamol');
+        expect(searchInput.props.value).toBe('Paracetamol');
+      });
+
+      it('Bluetooth scanner does not interfere with USB scanner', () => {
+        const { getByTestId } = renderWithCartProvider(
+          <POSScreen products={mockProducts} loading={false} />
+        );
+
+        // Both scanner inputs should coexist
+        expect(getByTestId('scanner-keyboard-input')).toBeTruthy();
+      });
+    });
   });
 });

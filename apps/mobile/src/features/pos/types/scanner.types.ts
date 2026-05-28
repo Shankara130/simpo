@@ -85,3 +85,75 @@ export interface ScannerCallbacks {
   /** Called when scanner state changes */
   onStateChange?: (state: ScannerState) => void;
 }
+
+// ============================================================================
+// Bluetooth Scanner Types (Story 7.3)
+// ============================================================================
+
+/**
+ * Bluetooth connection states
+ */
+export type BluetoothConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+/**
+ * Bluetooth device representation
+ */
+export interface BluetoothDevice {
+  /** Unique device identifier (MAC address or UUID) */
+  id: string;
+  /** Device name from advertising or pairing */
+  name: string;
+  /** Bluetooth type: BLE or Classic */
+  type: 'BLE' | 'Classic';
+  /** Current connection status */
+  connected: boolean;
+  /** Device is paired/bonded */
+  paired: boolean;
+  /** Signal strength (RSSI) in dBm (negative value, closer to 0 is stronger) */
+  rssi?: number;
+}
+
+/**
+ * Bluetooth error types
+ */
+export type BluetoothErrorType =
+  | 'permission_denied'
+  | 'connection_failed'
+  | 'device_not_found'
+  | 'bluetooth_unavailable'
+  | 'discovery_failed'
+  | 'unknown';
+
+/**
+ * Bluetooth error details
+ */
+export interface BluetoothError {
+  type: BluetoothErrorType;
+  message: string;
+  deviceId?: string;
+  originalError?: unknown;
+}
+
+/**
+ * Bluetooth scanner configuration options
+ */
+export interface BluetoothConfig {
+  /** Enable automatic reconnection when connection is lost (default: true) */
+  autoReconnect: boolean;
+  /** Maximum reconnection attempts (default: 5) */
+  maxReconnectAttempts: number;
+  /** Reconnection delays in milliseconds (exponential backoff) */
+  reconnectDelays: number[];
+  /** Connection timeout in milliseconds (default: 10000ms) */
+  connectionTimeout: number;
+}
+
+/**
+ * Default Bluetooth scanner configuration
+ */
+export const DEFAULT_BLUETOOTH_CONFIG: BluetoothConfig = {
+  autoReconnect: true,
+  maxReconnectAttempts: 5,
+  reconnectDelays: [1000, 2000, 4000, 8000], // 1s, 2s, 4s, 8s
+  connectionTimeout: 10000,
+};
