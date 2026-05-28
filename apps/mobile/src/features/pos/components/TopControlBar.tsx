@@ -203,6 +203,16 @@ export const TopControlBar: React.FC<TopControlBarProps> = ({
         >
           <Icon name="history" size={24} color="#2196F3" />
         </TouchableOpacity>
+
+        {/* Story 7.2: Scanner Settings button */}
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => navigation.navigate('ScannerSettings')}
+          activeOpacity={0.7}
+          testID="scanner-settings-button"
+        >
+          <Icon name="settings" size={24} color="#2196F3" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -299,6 +309,18 @@ const styles = StyleSheet.create({
   // Story 3.7: Transaction History button styles
   historyButton: {
     backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+
+  // Story 7.2: Scanner Settings button styles
+  settingsButton: {
+    backgroundColor: '#E8F5E9',
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 8,

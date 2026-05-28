@@ -10,6 +10,7 @@ export type POSStackParamList = {
   TransactionHistory: NavigatorScreenParams<TransactionHistoryParamList> | undefined;
   TransactionDetail: { transactionId: number };
   Settings: undefined;
+  ScannerSettings: undefined; // Story 7.2: USB Barcode Scanner Integration
 };
 
 export type TransactionHistoryParamList = {

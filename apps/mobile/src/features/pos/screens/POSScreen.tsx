@@ -3,10 +3,11 @@
  * Main POS screen that integrates all POS components
  * Layout: Top control bar, Product list, Cart summary (CartList + CartTotal), Action buttons
  * Story 3.6: Transaction Processing Integration
+ * Story 7.2: USB Barcode Scanner Integration
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types/product.types';
 import { PaymentData } from '../types/payment.types';
@@ -17,10 +18,15 @@ import { CartList } from '../components/CartList';
 import { CartTotal } from '../components/CartTotal';
 import { ActionButtons } from '../components/ActionButtons';
 import { PrinterStatusComponent } from '../components/PrinterStatus';
+import { ScannerFeedback } from '../components/ScannerFeedback';
 import { useReceiptPrinter } from '../hooks/useReceiptPrinter';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { useKeyboardInput } from '../hooks/useKeyboardInput';
 import { ReceiptData } from '../types/receipt.types';
 import { PrinterStatus } from '../hardware/printer';
+import { ScannerState } from '../types/scanner.types';
 import { TransactionService } from '../services/TransactionService';
+import { ProductService } from '../services/ProductService';
 import { TransactionResponse } from '../types/transaction.types';
 
 interface POSScreenProps {
@@ -43,6 +49,9 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const { state, actions } = useCartContext();
+
+  // Story 7.2: USB Barcode Scanner Integration
+  const [scannerState, setScannerState] = useState<ScannerState>('idle');
 
   // Story 3.6 AC4: Transaction duration tracking
   // Track when first item is added to cart (transaction start time)
@@ -75,6 +84,37 @@ export const POSScreen: React.FC<POSScreenProps> = ({
     clearError,
   } = useReceiptPrinter({
     autoRetry: false,
+  });
+
+  // Story 7.2: Barcode scanner hook - handles barcode validation, debouncing, feedback
+  const scanner = useBarcodeScanner({
+    onBarcodeScanned: async (barcode: string) => {
+      try {
+        // Fetch product by barcode
+        const product = await ProductService.getProductByBarcode(barcode);
+
+        // Add to cart
+        handleAddToCart(product);
+
+        // Success feedback is handled by ScannerFeedback component
+      } catch (error) {
+        // Error feedback is handled by ScannerFeedback component
+        // Let the error propagate for useBarcodeScanner to handle
+        throw error;
+      }
+    },
+    onError: (error) => {
+      // Display error message to user
+      const errorMessage = error.message || 'Gagal memindai barcode';
+      Alert.alert('Scan Gagal', errorMessage);
+    },
+    onStateChange: setScannerState,
+  });
+
+  // Story 7.2: Keyboard input hook - captures USB HID scanner input
+  const keyboardInput = useKeyboardInput({
+    onCharReceived: scanner.handleScannerInput,
+    enabled: true, // Scanner input always enabled when on POSScreen
   });
 
   const handleAddToCart = (product: Product) => {
@@ -320,6 +360,20 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   return (
     <SafeAreaView style={styles.safeArea} testID="pos-screen-container">
       <View style={styles.container}>
+        {/* Story 7.2: Invisible keyboard input for USB HID barcode scanner */}
+        <TextInput
+          ref={keyboardInput.textInputRef}
+          onChangeText={keyboardInput.handleChange}
+          onSubmitEditing={keyboardInput.handleSubmit}
+          style={styles.invisibleTextInput}
+          autoFocus={false}
+          selectTextOnFocus={false}
+          testID="scanner-keyboard-input"
+        />
+
+        {/* Story 7.2: Scanner feedback overlay */}
+        <ScannerFeedback state={scannerState} testID="scanner-feedback" />
+
         {/* Transaction Processing Indicator - Story 3.6 */}
         {isProcessingTransaction && (
           <View style={styles.processingOverlay}>
@@ -445,5 +499,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
+  },
+
+  // Story 7.2: Invisible input for USB HID barcode scanner
+  invisibleTextInput: {
+    height: 0,
+    width: 0,
+    opacity: 0,
+    position: 'absolute',
+    top: -9999, // Position off-screen
   },
 });

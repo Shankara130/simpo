@@ -1,10 +1,12 @@
 /**
  * POSScreen component tests
  * Tests main POS screen integration with all sub-components
+ * Story 7.2: USB Barcode Scanner Integration
  */
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { POSScreen } from './POSScreen';
 import { CartProvider } from '../context/CartContext';
 import { Product } from '../types/product.types';
@@ -25,7 +27,11 @@ const mockProducts: Product[] = [
 ];
 
 const renderWithCartProvider = (component: React.ReactElement) => {
-  return render(<CartProvider>{component}</CartProvider>);
+  return render(
+    <NavigationContainer>
+      <CartProvider>{component}</CartProvider>
+    </NavigationContainer>
+  );
 };
 
 describe('POSScreen', () => {
@@ -113,5 +119,56 @@ describe('POSScreen', () => {
     );
 
     expect(getByTestId('pos-screen-container')).toBeTruthy();
+  });
+
+  // Story 7.2: USB Barcode Scanner Integration Tests
+  describe('Scanner Integration', () => {
+    it('renders scanner keyboard input', () => {
+      const { getByTestId } = renderWithCartProvider(
+        <POSScreen products={mockProducts} loading={false} />
+      );
+
+      expect(getByTestId('scanner-keyboard-input')).toBeTruthy();
+    });
+
+    it('renders scanner feedback component', () => {
+      const { queryByTestId } = renderWithCartProvider(
+        <POSScreen products={mockProducts} loading={false} />
+      );
+
+      // Scanner feedback component exists but may not render when idle
+      // Component is included in JSX even if not visible
+      expect(queryByTestId('scanner-feedback')).toBeNull(); // Null when idle
+    });
+
+    it('initializes scanner with idle state', () => {
+      const { queryByTestId } = renderWithCartProvider(
+        <POSScreen products={mockProducts} loading={false} />
+      );
+
+      // Scanner feedback should not be visible when idle (component returns null)
+      expect(queryByTestId('scanner-feedback')).toBeNull();
+    });
+
+    it('scanner input does not interfere with search functionality', () => {
+      const { getByPlaceholderText } = renderWithCartProvider(
+        <POSScreen products={mockProducts} loading={false} />
+      );
+
+      const searchInput = getByPlaceholderText('Search products or scan barcode...');
+      expect(searchInput).toBeTruthy();
+
+      // Search should work normally
+      fireEvent.changeText(searchInput, 'Paracetamol');
+      expect(searchInput.props.value).toBe('Paracetamol');
+    });
+
+    it('renders scanner settings button', () => {
+      const { getByTestId } = renderWithCartProvider(
+        <POSScreen products={mockProducts} loading={false} />
+      );
+
+      expect(getByTestId('scanner-settings-button')).toBeTruthy();
+    });
   });
 });

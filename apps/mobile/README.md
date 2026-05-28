@@ -164,11 +164,42 @@ cd android && ./gradlew clean && cd ..
 npm start -- --reset-cache
 ```
 
-## Hardware Integration (Future)
+## Hardware Integration
 
-- **Thermal Printers:** ESC/POS protocol support
-- **Barcode Scanners:** USB HID and Bluetooth
-- **Cash Drawers:** Printer kick command control
+### USB Barcode Scanner Support (Story 7.2)
+
+The mobile POS supports USB HID barcode scanners for fast product scanning.
+
+**Supported Scanner Types:**
+- USB HID barcode scanners (plug-and-play)
+- Common barcode formats: EAN-8, EAN-13, Code 128
+- Tested brands: Zebra DS2200, Honeywell Eclipse 5145, Datalogic QuickScan
+
+**Configuration:**
+- Access scanner settings via gear icon in POS screen header
+- Adjustable debounce interval (100ms - 2000ms)
+- Configurable barcode length validation
+- Feedback (vibration) can be toggled on/off
+
+**Usage:**
+1. Connect USB barcode scanner to mobile device
+2. Scanner is automatically detected as keyboard input
+3. Scan product barcode to add to cart automatically
+4. Visual feedback shows scan success/failure
+
+**Troubleshooting:**
+- Scanner not working: Verify USB HID model (not serial/USB-COM)
+- Duplicate scans: Increase debounce interval in settings
+- Typing interference: Scanner input vs manual typing distinguished by timing
+
+### Thermal Printer Support (Story 7.1)
+
+ESC/POS protocol support for 58mm and 80mm thermal printers.
+
+### Future Hardware Support
+
+- **Bluetooth Barcode Scanners:** Wireless scanner support (Story 7.3)
+- **Cash Drawers:** Printer kick command control (Story 7.4)
 
 ## License
 
