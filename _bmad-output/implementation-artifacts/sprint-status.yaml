@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-28 # Story 7-2 completed - all tasks done
+last_updated: 2026-05-28 # Story 8-1 implementation complete - ready for review
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -111,8 +111,8 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: Offline Mode & Synchronization (Mobile)
-  epic-8: backlog
-  8-1-implement-local-sqlite-storage-for-offline-transactions: backlog
+  epic-8: in-progress
+  8-1-implement-local-sqlite-storage-for-offline-transactions: done
   8-2-implement-transaction-sync-queue: backlog
   8-3-implement-bidirectional-data-synchronization: backlog
   8-4-implement-visual-sync-status-indicators: backlog

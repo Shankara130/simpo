@@ -13,6 +13,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "ios": {
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Required for offline transaction storage and network state detection"
+      }
+    },
     "android": {
       "package": "com.simpo.pos",
       "permissions": [

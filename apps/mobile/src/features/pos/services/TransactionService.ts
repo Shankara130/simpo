@@ -2,6 +2,7 @@
  * TransactionService - API integration for Transaction processing
  * Handles transaction creation with backend API
  * Story 3.6: Implement Transaction Processing <30 Seconds
+ * Story 8.1: Integration with offline storage for offline mode
  */
 
 import axios, { AxiosError } from 'axios';
@@ -15,6 +16,7 @@ import {
 } from '../types/transaction.types';
 import { CartItem } from '../types/cart.types';
 import { PaymentData, PaymentMethod } from '../types/payment.types';
+import offlineStorageService from '../../offline/services/OfflineStorageService';
 
 // API base URL - configure for different environments
 const API_BASE_URL = __DEV__
@@ -111,11 +113,53 @@ const mapErrorToIndonesian = (errorDetail: string): string => {
 /**
  * TransactionService - Transaction API operations
  * Story 3.6 AC2: Mobile TransactionService calls backend API
+ * Story 8.1 AC4: Offline mode integration with SQLite storage
  */
 export const TransactionService = {
   /**
+   * Get current cashier ID from AsyncStorage
+   * Returns cached user ID or default to 1 for MVP
+   */
+  _getCashierId: async (): Promise<number> => {
+    try {
+      const userStr = await AsyncStorage.getItem('@simpo_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.id || 1;
+      }
+      return 1; // Default cashier ID for MVP
+    } catch (error) {
+      return 1; // Fallback to default cashier ID
+    }
+  },
+
+  /**
+   * Create offline transaction in SQLite storage
+   * Story 8.1 AC4: Offline mode stores to local SQLite
+   */
+  _createOfflineTransaction: async (
+    saleRequest: SaleRequest,
+    cashierId: number
+  ): Promise<TransactionResponse> => {
+    try {
+      const response = await offlineStorageService.saveTransaction(
+        saleRequest,
+        cashierId
+      );
+      return response;
+    } catch (error) {
+      throw new TransactionServiceError(
+        'Gagal menyimpan transaksi offline',
+        undefined,
+        error
+      );
+    }
+  },
+
+  /**
    * Create a new transaction with cart and payment data
    * Story 3.6 AC2: Service timeout set to 15 seconds
+   * Story 8.1 AC4: Supports offline mode with network detection
    */
   createTransaction: async (
     cartItems: CartItem[],
@@ -123,24 +167,14 @@ export const TransactionService = {
     customerName: string = '',
     taxAmount: string = '0',
     discountAmount: string = '0',
-    idempotencyKeyOverride?: string // CRITICAL FIX: Allow passing existing idempotency key for retry
+    idempotencyKeyOverride?: string, // CRITICAL FIX: Allow passing existing idempotency key for retry
+    isOffline?: boolean // Story 8.1 AC4: Force offline mode if true
   ): Promise<TransactionResponse> => {
     try {
       // Validate cart is not empty
       if (!cartItems || cartItems.length === 0) {
         throw new TransactionServiceError('Keranjang tidak boleh kosong', 400);
       }
-
-      // Get JWT token for authentication
-      const token = await getAuthToken();
-
-      // CRITICAL FIX: Generate and persist idempotency key BEFORE API call
-      // This prevents duplicate charges if app crashes before response
-      const idempotencyKey = idempotencyKeyOverride || uuidv4(); // Use override for retry, or generate new
-
-      // Persist idempotency key to AsyncStorage for crash recovery
-      const pendingKey = `@simpo_pending_idempotency_${Date.now()}`;
-      await AsyncStorage.setItem(pendingKey, idempotencyKey);
 
       // Convert cart items to sale items
       const items = convertCartItemsToSaleItems(cartItems);
@@ -153,10 +187,28 @@ export const TransactionService = {
         items,
         payment_method: paymentMethod,
         customer_name: customerName,
-        idempotency_key: idempotencyKey, // CRITICAL-003: Include idempotency key
+        idempotency_key: idempotencyKeyOverride || uuidv4(),
         tax_amount: taxAmount,
         discount_amount: discountAmount,
       };
+
+      // Story 8.1 AC4: Check if offline mode is forced or network unavailable
+      if (isOffline) {
+        const cashierId = await TransactionService._getCashierId();
+        return await TransactionService._createOfflineTransaction(saleRequest, cashierId);
+      }
+
+      // Online mode - make API call
+      // Get JWT token for authentication
+      const token = await getAuthToken();
+
+      // CRITICAL FIX: Generate and persist idempotency key BEFORE API call
+      // This prevents duplicate charges if app crashes before response
+      const idempotencyKey = saleRequest.idempotency_key;
+
+      // Persist idempotency key to AsyncStorage for crash recovery
+      const pendingKey = `@simpo_pending_idempotency_${Date.now()}`;
+      await AsyncStorage.setItem(pendingKey, idempotencyKey);
 
       // Make API call with 15 second timeout
       const response = await axios.post<TransactionResponse>(
