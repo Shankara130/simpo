@@ -1,4 +1,30 @@
 {
   "name": "simpo",
-  "displayName": "Simpo"
+  "displayName": "Simpo",
+  "expo": {
+    "name": "simpo",
+    "slug": "simpo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "package": "com.simpo.pos",
+      "permissions": [
+        "INTERNET",
+        "USB_PERMISSION",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "ACCESS_WIFI_STATE",
+        "ACCESS_NETWORK_STATE"
+      ]
+    }
+  }
 }
