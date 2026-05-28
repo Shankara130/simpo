@@ -12,6 +12,7 @@ import (
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/user"
 )
 
@@ -99,7 +100,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 	if username == "" {
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "EMPTY_USERNAME",
 			Timestamp: time.Now(),
@@ -109,7 +110,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 	if password == "" {
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "EMPTY_PASSWORD",
 			Timestamp: time.Now(),
@@ -123,7 +124,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 		// Log failed login attempt - user not found (Story 1.5, AC7)
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "USER_NOT_FOUND",
 			Reason:    "username not found in database",
@@ -141,7 +142,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			UserID:    &foundUser.ID,
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "USER_INACTIVE",
 			Reason:    "user account is inactive",
@@ -156,7 +157,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			UserID:    &foundUser.ID,
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "INVALID_USER_STATE",
 			Reason:    "password hash is missing",
@@ -170,7 +171,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			UserID:    &foundUser.ID,
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "INVALID_PASSWORD",
 			Reason:    "password does not match",
@@ -186,7 +187,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 		_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 			UserID:    &foundUser.ID,
 			Username:  username,
-			Action:    AuditActionLoginFailure,
+			Action:    models.AuditActionLoginFailure,
 			IPAddress: ipAddress,
 			Outcome:   "TOKEN_GENERATION_FAILED",
 			Reason:    err.Error(),
@@ -199,7 +200,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ipAddress s
 	_ = s.auditService.LogLoginAttempt(ctx, AuditLogEntry{
 		UserID:    &foundUser.ID,
 		Username:  username,
-		Action:    AuditActionLoginSuccess,
+		Action:    models.AuditActionLoginSuccess,
 		IPAddress: ipAddress,
 		Outcome:   "SUCCESS",
 		Timestamp: time.Now(),

@@ -56,7 +56,8 @@ func (s *service) AddDomain(ctx context.Context, req AddWhitelistEntryRequest) (
 
 	// Validate domain format
 	if !isValidDomainFormat(req.Domain) {
-		return nil, fmt.Errorf("invalid domain format: '%s'", req.Domain)
+		// Code review fix: CRIT-013 - Don't include user input directly in error messages
+		return nil, fmt.Errorf("invalid domain format")
 	}
 
 	// Normalize domain to lowercase for case-insensitive matching
@@ -139,7 +140,8 @@ func (s *service) ValidateDomainWhitelisted(ctx context.Context, domain string) 
 	entry, err := s.repo.FindByDomain(ctx, domain)
 	if err != nil {
 		if errors.Is(err, ErrWhitelistEntryNotFound) {
-			return nil, fmt.Errorf("domain '%s' is not whitelisted", domain)
+			// Code review fix: CRIT-013 - Don't include user input directly in error messages
+			return nil, fmt.Errorf("domain is not whitelisted")
 		}
 		return nil, err
 	}

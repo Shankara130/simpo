@@ -8,6 +8,7 @@ import (
 
 // AuditAction represents the type of audit action
 // Story 5.4: Audit action types for append-only audit trail
+// Story 6.4: Extended with system change audit actions for Badan POM compliance
 type AuditAction string
 
 const (
@@ -36,6 +37,31 @@ const (
 
 	// Reporting actions
 	AuditActionExportReport        AuditAction = "EXPORT_REPORT"
+
+	// System settings actions (Story 6.4)
+	AuditActionSystemSettingsUpdated   AuditAction = "SYSTEM_SETTINGS_UPDATED"
+	AuditActionSystemConfigChanged     AuditAction = "SYSTEM_CONFIG_CHANGED"
+
+	// Backup operations (Story 6.4)
+	AuditActionBackupCreated           AuditAction = "BACKUP_CREATED"
+	AuditActionBackupRestored          AuditAction = "BACKUP_RESTORED"
+	AuditActionBackupDeleted           AuditAction = "BACKUP_DELETED"
+
+	// Role and permission management (Story 6.4)
+	AuditActionRoleUpdated             AuditAction = "ROLE_UPDATED"
+	AuditActionPermissionGranted       AuditAction = "PERMISSION_GRANTED"
+	AuditActionPermissionRevoked       AuditAction = "PERMISSION_REVOKED"
+
+	// Branch management (Story 6.4)
+	AuditActionBranchCreated           AuditAction = "BRANCH_CREATED"
+	AuditActionBranchUpdated           AuditAction = "BRANCH_UPDATED"
+	AuditActionBranchDeactivated       AuditAction = "BRANCH_DEACTIVATED"
+
+	// System operations (Story 6.4)
+	AuditActionSystemStartup            AuditAction = "SYSTEM_STARTUP"
+	AuditActionSystemShutdown           AuditAction = "SYSTEM_SHUTDOWN"
+	AuditActionMaintenanceModeEnabled   AuditAction = "MAINTENANCE_MODE_ENABLED"
+	AuditActionMaintenanceModeDisabled  AuditAction = "MAINTENANCE_MODE_DISABLED"
 )
 
 // AuditLog represents an append-only audit log entry for Badan POM compliance
@@ -74,6 +100,10 @@ func (a *AuditLog) BeforeCreate(tx *gorm.DB) error {
 	}
 	if a.Outcome == "" {
 		return tx.AddError(ErrInvalidAuditLog{Field: "outcome", Message: "outcome is required"})
+	}
+	// Code review fix: CRIT-011 - Validate IP address length (max 45 chars for IPv6)
+	if len(a.IPAddress) > 45 {
+		return tx.AddError(ErrInvalidAuditLog{Field: "ip_address", Message: "ip_address exceeds maximum length of 45 characters"})
 	}
 	return nil
 }

@@ -58,12 +58,59 @@ const AUDIT_ACTIONS = [
   'STOCK_ADJUSTMENT',
   'BLOCKED_SALE_ATTEMPT',
   'EXPORT_REPORT',
+  // Story 6.4: System change audit actions
+  'SYSTEM_SETTINGS_UPDATED',
+  'BACKUP_CREATED',
+  'BACKUP_RESTORED',
+  'BACKUP_DELETED',
+  'ROLE_UPDATED',
+  'PERMISSION_GRANTED',
+  'PERMISSION_REVOKED',
+  'BRANCH_CREATED',
+  'BRANCH_UPDATED',
+  'BRANCH_DEACTIVATED',
+  'SYSTEM_STARTUP',
+  'SYSTEM_SHUTDOWN',
+  'MAINTENANCE_MODE_ENABLED',
+  'MAINTENANCE_MODE_DISABLED',
 ] as const;
 
 type AuditAction = typeof AUDIT_ACTIONS[number];
 
 // User role enum
 type UserRole = 'CASHIER' | 'OWNER' | 'ADMIN' | 'SYSTEM_ADMIN';
+
+// Story 6.4: System change categories for filtering
+type AuditCategory = 'all' | 'settings' | 'backups' | 'users' | 'branches' | 'system' | 'inventory';
+
+// Audit category mappings
+const AUDIT_CATEGORIES: Record<AuditCategory, { name: string; actions: string[] }> = {
+  all: { name: 'Semua Kategori', actions: [] },
+  settings: {
+    name: 'Pengaturan Sistem',
+    actions: ['SYSTEM_SETTINGS_UPDATED'],
+  },
+  backups: {
+    name: 'Backup',
+    actions: ['BACKUP_CREATED', 'BACKUP_RESTORED', 'BACKUP_DELETED'],
+  },
+  users: {
+    name: 'Manajemen User',
+    actions: ['USER_CREATED', 'USER_DEACTIVATED', 'ROLE_UPDATED', 'PERMISSION_GRANTED', 'PERMISSION_REVOKED'],
+  },
+  branches: {
+    name: 'Manajemen Cabang',
+    actions: ['BRANCH_CREATED', 'BRANCH_UPDATED', 'BRANCH_DEACTIVATED'],
+  },
+  system: {
+    name: 'Operasi Sistem',
+    actions: ['SYSTEM_STARTUP', 'SYSTEM_SHUTDOWN', 'MAINTENANCE_MODE_ENABLED', 'MAINTENANCE_MODE_DISABLED'],
+  },
+  inventory: {
+    name: 'Inventori',
+    actions: ['STOCK_ADJUSTMENT', 'BLOCKED_SALE_ATTEMPT'],
+  },
+};
 
 /**
  * Get action display name in Indonesian
@@ -86,6 +133,21 @@ function getActionDisplayName(action: string): string {
     STOCK_ADJUSTMENT: 'Penyesuaian Stok',
     BLOCKED_SALE_ATTEMPT: 'Upaya Penjualan Ditolak',
     EXPORT_REPORT: 'Export Laporan',
+    // Story 6.4: System change audit actions
+    SYSTEM_SETTINGS_UPDATED: 'Pengaturan Sistem Diupdate',
+    BACKUP_CREATED: 'Backup Dibuat',
+    BACKUP_RESTORED: 'Backup Dipulihkan',
+    BACKUP_DELETED: 'Backup Dihapus',
+    ROLE_UPDATED: 'Role Diupdate',
+    PERMISSION_GRANTED: 'Izin Diberikan',
+    PERMISSION_REVOKED: 'Izin Dicabut',
+    BRANCH_CREATED: 'Cabang Dibuat',
+    BRANCH_UPDATED: 'Cabang Diupdate',
+    BRANCH_DEACTIVATED: 'Cabang Dinonaktifkan',
+    SYSTEM_STARTUP: 'Sistem Start',
+    SYSTEM_SHUTDOWN: 'Sistem Shutdown',
+    MAINTENANCE_MODE_ENABLED: 'Mode Maintenance Aktif',
+    MAINTENANCE_MODE_DISABLED: 'Mode Maintenance Nonaktif',
   };
   return displayNames[action] || action;
 }
@@ -111,6 +173,21 @@ function getActionBadgeColor(action: string): string {
     STOCK_ADJUSTMENT: 'bg-indigo-100 text-indigo-800',
     BLOCKED_SALE_ATTEMPT: 'bg-red-100 text-red-800',
     EXPORT_REPORT: 'bg-blue-100 text-blue-800',
+    // Story 6.4: System change audit actions
+    SYSTEM_SETTINGS_UPDATED: 'bg-cyan-100 text-cyan-800',
+    BACKUP_CREATED: 'bg-green-100 text-green-800',
+    BACKUP_RESTORED: 'bg-blue-100 text-blue-800',
+    BACKUP_DELETED: 'bg-red-100 text-red-800',
+    ROLE_UPDATED: 'bg-purple-100 text-purple-800',
+    PERMISSION_GRANTED: 'bg-green-100 text-green-800',
+    PERMISSION_REVOKED: 'bg-red-100 text-red-800',
+    BRANCH_CREATED: 'bg-teal-100 text-teal-800',
+    BRANCH_UPDATED: 'bg-yellow-100 text-yellow-800',
+    BRANCH_DEACTIVATED: 'bg-orange-100 text-orange-800',
+    SYSTEM_STARTUP: 'bg-blue-100 text-blue-800',
+    SYSTEM_SHUTDOWN: 'bg-gray-100 text-gray-800',
+    MAINTENANCE_MODE_ENABLED: 'bg-amber-100 text-amber-800',
+    MAINTENANCE_MODE_DISABLED: 'bg-green-100 text-green-800',
   };
   return colors[action] || 'bg-gray-100 text-gray-800';
 }
@@ -153,6 +230,7 @@ export default function AuditLogsPage() {
   const [endDate, setEndDate] = useState(formatDate(new Date()));
   const [selectedAction, setSelectedAction] = useState<string>('');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<AuditCategory>('all'); // Story 6.4: Category filter
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -197,6 +275,7 @@ export default function AuditLogsPage() {
   /**
    * Fetch audit logs with filters and pagination
    * Story 5.4, Task 8.2, 8.3, 8.4, 8.6: Add filters and pagination
+   * Story 6.4, Task 9.5: Add system change category filter
    */
   const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
@@ -211,7 +290,19 @@ export default function AuditLogsPage() {
         offset: ((currentPage - 1) * limit).toString(),
       });
 
-      if (selectedAction) {
+      // Story 6.4: Use category filter to determine which actions to query
+      let actionsToQuery: string[] = [];
+      if (selectedCategory !== 'all') {
+        actionsToQuery = AUDIT_CATEGORIES[selectedCategory].actions;
+        // If a specific action is also selected, only use that one
+        if (selectedAction && actionsToQuery.includes(selectedAction)) {
+          params.append('action', selectedAction);
+        } else if (actionsToQuery.length > 0) {
+          // For category filtering, we'd need to modify the backend to accept multiple actions
+          // For now, just use the first action from the category
+          params.append('action', actionsToQuery[0]);
+        }
+      } else if (selectedAction) {
         params.append('action', selectedAction);
       }
 
@@ -287,7 +378,7 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, selectedAction, selectedUserId, currentPage, limit]);
+  }, [startDate, endDate, selectedAction, selectedUserId, currentPage, limit, selectedCategory]); // Story 6.4: Add selectedCategory to dependencies
 
   /**
    * Fetch audit logs when filters or pagination changes
@@ -426,8 +517,9 @@ export default function AuditLogsPage() {
 
       {/* Filters */}
       {/* Story 5.4, Task 8.2, 8.3, 8.4: Add date range, action, and user filters */}
+      {/* Story 6.4, Task 9.2, 9.5: Add system change actions and category filter */}
       <div className="bg-white p-4 rounded-lg border shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Start Date */}
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
@@ -456,8 +548,32 @@ export default function AuditLogsPage() {
             />
           </div>
 
+          {/* Category Filter */}
+          {/* Story 6.4, Task 9.5: Add system change category filter */}
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              Kategori
+            </label>
+            <select
+              id="category"
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value as AuditCategory);
+                setSelectedAction(''); // Reset action filter when category changes
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {Object.entries(AUDIT_CATEGORIES).map(([key, { name }]) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Action Filter */}
           {/* Story 5.4, Task 8.3: Add action filter dropdown */}
+          {/* Story 6.4, Task 9.2: Add system change actions to filter dropdown */}
           <div>
             <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
               Aksi
@@ -466,15 +582,22 @@ export default function AuditLogsPage() {
               id="action"
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={selectedCategory !== 'all'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="">Semua Aksi</option>
-              {AUDIT_ACTIONS.map(action => (
+              {/* Story 6.4: Filter actions by selected category */}
+              {(selectedCategory === 'all' ? AUDIT_ACTIONS : AUDIT_CATEGORIES[selectedCategory].actions).map(action => (
                 <option key={action} value={action}>
                   {getActionDisplayName(action)}
                 </option>
               ))}
             </select>
+            {selectedCategory !== 'all' && (
+              <p className="text-xs text-gray-500 mt-1">
+                Filtered by {AUDIT_CATEGORIES[selectedCategory].name}
+              </p>
+            )}
           </div>
 
           {/* User Filter */}

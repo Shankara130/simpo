@@ -569,7 +569,7 @@ func (h *AuditHandler) CleanupAuditLogs(c *gin.Context) {
 	entry := services.AuditLogEntry{
 		UserID:    &userID,
 		Username:  username,
-		Action:    services.AuditAction("RETENTION_CLEANUP"),
+		Action:    models.AuditAction("RETENTION_CLEANUP"),
 		IPAddress: c.ClientIP(),
 		Outcome:   "pending",
 		Reason:    reason,

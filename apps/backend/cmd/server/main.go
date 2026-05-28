@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,6 +30,10 @@ import (
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/whitelist"
 )
 
+// System user ID for audit logging (Story 6.4, CRIT-008)
+// Use a dedicated system user ID (999) instead of "0" for system operations
+const SystemUserID = "999"
+
 // @title Go REST API Boilerplate
 // @version 1.0
 // @description A production-ready REST API boilerplate in Go with JWT authentication
@@ -53,6 +58,29 @@ func main() {
 	if err := run(); err != nil {
 		os.Exit(1)
 	}
+}
+
+// getServerInfo returns server identification information for audit logging
+// Story 6.4, Task 2.3: Get server hostname and IP for system startup/shutdown audits
+func getServerInfo() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+
+	// Try to get primary IP address
+	addrs, err := net.InterfaceAddrs()
+	if err == nil {
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					return fmt.Sprintf("%s (%s)", hostname, ipnet.IP.String())
+				}
+			}
+		}
+	}
+
+	return hostname
 }
 
 func run() error {
@@ -200,7 +228,7 @@ func run() error {
 		systemSettingsHandler := handlers.NewSystemSettingsHandler(systemService)
 
 			// Story 6.3: Create backup service and handler
-			backupService := services.NewBackupService(cfg)
+			backupService := services.NewBackupService(cfg, auditService) // Story 6.4: Pass audit service for backup audit logging
 			backupHandler := handlers.NewBackupHandler(backupService)
 
 		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, redisClient)
@@ -258,6 +286,14 @@ func run() error {
 		logger.Info("Liveness probe available", "url", fmt.Sprintf("http://localhost:%s/health/live", port))
 		logger.Info("Readiness probe available", "url", fmt.Sprintf("http://localhost:%s/health/ready", port))
 
+		// Story 6.4, Task 2.3: Log system startup for compliance
+		serverInfo := getServerInfo()
+		if err := auditService.LogSystemStartup(context.Background(), SystemUserID, serverInfo, srv.Addr); err != nil {
+			logger.Warn("Failed to log system startup to audit trail", "error", err)
+		} else {
+			logger.Info("System startup audit log created", "serverInfo", serverInfo, "address", srv.Addr)
+		}
+
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("Server error", "error", err)
 			os.Exit(1)
@@ -296,6 +332,17 @@ func run() error {
 		}
 	}
 
+	// Code review fix: CRITICAL-005 - Shutdown audit service before database close
+	if auditService != nil {
+		logger.Info("Shutting down audit service...")
+		ctx := context.Background()
+		if err := auditService.Shutdown(ctx); err != nil {
+			logger.Warn("Failed to shutdown audit service gracefully", "error", err)
+		} else {
+			logger.Info("Audit service shutdown complete")
+		}
+	}
+
 	sqlDB, err := database.DB()
 	if err == nil {
 		logger.Info("Closing database connections...")
@@ -313,6 +360,15 @@ func run() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+
+	// Story 6.4, Task 2.3: Log system shutdown for compliance
+	serverInfo := getServerInfo()
+	reason := fmt.Sprintf("Graceful shutdown initiated by signal %s on server %s", sig.String(), serverInfo)
+	if err := auditService.LogSystemShutdown(ctx, SystemUserID, reason, srv.Addr); err != nil {
+		logger.Warn("Failed to log system shutdown to audit trail", "error", err)
+	} else {
+		logger.Info("System shutdown audit log created", "reason", reason)
+	}
 
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Error("Server forced to shutdown", "error", err)

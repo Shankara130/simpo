@@ -30,6 +30,62 @@ func (h *BackupHandler) GetBackupService() any {
 	return h.backupService
 }
 
+// userContext holds validated user context information
+// Story 6.4, CRIT-002: Extract and validate user context safely
+type userContext struct {
+	adminID     uint
+	adminUsername string
+}
+
+// extractUserContext safely extracts and validates user context from Gin context
+// Story 6.4, CRIT-002: Fix type assertion panics with comma-ok pattern
+// Returns validated user context or error response if validation fails
+// Usage: ctx, ok := h.extractUserContext(c); if !ok { return }
+func (h *BackupHandler) extractUserContext(c *gin.Context) (userContext, bool) {
+	// Extract user ID with type safety check
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return userContext{}, false
+	}
+
+	adminID, ok := userID.(uint)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context type"})
+		return userContext{}, false
+	}
+
+	// Extract username with type safety check
+	username, exists := c.Get("username")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Username not found"})
+		return userContext{}, false
+	}
+
+	adminUsername, ok := username.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid username context type"})
+		return userContext{}, false
+	}
+
+	// Validate user ID is not zero
+	if adminID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return userContext{}, false
+	}
+
+	// Validate username is not empty
+	if adminUsername == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username"})
+		return userContext{}, false
+	}
+
+	return userContext{
+		adminID:     adminID,
+		adminUsername: adminUsername,
+	}, true
+}
+
 // CreateBackup godoc
 // @Summary      Trigger manual backup
 // @Description  Manually triggers a database backup operation (Story 6.3, AC5)
@@ -55,14 +111,26 @@ func (h *BackupHandler) CreateBackup(c *gin.Context) {
 		return
 	}
 
+	// Extract user information for audit logging (Story 6.4, CRIT-002)
+	// Use safe helper function with type assertion checks
+	userCtx, ok := h.extractUserContext(c)
+	if !ok {
+		return
+	}
+	adminID := userCtx.adminID
+	adminUsername := userCtx.adminUsername
+
+	// Get IP address from request
+	ipAddress := c.ClientIP()
+
 	// Set default description if not provided
 	description := req.Description
 	if description == "" {
 		description = "Manual backup"
 	}
 
-	// Create backup
-	backupInfo, err := h.backupService.CreateBackup(ctx, description)
+	// Create backup (Story 6.4: Pass user info for audit logging)
+	backupInfo, err := h.backupService.CreateBackup(ctx, description, adminID, adminUsername, ipAddress)
 	if err != nil {
 		if strings.Contains(err.Error(), "already in progress") {
 			c.JSON(http.StatusConflict, gin.H{"error": "Backup already in progress"})
@@ -214,8 +282,20 @@ func (h *BackupHandler) RestoreBackup(c *gin.Context) {
 		return
 	}
 
-	// Perform restore
-	if err := h.backupService.RestoreBackup(ctx, filename, req.Reason); err != nil {
+	// Extract user information for audit logging (Story 6.4, CRIT-002)
+	// Use safe helper function with type assertion checks
+	userCtx, ok := h.extractUserContext(c)
+	if !ok {
+		return
+	}
+	adminID := userCtx.adminID
+	adminUsername := userCtx.adminUsername
+
+	// Get IP address from request
+	ipAddress := c.ClientIP()
+
+	// Perform restore (Story 6.4: Pass user info for audit logging)
+	if err := h.backupService.RestoreBackup(ctx, filename, req.Reason, adminID, adminUsername, ipAddress); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -271,8 +351,20 @@ func (h *BackupHandler) DeleteBackup(c *gin.Context) {
 		return
 	}
 
-	// Delete backup file
-	if err := h.backupService.DeleteBackup(ctx, filename); err != nil {
+	// Extract user information for audit logging (Story 6.4, CRIT-002)
+	// Use safe helper function with type assertion checks
+	userCtx, ok := h.extractUserContext(c)
+	if !ok {
+		return
+	}
+	adminID := userCtx.adminID
+	adminUsername := userCtx.adminUsername
+
+	// Get IP address from request
+	ipAddress := c.ClientIP()
+
+	// Delete backup file (Story 6.4: Pass user info for audit logging)
+	if err := h.backupService.DeleteBackup(ctx, filename, adminID, adminUsername, ipAddress); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return

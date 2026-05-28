@@ -10,6 +10,7 @@ import (
 
 	apiErrors "github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 )
 
@@ -76,7 +77,7 @@ func (h *Handler) AddDomain(c *gin.Context) {
 	if h.auditService != nil {
 		userID := middleware.GetUserID(c)
 		username := middleware.GetUsername(c)
-		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, req.Domain, services.AuditActionWhitelistDomainAdded, c.ClientIP()); err != nil {
+		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, req.Domain, models.AuditActionWhitelistDomainAdded, c.ClientIP()); err != nil {
 			slog.Error("Failed to log whitelist change", "error", err)
 		}
 	}
@@ -192,7 +193,7 @@ func (h *Handler) UpdateDomain(c *gin.Context) {
 	if h.auditService != nil {
 		userID := middleware.GetUserID(c)
 		username := middleware.GetUsername(c)
-		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, entry.Domain, services.AuditActionWhitelistDomainUpdated, c.ClientIP()); err != nil {
+		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, entry.Domain, models.AuditActionWhitelistDomainUpdated, c.ClientIP()); err != nil {
 			slog.Error("Failed to log whitelist change", "error", err)
 		}
 	}
@@ -238,7 +239,7 @@ func (h *Handler) DeleteDomain(c *gin.Context) {
 		userID := middleware.GetUserID(c)
 		username := middleware.GetUsername(c)
 		// Use ID as domain reference since we don't have the domain after deletion
-		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, fmt.Sprintf("ID:%d", id), services.AuditActionWhitelistDomainDeleted, c.ClientIP()); err != nil {
+		if err := h.auditService.LogWhitelistChange(c.Request.Context(), userID, username, fmt.Sprintf("ID:%d", id), models.AuditActionWhitelistDomainDeleted, c.ClientIP()); err != nil {
 			slog.Error("Failed to log whitelist change", "error", err)
 		}
 	}

@@ -138,6 +138,8 @@ type LoginRequest struct {
 type UpdateUserRequest struct {
 	Name  string `json:"name" binding:"omitempty,min=2,max=100"`
 	Email string `json:"email" binding:"omitempty,email"`
+	// Story 6.4: Added Role field for role updates
+	Role  string `json:"role" binding:"omitempty,oneof=SYSTEM_ADMIN OWNER CASHIER"`
 }
 
 // UserResponse represents user response (without sensitive fields)
@@ -222,4 +224,103 @@ type DeactivateUserResponse struct {
 	// DeactivationReason is the reason for deactivation
 	// Example: "Staff resignation"
 	DeactivationReason string `json:"deactivation_reason" example:"Staff resignation"`
+}
+
+// Story 6.4: User Management DTOs for Role and Permission Management
+
+// UpdateRoleRequest represents role update request payload (Story 6.4, AC1, AC2)
+type UpdateRoleRequest struct {
+	// Role is the new role to assign (must be one of: SYSTEM_ADMIN, OWNER, CASHIER)
+	// Example: "OWNER"
+	// Enum: SYSTEM_ADMIN, OWNER, CASHIER
+	Role string `json:"role" binding:"required" example:"OWNER" enum:"SYSTEM_ADMIN,OWNER,CASHIER"`
+
+	// Reason is the reason for role change (minimum 5 characters)
+	// Examples: "Promoted to owner", "Role change due to reorganization", "Demoted for policy violation"
+	Reason string `json:"reason" binding:"required,min=5" example:"Promoted to owner position"`
+}
+
+// UpdateRoleResponse represents role update response (Story 6.4, AC1, AC2)
+type UpdateRoleResponse struct {
+	// ID is the unique identifier for the user
+	// Example: 10
+	ID uint `json:"id" example:"10"`
+
+	// Username is the login username
+	// Example: "staffuser"
+	Username string `json:"username" example:"staffuser"`
+
+	// OldRole is the previous role before change
+	// Example: "CASHIER"
+	OldRole string `json:"old_role" example:"CASHIER"`
+
+	// NewRole is the new role after change
+	// Example: "OWNER"
+	NewRole string `json:"new_role" example:"OWNER"`
+
+	// UpdatedAt is the timestamp when role was changed
+	// Example: "2026-05-27T12:00:00Z"
+	UpdatedAt string `json:"updated_at" example:"2026-05-27T12:00:00Z"`
+}
+
+// GrantPermissionRequest represents permission grant request payload (Story 6.4, AC1, AC2)
+// Note: This is a placeholder for future permission-based access control (PBAC) enhancement
+// Current implementation uses role-based access control (RBAC) with pre-defined roles
+type GrantPermissionRequest struct {
+	// Permission is the permission to grant
+	// Examples: "MANAGE_USERS", "MANAGE_INVENTORY", "VIEW_REPORTS"
+	Permission string `json:"permission" binding:"required,min=3" example:"MANAGE_USERS"`
+
+	// Reason is the reason for granting permission (minimum 5 characters)
+	// Example: "Additional responsibilities for new project"
+	Reason string `json:"reason" binding:"required,min=5" example:"Additional responsibilities for new project"`
+}
+
+// GrantPermissionResponse represents permission grant response (Story 6.4, AC1, AC2)
+type GrantPermissionResponse struct {
+	// ID is the unique identifier for the user
+	// Example: 10
+	ID uint `json:"id" example:"10"`
+
+	// Username is the login username
+	// Example: "staffuser"
+	Username string `json:"username" example:"staffuser"`
+
+	// Permission is the granted permission
+	// Example: "MANAGE_USERS"
+	Permission string `json:"permission" example:"MANAGE_USERS"`
+
+	// GrantedAt is the timestamp when permission was granted
+	// Example: "2026-05-27T12:00:00Z"
+	GrantedAt string `json:"granted_at" example:"2026-05-27T12:00:00Z"`
+}
+
+// RevokePermissionRequest represents permission revoke request payload (Story 6.4, AC1, AC2)
+type RevokePermissionRequest struct {
+	// Permission is the permission to revoke
+	// Examples: "MANAGE_USERS", "MANAGE_INVENTORY", "VIEW_REPORTS"
+	Permission string `json:"permission" binding:"required,min=3" example:"MANAGE_USERS"`
+
+	// Reason is the reason for revoking permission (minimum 5 characters)
+	// Example: "Project completed, no longer needs access"
+	Reason string `json:"reason" binding:"required,min=5" example:"Project completed, no longer needs access"`
+}
+
+// RevokePermissionResponse represents permission revoke response (Story 6.4, AC1, AC2)
+type RevokePermissionResponse struct {
+	// ID is the unique identifier for the user
+	// Example: 10
+	ID uint `json:"id" example:"10"`
+
+	// Username is the login username
+	// Example: "staffuser"
+	Username string `json:"username" example:"staffuser"`
+
+	// Permission is the revoked permission
+	// Example: "MANAGE_USERS"
+	Permission string `json:"permission" example:"MANAGE_USERS"`
+
+	// RevokedAt is the timestamp when permission was revoked
+	// Example: "2026-05-27T12:00:00Z"
+	RevokedAt string `json:"revoked_at" example:"2026-05-27T12:00:00Z"`
 }

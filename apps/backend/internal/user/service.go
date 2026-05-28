@@ -322,6 +322,13 @@ func (s *service) UpdateUser(ctx context.Context, id uint, req UpdateUserRequest
 		}
 		user.Email = req.Email
 	}
+	// Story 6.4: Added Role field update support
+	if req.Role != "" {
+		if !IsValidRoleForCreate(req.Role) {
+			return nil, fmt.Errorf("invalid role: %s", req.Role)
+		}
+		user.Role = req.Role
+	}
 
 	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)

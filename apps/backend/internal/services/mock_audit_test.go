@@ -9,7 +9,7 @@ type MockAuditService struct {
 	LogLoginAttemptFunc           func(ctx context.Context, entry AuditLogEntry) error
 	LogAuthorizationFailureFunc    func(ctx context.Context, entry AuditLogEntry) error
 	LogUserCreationFunc            func(ctx context.Context, adminID uint, createdUserID uint, adminUsername string, createdUsername string, ipAddress string) error
-	LogWhitelistChangeFunc        func(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error
+	LogWhitelistChangeFunc        func(ctx context.Context, adminID uint, adminUsername string, domain string, action models.AuditAction, ipAddress string) error
 	LogSelfRegistrationFunc       func(ctx context.Context, userID uint, email string, domain string, ipAddress string) error
 	LogEmailVerificationFunc       func(ctx context.Context, userID uint, email string, ipAddress string) error
 	LogUserDeactivationFunc       func(ctx context.Context, adminID uint, deactivatedUserID uint, adminUsername string, deactivatedUsername string, reason string, ipAddress string) error
@@ -17,6 +17,28 @@ type MockAuditService struct {
 	LogBlockedSaleAttemptFunc     func(ctx context.Context, userID uint, username string, productID uint, productSKU string, productName string, expiryDate string, reason string, ipAddress string) error
 	LogReportExportFunc           func(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string, ipAddress string) error
 	LogSettingsUpdateFunc         func(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error
+
+	// Story 6.4: Backup audit methods
+	LogBackupCreatedFunc          func(ctx context.Context, adminID uint, adminUsername string, backupFile string, size int64, ipAddress string) error
+	LogBackupRestoredFunc         func(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error
+	LogBackupDeletedFunc          func(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error
+
+	// Story 6.4: Role and permission management audit methods
+	LogRoleUpdatedFunc             func(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, oldRole string, newRole string, ipAddress string) error
+	LogPermissionGrantedFunc       func(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error
+	LogPermissionRevokedFunc       func(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error
+
+	// Story 6.4: Branch management audit methods
+	LogBranchCreatedFunc           func(ctx context.Context, adminID uint, adminUsername string, branchName string, branchLocation string, ipAddress string) error
+	LogBranchUpdatedFunc           func(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, changes string, ipAddress string) error
+	LogBranchDeactivatedFunc       func(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, reason string, ipAddress string) error
+
+	// Story 6.4: System operation audit methods
+	LogSystemStartupFunc              func(ctx context.Context, systemID string, serverInfo string, ipAddress string) error
+	LogSystemShutdownFunc             func(ctx context.Context, systemID string, reason string, ipAddress string) error
+	LogMaintenanceModeEnabledFunc     func(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error
+	LogMaintenanceModeDisabledFunc    func(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error
+
 	LogCount                      int // Track how many times logging was called
 }
 
@@ -46,7 +68,7 @@ func (m *MockAuditService) LogUserCreation(ctx context.Context, adminID uint, cr
 }
 
 // LogWhitelistChange logs whitelist domain management actions (Story 1.9, AC8)
-func (m *MockAuditService) LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error {
+func (m *MockAuditService) LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action models.AuditAction, ipAddress string) error {
 	m.LogCount++
 	if m.LogWhitelistChangeFunc != nil {
 		return m.LogWhitelistChangeFunc(ctx, adminID, adminUsername, domain, action, ipAddress)
@@ -117,5 +139,127 @@ func (m *MockAuditService) LogSettingsUpdate(ctx context.Context, adminID uint, 
 	if m.LogSettingsUpdateFunc != nil {
 		return m.LogSettingsUpdateFunc(ctx, adminID, adminUsername, changesJSON, ipAddress)
 	}
+	return nil
+}
+
+// LogBackupCreated logs backup creation operations (Story 6.4)
+func (m *MockAuditService) LogBackupCreated(ctx context.Context, adminID uint, adminUsername string, backupFile string, size int64, ipAddress string) error {
+	m.LogCount++
+	if m.LogBackupCreatedFunc != nil {
+		return m.LogBackupCreatedFunc(ctx, adminID, adminUsername, backupFile, size, ipAddress)
+	}
+	return nil
+}
+
+// LogBackupRestored logs backup restore operations (Story 6.4)
+func (m *MockAuditService) LogBackupRestored(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error {
+	m.LogCount++
+	if m.LogBackupRestoredFunc != nil {
+		return m.LogBackupRestoredFunc(ctx, adminID, adminUsername, backupFile, ipAddress)
+	}
+	return nil
+}
+
+// LogBackupDeleted logs backup deletion operations (Story 6.4)
+func (m *MockAuditService) LogBackupDeleted(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error {
+	m.LogCount++
+	if m.LogBackupDeletedFunc != nil {
+		return m.LogBackupDeletedFunc(ctx, adminID, adminUsername, backupFile, ipAddress)
+	}
+	return nil
+}
+
+// LogRoleUpdated logs role changes (Story 6.4)
+func (m *MockAuditService) LogRoleUpdated(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, oldRole string, newRole string, ipAddress string) error {
+	m.LogCount++
+	if m.LogRoleUpdatedFunc != nil {
+		return m.LogRoleUpdatedFunc(ctx, adminID, adminUsername, targetUserID, targetUsername, oldRole, newRole, ipAddress)
+	}
+	return nil
+}
+
+// LogPermissionGranted logs permission grant operations (Story 6.4)
+func (m *MockAuditService) LogPermissionGranted(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error {
+	m.LogCount++
+	if m.LogPermissionGrantedFunc != nil {
+		return m.LogPermissionGrantedFunc(ctx, adminID, adminUsername, targetUserID, targetUsername, permission, ipAddress)
+	}
+	return nil
+}
+
+// LogPermissionRevoked logs permission revoke operations (Story 6.4)
+func (m *MockAuditService) LogPermissionRevoked(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error {
+	m.LogCount++
+	if m.LogPermissionRevokedFunc != nil {
+		return m.LogPermissionRevokedFunc(ctx, adminID, adminUsername, targetUserID, targetUsername, permission, ipAddress)
+	}
+	return nil
+}
+
+// LogBranchCreated logs branch creation operations (Story 6.4)
+func (m *MockAuditService) LogBranchCreated(ctx context.Context, adminID uint, adminUsername string, branchName string, branchLocation string, ipAddress string) error {
+	m.LogCount++
+	if m.LogBranchCreatedFunc != nil {
+		return m.LogBranchCreatedFunc(ctx, adminID, adminUsername, branchName, branchLocation, ipAddress)
+	}
+	return nil
+}
+
+// LogBranchUpdated logs branch update operations (Story 6.4)
+func (m *MockAuditService) LogBranchUpdated(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, changes string, ipAddress string) error {
+	m.LogCount++
+	if m.LogBranchUpdatedFunc != nil {
+		return m.LogBranchUpdatedFunc(ctx, adminID, adminUsername, branchID, branchName, changes, ipAddress)
+	}
+	return nil
+}
+
+// LogBranchDeactivated logs branch deactivation operations (Story 6.4)
+func (m *MockAuditService) LogBranchDeactivated(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, reason string, ipAddress string) error {
+	m.LogCount++
+	if m.LogBranchDeactivatedFunc != nil {
+		return m.LogBranchDeactivatedFunc(ctx, adminID, adminUsername, branchID, branchName, reason, ipAddress)
+	}
+	return nil
+}
+
+// LogSystemStartup logs system startup operations (Story 6.4)
+func (m *MockAuditService) LogSystemStartup(ctx context.Context, systemID string, serverInfo string, ipAddress string) error {
+	m.LogCount++
+	if m.LogSystemStartupFunc != nil {
+		return m.LogSystemStartupFunc(ctx, systemID, serverInfo, ipAddress)
+	}
+	return nil
+}
+
+// LogSystemShutdown logs system shutdown operations (Story 6.4)
+func (m *MockAuditService) LogSystemShutdown(ctx context.Context, systemID string, reason string, ipAddress string) error {
+	m.LogCount++
+	if m.LogSystemShutdownFunc != nil {
+		return m.LogSystemShutdownFunc(ctx, systemID, reason, ipAddress)
+	}
+	return nil
+}
+
+// LogMaintenanceModeEnabled logs maintenance mode enable operations (Story 6.4)
+func (m *MockAuditService) LogMaintenanceModeEnabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error {
+	m.LogCount++
+	if m.LogMaintenanceModeEnabledFunc != nil {
+		return m.LogMaintenanceModeEnabledFunc(ctx, adminID, adminUsername, reason, ipAddress)
+	}
+	return nil
+}
+
+// LogMaintenanceModeDisabled logs maintenance mode disable operations (Story 6.4)
+func (m *MockAuditService) LogMaintenanceModeDisabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error {
+	m.LogCount++
+	if m.LogMaintenanceModeDisabledFunc != nil {
+		return m.LogMaintenanceModeDisabledFunc(ctx, adminID, adminUsername, reason, ipAddress)
+	}
+	return nil
+}
+
+// Shutdown gracefully shuts down the audit service (Story 6.4, CRIT-001)
+func (m *MockAuditService) Shutdown(ctx context.Context) error {
 	return nil
 }

@@ -29,7 +29,7 @@ func (m *mockAuditService) LogUserCreation(ctx context.Context, adminID uint, cr
 	return nil
 }
 
-func (m *mockAuditService) LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action AuditAction, ipAddress string) error {
+func (m *mockAuditService) LogWhitelistChange(ctx context.Context, adminID uint, adminUsername string, domain string, action models.AuditAction, ipAddress string) error {
 	return nil
 }
 
@@ -54,6 +54,63 @@ func (m *mockAuditService) LogBlockedSaleAttempt(ctx context.Context, userID uin
 }
 
 func (m *mockAuditService) LogReportExport(ctx context.Context, userID uint, username string, reportType string, format string, dateRange string, outcome string, ipAddress string) error {
+	return nil
+}
+
+// Story 6.4: Backup audit methods
+func (m *mockAuditService) LogSettingsUpdate(ctx context.Context, adminID uint, adminUsername string, changesJSON string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBackupCreated(ctx context.Context, adminID uint, adminUsername string, backupFile string, size int64, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBackupRestored(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBackupDeleted(ctx context.Context, adminID uint, adminUsername string, backupFile string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogRoleUpdated(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, oldRole string, newRole string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogPermissionGranted(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogPermissionRevoked(ctx context.Context, adminID uint, adminUsername string, targetUserID uint, targetUsername string, permission string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBranchCreated(ctx context.Context, adminID uint, adminUsername string, branchName string, branchLocation string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBranchUpdated(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, changes string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogBranchDeactivated(ctx context.Context, adminID uint, adminUsername string, branchID uint, branchName string, reason string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogSystemStartup(ctx context.Context, systemID string, serverInfo string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogSystemShutdown(ctx context.Context, systemID string, reason string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogMaintenanceModeEnabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogMaintenanceModeDisabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error {
 	return nil
 }
 

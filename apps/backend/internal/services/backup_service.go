@@ -14,11 +14,13 @@ type BackupService interface {
 	// Story 6.3, AC1: System automatically creates full PostgreSQL database backup
 	// Story 6.3, AC2: Backup files stored with timestamp in configured location
 	// Story 6.3, AC7: Backup operations maintain database consistency
-	CreateBackup(ctx context.Context, description string) (*dto.BackupInfo, error)
+	// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+	CreateBackup(ctx context.Context, description string, adminID uint, adminUsername string, ipAddress string) (*dto.BackupInfo, error)
 
 	// RestoreBackup restores database from a backup file
 	// Story 6.3, AC6: System supports restoration from any backup in 30-day window
-	RestoreBackup(ctx context.Context, filename string, reason string) error
+	// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+	RestoreBackup(ctx context.Context, filename string, reason string, adminID uint, adminUsername string, ipAddress string) error
 
 	// ListBackups returns all available backups with metadata
 	// Story 6.3, AC3: Backups retained for 30 days with automatic cleanup
@@ -30,7 +32,8 @@ type BackupService interface {
 
 	// DeleteBackup removes a specific backup file
 	// Story 6.3, Task 4: Manual deletion of specific backup file
-	DeleteBackup(ctx context.Context, filename string) error
+	// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+	DeleteBackup(ctx context.Context, filename string, adminID uint, adminUsername string, ipAddress string) error
 
 	// GetBackupFile returns a reader for the backup file
 	// Story 6.3, AC5: Support for downloading backup files

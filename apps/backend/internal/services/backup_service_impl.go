@@ -35,6 +35,7 @@ type BackupServiceImpl struct {
 	jobStatus       *dto.BackupJobStatus
 	jobStatusLock   sync.RWMutex
 	db              any // Database connection for consistency checks (optional, can be nil)
+	auditService    AuditService // Story 6.4: Audit logging for backup operations
 }
 
 // DatabaseConfig represents database connection configuration for backups
@@ -61,7 +62,7 @@ type BackupMetadataFile struct {
 
 // NewBackupService creates a new backup service instance
 // Story 6.3, Task 1: Service initialization with configuration
-func NewBackupService(cfg *config.Config) *BackupServiceImpl {
+func NewBackupService(cfg *config.Config, auditService AuditService) *BackupServiceImpl {
 	return &BackupServiceImpl{
 		cfg: cfg,
 		dbConfig: DatabaseConfig{
@@ -76,6 +77,7 @@ func NewBackupService(cfg *config.Config) *BackupServiceImpl {
 			LastStatus:  dto.BackupStatusPending,
 			SuccessRate: 100.0,
 		},
+		auditService: auditService, // Story 6.4: Initialize audit service
 	}
 }
 
@@ -83,7 +85,8 @@ func NewBackupService(cfg *config.Config) *BackupServiceImpl {
 // Story 6.3, AC1: System automatically creates full PostgreSQL database backup
 // Story 6.3, AC2: Backup files stored with timestamp in configured location
 // Story 6.3, AC7: Backup operations maintain database consistency
-func (s *BackupServiceImpl) CreateBackup(ctx context.Context, description string) (*dto.BackupInfo, error) {
+// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+func (s *BackupServiceImpl) CreateBackup(ctx context.Context, description string, adminID uint, adminUsername string, ipAddress string) (*dto.BackupInfo, error) {
 	startTime := time.Now()
 	slog.Info("Creating backup", "description", description)
 
@@ -192,12 +195,22 @@ func (s *BackupServiceImpl) CreateBackup(ctx context.Context, description string
 	}
 
 	slog.Info("Backup created successfully", "filename", filename, "size", fileInfo.Size(), "duration", duration)
+
+	// Story 6.4: Log backup creation to audit trail
+	if s.auditService != nil {
+		if err := s.auditService.LogBackupCreated(ctx, adminID, adminUsername, filename, fileInfo.Size(), ipAddress); err != nil {
+			// Log but don't fail the operation
+			slog.Warn("Failed to log backup creation to audit trail", "error", err)
+		}
+	}
+
 	return backupInfo, nil
 }
 
 // RestoreBackup restores database from a backup file using pg_restore
 // Story 6.3, AC6: System supports restoration from any backup in 30-day window
-func (s *BackupServiceImpl) RestoreBackup(ctx context.Context, filename string, reason string) error {
+// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+func (s *BackupServiceImpl) RestoreBackup(ctx context.Context, filename string, reason string, adminID uint, adminUsername string, ipAddress string) error {
 	slog.Info("Starting restore", "filename", filename, "reason", reason)
 
 	// AC6: Validate backup before restore
@@ -235,6 +248,15 @@ func (s *BackupServiceImpl) RestoreBackup(ctx context.Context, filename string, 
 	}
 
 	slog.Info("Restore completed successfully", "filename", filename)
+
+	// Story 6.4: Log backup restoration to audit trail
+	if s.auditService != nil {
+		if err := s.auditService.LogBackupRestored(ctx, adminID, adminUsername, filename, ipAddress); err != nil {
+			// Log but don't fail the operation
+			slog.Warn("Failed to log backup restoration to audit trail", "error", err)
+		}
+	}
+
 	return nil
 }
 
@@ -367,7 +389,8 @@ func (s *BackupServiceImpl) DeleteOldBackups(ctx context.Context, retentionDays 
 
 // DeleteBackup removes a specific backup file
 // Story 6.3, Task 4: Manual deletion of specific backup file
-func (s *BackupServiceImpl) DeleteBackup(ctx context.Context, filename string) error {
+// Story 6.4: Added adminID, adminUsername, ipAddress for audit logging
+func (s *BackupServiceImpl) DeleteBackup(ctx context.Context, filename string, adminID uint, adminUsername string, ipAddress string) error {
 	slog.Info("Deleting backup file", "filename", filename)
 
 	// Validate filename
@@ -394,6 +417,15 @@ func (s *BackupServiceImpl) DeleteBackup(ctx context.Context, filename string) e
 	}
 
 	slog.Info("Backup file deleted successfully", "filename", filename)
+
+	// Story 6.4: Log backup deletion to audit trail
+	if s.auditService != nil {
+		if err := s.auditService.LogBackupDeleted(ctx, adminID, adminUsername, filename, ipAddress); err != nil {
+			// Log but don't fail the operation
+			slog.Warn("Failed to log backup deletion to audit trail", "error", err)
+		}
+	}
+
 	return nil
 }
 
@@ -523,7 +555,8 @@ func (s *BackupServiceImpl) StartScheduler(ctx context.Context) error {
 	// Add scheduled backup job
 	_, err := s.scheduler.AddFunc(schedule, func() {
 		slog.Info("Scheduled backup triggered")
-		if _, err := s.CreateBackup(s.schedulerCtx, "Scheduled backup"); err != nil {
+		// Story 6.4: Use system user (ID=0) for scheduled backups
+		if _, err := s.CreateBackup(s.schedulerCtx, "Scheduled backup", 0, "system", "localhost"); err != nil {
 			slog.Error("Scheduled backup failed", "error", err)
 			s.jobStatusLock.Lock()
 			s.calculateSuccessRate(false)
