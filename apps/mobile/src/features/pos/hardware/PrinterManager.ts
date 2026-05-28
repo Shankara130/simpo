@@ -12,8 +12,12 @@ import {
   PrinterErrorType,
   IPrinterManager,
   PrinterManagerConfig,
+  CashDrawerOptions,
+  DrawerStatus,
 } from './printer';
 import { ThermalPrinterModule } from '@finan-me/react-native-thermal-printer';
+import { ESCPOSGenerator } from '../services/ESCPOSGenerator';
+import { getAuditLogService } from '../services/AuditLogService';
 
 /**
  * Printer Manager Class
@@ -27,6 +31,11 @@ class PrinterManagerClass implements IPrinterManager {
   private statusChangeHandler?: (status: PrinterStatus) => void;
   private config: PrinterManagerConfig;
   private isReconnecting: boolean = false; // Guard against concurrent reconnect attempts
+
+  // Cash Drawer Support (Story 7.4)
+  private drawerStatus: DrawerStatus = 'disconnected';
+  private drawerResultHandler?: (success: boolean, error?: string) => void;
+  private drawerOperationInProgress: boolean = false; // Guard against concurrent drawer opens
 
   private constructor(config: PrinterManagerConfig = {}) {
     this.config = {
@@ -163,6 +172,12 @@ class PrinterManagerClass implements IPrinterManager {
         if (this.currentPrinter?.id === disconnectingPrinterId) {
           this.currentPrinter = null;
           this.updateStatus(PrinterStatus.DISCONNECTED);
+
+          // Clean up drawer state on disconnect
+          this.drawerStatus = 'disconnected';
+          this.drawerResultHandler = undefined;
+          this.drawerOperationInProgress = false;
+
           return true;
         } else {
           // Printer changed during disconnect - handle unexpected state
@@ -233,6 +248,180 @@ class PrinterManagerClass implements IPrinterManager {
       });
       return false;
     }
+  }
+
+  // ============================================================================
+  // Cash Drawer Support (Story 7.4)
+  // ============================================================================
+
+  /**
+   * Open cash drawer via ESC/POS kick command
+   * @param options - Drawer configuration options
+   * @param onResult - Callback for success/failure (for audit logging)
+   */
+  public async openCashDrawer(
+    options: CashDrawerOptions,
+    onResult?: (success: boolean, error?: string) => void
+  ): Promise<boolean> {
+    // Guard against concurrent drawer opens
+    if (this.drawerOperationInProgress) {
+      const errorMsg = 'Drawer operation already in progress';
+      onResult?.(false, errorMsg);
+      this.drawerResultHandler?.(false, errorMsg);
+      return false;
+    }
+
+    this.drawerOperationInProgress = true;
+
+    try {
+      // Check if drawer is enabled
+      if (!options.enabled) {
+        this.drawerStatus = 'disconnected';
+        const errorMsg = 'Drawer disabled in configuration';
+        onResult?.(false, errorMsg);
+        this.drawerResultHandler?.(false, errorMsg);
+        return false;
+      }
+
+      // Verify printer is connected (explicit state validation)
+      if (!this.currentPrinter || this.currentStatus !== PrinterStatus.CONNECTED) {
+        this.drawerStatus = 'disconnected'; // Use 'disconnected' instead of 'failed' for clarity
+        const errorMsg = 'Printer not connected';
+        onResult?.(false, errorMsg);
+        this.drawerResultHandler?.(false, errorMsg);
+        this.handleError({
+          type: PrinterErrorType.NOT_CONNECTED,
+          message: 'Cannot open drawer: printer not connected',
+        });
+        return false;
+      }
+
+      this.drawerStatus = 'opening';
+
+      // Generate ESC/POS cash drawer kick command
+      const escposGenerator = new ESCPOSGenerator();
+      const drawerCommand = escposGenerator.generateCashDrawerKick({
+        pulseTiming: options.pulseTiming,
+        pinNumber: options.pinNumber,
+      });
+
+      // Send command to printer via USB with timeout (default 10 seconds)
+      const printTimeout = options.drawerOpenTimeoutMs || 10000;
+      const result = await Promise.race([
+        ThermalPrinterModule.print(drawerCommand),
+        new Promise<boolean>((_, reject) =>
+          setTimeout(() => reject(new Error('Printer operation timed out')), printTimeout)
+        ),
+      ]) as boolean;
+
+      if (!result) {
+        // Check if printer disconnected during operation
+        if (this.currentStatus !== PrinterStatus.CONNECTED) {
+          this.drawerStatus = 'disconnected';
+          const errorMsg = 'Printer disconnected during operation';
+          onResult?.(false, errorMsg);
+          this.drawerResultHandler?.(false, errorMsg);
+          this.handleError({
+            type: PrinterErrorType.NOT_CONNECTED,
+            message: errorMsg,
+          });
+          return false;
+        }
+
+        this.drawerStatus = 'failed';
+        const errorMsg = 'Failed to send drawer command to printer';
+        this.handleDrawerError(false, errorMsg, onResult);
+        this.handleError({
+          type: PrinterErrorType.SEND_FAILED,
+          message: errorMsg,
+        });
+        return false;
+      }
+
+      // Wait for drawer to open (mechanical delay - configurable via options)
+      const mechanicalDelay = options.mechanicalDelayMs || 200;
+      await this.delay(mechanicalDelay);
+
+      // Reset drawer status to connected after success
+      this.drawerStatus = 'connected';
+      this.handleDrawerError(true, undefined, onResult);
+      return true;
+    } catch (error) {
+      // Check if error is timeout or printer disconnected
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (errorMessage.includes('timed out') || this.currentStatus !== PrinterStatus.CONNECTED) {
+        this.drawerStatus = 'disconnected'; // Use 'disconnected' for timeout/disconnect
+      } else {
+        this.drawerStatus = 'failed';
+      }
+
+      this.handleDrawerError(false, errorMessage, onResult);
+      this.handleError({
+        type: PrinterErrorType.SEND_FAILED,
+        message: `Cash drawer open failed: ${errorMessage}`,
+        originalError: error,
+      });
+      return false;
+    } finally {
+      this.drawerOperationInProgress = false;
+    }
+  }
+
+  /**
+   * Handle drawer operation errors with centralized callback logic
+   */
+  private handleDrawerError(
+    success: boolean,
+    error?: string,
+    additionalCallback?: (success: boolean, error?: string) => void
+  ): void {
+    // Use single callback mechanism - prefer drawerResultHandler if set
+    if (this.drawerResultHandler) {
+      this.drawerResultHandler(success, error);
+    }
+    // Fall back to additional callback if drawerResultHandler not set
+    else if (additionalCallback) {
+      additionalCallback(success, error);
+    }
+  }
+
+  /**
+   * Check if cash drawer is connected
+   * (Inferred from printer connection since drawer connects via printer)
+   */
+  public get isDrawerConnected(): boolean {
+    return this.currentStatus === PrinterStatus.CONNECTED;
+  }
+
+  /**
+   * Get current drawer status
+   */
+  public getDrawerStatus(): DrawerStatus {
+    return this.drawerStatus;
+  }
+
+  /**
+   * Set drawer result handler callback
+   * @param handler - Callback function for drawer operation results
+   */
+  public onDrawerResult(handler: (success: boolean, error?: string) => void): void {
+    this.drawerResultHandler = handler;
+  }
+
+  /**
+   * Clear drawer result handler callback
+   */
+  public clearDrawerResultHandler(): void {
+    this.drawerResultHandler = undefined;
+  }
+
+  /**
+   * Delay helper function
+   * @param ms - Milliseconds to delay
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

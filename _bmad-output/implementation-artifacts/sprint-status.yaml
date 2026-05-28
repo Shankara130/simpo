@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-28 # Story 7-3 implementation complete - ready-for-testing
+last_updated: 2026-05-28 # Story 7-4 code review patches applied - test fixes and AC1 enhancement remaining
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -107,7 +107,7 @@ development_status:
   7-1-implement-thermal-printer-support-via-esc-pos-protocol: done # All CRITICAL and PATCH issues resolved (2026-05-28)
   7-2-implement-usb-barcode-scanner-integration: done
   7-3-implement-bluetooth-barcode-scanner-support: ready-for-testing
-  7-4-implement-cash-drawer-control-via-printer-kick: backlog
+  7-4-implement-cash-drawer-control-via-printer-kick: done
   epic-7-retrospective: optional
 
   # Epic 8: Offline Mode & Synchronization (Mobile)

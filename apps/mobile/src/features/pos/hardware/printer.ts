@@ -160,6 +160,42 @@ export interface IPrinterManager {
    * @param handler Status change handler function
    */
   onStatusChange(handler: (status: PrinterStatus) => void): void;
+
+  // Cash Drawer Methods (Story 7.4)
+
+  /**
+   * Open cash drawer via ESC/POS kick command
+   * @param options - Cash drawer options (pulse timing, pin number, enabled)
+   * @param onResult - Callback for success/failure result
+   * @returns Promise resolving to true if drawer opened successfully
+   */
+  openCashDrawer(
+    options: CashDrawerOptions,
+    onResult?: (success: boolean, error?: string) => void
+  ): Promise<boolean>;
+
+  /**
+   * Check if cash drawer is connected (inferred from printer connection)
+   * @returns true if drawer is connected via printer
+   */
+  readonly isDrawerConnected: boolean;
+
+  /**
+   * Get current drawer status
+   * @returns Current drawer status
+   */
+  getDrawerStatus(): DrawerStatus;
+
+  /**
+   * Set drawer result handler callback
+   * @param handler - Callback function for drawer operation results
+   */
+  onDrawerResult(handler: (success: boolean, error?: string) => void): void;
+
+  /**
+   * Clear drawer result handler callback
+   */
+  clearDrawerResultHandler(): void;
 }
 
 /**
@@ -184,3 +220,61 @@ export interface INetworkPrinterConnection extends IPrinterConnection {
   getIpAddress(): string;
   getPort(): number;
 }
+
+// ============================================================================
+// Cash Drawer Support (Story 7.4)
+// ============================================================================
+
+/**
+ * Cash Drawer Options Interface
+ * Configuration options for cash drawer control
+ */
+export interface CashDrawerOptions {
+  /** Pulse duration in milliseconds (typically 50-200ms) */
+  pulseTiming: number;
+  /** Drawer pin number (0 = pin 2, 1 = pin 5) */
+  pinNumber: 0 | 1;
+  /** Enable/disable automatic drawer opening */
+  enabled: boolean;
+  /** Timeout for drawer open operation in milliseconds (default: 10000) */
+  drawerOpenTimeoutMs?: number;
+  /** Mechanical delay for drawer opening in milliseconds (default: 200) */
+  mechanicalDelayMs?: number;
+}
+
+/**
+ * Cash Drawer Status Type
+ * Represents the current state of the cash drawer connection
+ */
+export type DrawerStatus = 'disconnected' | 'connected' | 'opening' | 'failed';
+
+/**
+ * Cash Drawer Pin Number Enum
+ * RJ-12 connector has two drawer pins: Pin 2 (drawer 1) and Pin 5 (drawer 2)
+ */
+export enum DrawerPin {
+  PIN_2 = 0, // Drawer 1 trigger (most commonly used)
+  PIN_5 = 1, // Drawer 2 trigger (for dual drawer systems)
+}
+
+/**
+ * Cash Drawer Configuration Interface
+ * Persisted configuration for cash drawer behavior
+ */
+export interface CashDrawerConfig {
+  /** Enable automatic drawer opening for cash payments */
+  autoOpen: boolean;
+  /** Pulse duration in milliseconds (50-500ms) */
+  pulseMs: number;
+  /** Drawer pin selection (Pin 2 or Pin 5) */
+  pinNumber: 0 | 1;
+}
+
+/**
+ * Default cash drawer configuration
+ */
+export const DEFAULT_CASH_DRAWER_CONFIG: CashDrawerConfig = {
+  autoOpen: true,
+  pulseMs: 100, // 100ms default pulse
+  pinNumber: DrawerPin.PIN_2, // Pin 2 is most common
+};

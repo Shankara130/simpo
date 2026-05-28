@@ -374,6 +374,54 @@ export class ESCPOSGenerator {
   public getPaperWidth(): PaperWidth {
     return this.paperWidth;
   }
+
+  // ============================================================================
+  // Cash Drawer Support (Story 7.4)
+  // ============================================================================
+
+  /**
+   * Generate ESC/POS cash drawer kick command
+   * Format: ESC p 0 m t1 t2
+   * ESC = 0x1B, p = 0x70, 0 = drawer number, m = 0x00 (pulse), t1 = on time, t2 = off time
+   * @param options - Cash drawer options including pulse timing and pin number
+   * @returns Uint8Array containing the cash drawer kick command
+   */
+  public generateCashDrawerKick(options: {
+    pulseTiming: number;
+    pinNumber: 0 | 1;
+  }): Uint8Array {
+    const { pulseTiming, pinNumber } = options;
+
+    // Validate pulse timing range (0-500ms supported by UI, max 255 units = 510ms)
+    if (pulseTiming < 0 || pulseTiming > 500) {
+      throw new Error(`Pulse timing must be between 0 and 500ms, got ${pulseTiming}ms`);
+    }
+
+    // Convert pulse timing from milliseconds to ESC/POS units (2ms per unit)
+    const pulseUnits = Math.floor(pulseTiming / 2);
+
+    // Validate pulse units fit in ESC/POS single byte (max 255)
+    if (pulseUnits > 255) {
+      throw new Error(`Pulse timing ${pulseTiming}ms exceeds maximum supported (510ms)`);
+    }
+
+    // Validate pin number is 0 or 1
+    if (pinNumber !== 0 && pinNumber !== 1) {
+      throw new Error(`Pin number must be 0 (pin 2) or 1 (pin 5), got ${pinNumber}`);
+    }
+
+    // ESC p command: 0x1B 0x70 [drawer] [mode] [t1] [t2]
+    // drawer: 0x00 = pin 2, 0x01 = pin 5
+    // mode: 0x00 = pulse mode, 0x01 = steady mode
+    return new Uint8Array([
+      ESCPOSGenerator.ESC, // 0x1B
+      0x70,                 // p
+      pinNumber,            // Drawer pin (0 = pin 2, 1 = pin 5)
+      0x00,                 // Pulse mode
+      pulseUnits,           // Pulse on time (t1)
+      pulseUnits,           // Pulse off time (t2)
+    ]);
+  }
 }
 
 // Export for convenience

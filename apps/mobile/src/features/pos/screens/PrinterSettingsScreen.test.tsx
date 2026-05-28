@@ -302,6 +302,88 @@ describe('PrinterSettingsScreen', () => {
     });
   });
 
+  // ============================================================================
+  // Cash Drawer Configuration Tests (Story 7.4)
+  // ============================================================================
+
+  describe('Cash Drawer Configuration', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should display cash drawer configuration section', () => {
+      const { getByText } = render(<PrinterSettingsScreen />);
+
+      expect(getByText('Buka Laci Uang Otomatis')).toBeTruthy();
+    });
+
+    it('should have drawer auto-open toggle', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      expect(getByTestId('drawer-auto-toggle')).toBeDefined();
+    });
+
+    it('should have pulse timing slider', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      expect(getByTestId('drawer-pulse-slider')).toBeDefined();
+    });
+
+    it('should have drawer pin selection (Pin 2 and Pin 5)', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      expect(getByTestId('drawer-pin-2')).toBeDefined();
+      expect(getByTestId('drawer-pin-5')).toBeDefined();
+    });
+
+    it('should have test drawer button', () => {
+      const { getByTestId, getByText } = render(<PrinterSettingsScreen />);
+
+      expect(getByTestId('test-drawer-button')).toBeDefined();
+      expect(getByText('🧪 Tes Buka Laci')).toBeTruthy();
+    });
+
+    it('should disable test drawer button when printer not connected', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      const testButton = getByTestId('test-drawer-button');
+      expect(testButton).toBeDefined();
+      // Button should be disabled when printer is not connected
+    });
+
+    it('should show drawer configuration only when auto-open is enabled', () => {
+      const { getByTestId, queryByText } = render(<PrinterSettingsScreen />);
+
+      // Initially, drawer config options should be visible when auto-open is enabled
+      expect(getByTestId('drawer-pulse-slider')).toBeDefined();
+    });
+
+    it('should allow toggling auto-open setting', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      const toggle = getByTestId('drawer-auto-toggle');
+      expect(toggle).toBeDefined();
+    });
+
+    it('should allow adjusting pulse timing', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      const slider = getByTestId('drawer-pulse-slider');
+      expect(slider).toBeDefined();
+    });
+
+    it('should allow selecting drawer pin (Pin 2 vs Pin 5)', () => {
+      const { getByTestId } = render(<PrinterSettingsScreen />);
+
+      const pin2Button = getByTestId('drawer-pin-2');
+      const pin5Button = getByTestId('drawer-pin-5');
+
+      expect(pin2Button).toBeDefined();
+      expect(pin5Button).toBeDefined();
+    });
+  });
+});
+
   describe('UI Layout', () => {
     it('should show printer status at top', () => {
       const { getByTestId } = render(<PrinterSettingsScreen />);

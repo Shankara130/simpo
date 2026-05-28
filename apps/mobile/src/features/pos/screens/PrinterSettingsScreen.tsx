@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  Switch,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
@@ -22,8 +23,11 @@ import {
   PrinterDevice,
   PrinterConnectionType,
   PrinterStatus,
+  CashDrawerConfig,
+  DrawerPin,
 } from '../hardware/printer';
 import { PrinterStatusComponent } from '../components/PrinterStatus';
+import { PrinterConfigService, loadDrawerConfig, saveDrawerConfig } from '../services/PrinterConfigService';
 
 /**
  * Printer Settings Props
@@ -53,6 +57,14 @@ export const PrinterSettingsScreen: React.FC<PrinterSettingsProps> = ({
   const [printerDarkness, setPrinterDarkness] = useState(0.5);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
 
+  // Story 7.4: Cash drawer configuration state
+  const [drawerConfig, setDrawerConfig] = useState<CashDrawerConfig>({
+    autoOpen: true,
+    pulseMs: 100,
+    pinNumber: DrawerPin.PIN_2,
+  });
+  const [isTestingDrawer, setIsTestingDrawer] = useState(false);
+
   /**
    * Scan for available printers
    */
@@ -74,6 +86,39 @@ export const PrinterSettingsScreen: React.FC<PrinterSettingsProps> = ({
       setIsScanning(false);
     }
   }, [printerManager]);
+
+  /**
+   * Story 7.4: Test cash drawer
+   */
+  const handleTestDrawer = useCallback(async () => {
+    if (printerStatus !== PrinterStatus.CONNECTED) {
+      Alert.alert('Error', 'Printer tidak terhubung. Hubungkan printer terlebih dahulu.');
+      return;
+    }
+
+    setIsTestingDrawer(true);
+    setErrorMessage('');
+
+    try {
+      const success = await printerManager.openCashDrawer({
+        enabled: true,
+        pulseTiming: drawerConfig.pulseMs,
+        pinNumber: drawerConfig.pinNumber,
+      });
+
+      if (success) {
+        Alert.alert('Sukses', 'Laci uang berhasil dibuka!');
+      } else {
+        setErrorMessage('Gagal membuka laci uang');
+        Alert.alert('Gagal', 'Gagal membuka laci uang. Periksa koneksi laci dan printer.');
+      }
+    } catch (error) {
+      setErrorMessage('Gagal membuka laci uang');
+      Alert.alert('Error', 'Gagal membuka laci uang. Silakan coba lagi.');
+    } finally {
+      setIsTestingDrawer(false);
+    }
+  }, [printerStatus, printerManager, drawerConfig]);
 
   /**
    * Connect to printer
@@ -207,6 +252,9 @@ export const PrinterSettingsScreen: React.FC<PrinterSettingsProps> = ({
     // Get initial status
     setPrinterStatus(printerManager.getStatus());
     setCurrentPrinter(printerManager.getCurrentPrinter());
+
+    // Story 7.4: Load drawer configuration
+    loadDrawerConfig().then(setDrawerConfig).catch(console.error);
 
     return () => {
       // Cleanup: Remove status handler to prevent memory leaks
@@ -374,6 +422,119 @@ export const PrinterSettingsScreen: React.FC<PrinterSettingsProps> = ({
               />
             </View>
           </View>
+
+          {/* Story 7.4: Cash Drawer Configuration */}
+          <View style={styles.configItem}>
+            <Text style={styles.configLabel}>Buka Laci Uang Otomatis</Text>
+            <Switch
+              value={drawerConfig.autoOpen}
+              onValueChange={(value) => {
+                const updatedConfig = { ...drawerConfig, autoOpen: value };
+                setDrawerConfig(updatedConfig);
+                saveDrawerConfig(updatedConfig);
+              }}
+              testID="drawer-auto-toggle"
+            />
+          </View>
+
+          {drawerConfig.autoOpen && (
+            <>
+              <View style={styles.configItem}>
+                <Text style={styles.configLabel}>Durasi Pulse (ms)</Text>
+                <View style={styles.darknessContainer}>
+                  <Text style={styles.darknessValue}>{drawerConfig.pulseMs}ms</Text>
+                  <Slider
+                    style={styles.darknessSlider}
+                    minimumValue={50}
+                    maximumValue={500}
+                    step={10}
+                    value={drawerConfig.pulseMs}
+                    onValueChange={(value) => {
+                      // Update local state immediately for responsive UI
+                      const updatedConfig = { ...drawerConfig, pulseMs: Math.round(value) };
+                      setDrawerConfig(updatedConfig);
+                    }}
+                    onSlidingComplete={(value) => {
+                      // Save to persistent storage only when sliding completes
+                      // Prevents AsyncStorage write conflicts during rapid slider movement
+                      const updatedConfig = { ...drawerConfig, pulseMs: Math.round(value) };
+                      saveDrawerConfig(updatedConfig);
+                    }}
+                    testID="drawer-pulse-slider"
+                  />
+                </View>
+                {/* Hardware compatibility warning for extreme values */}
+                {(drawerConfig.pulseMs <= 75 || drawerConfig.pulseMs >= 450) && (
+                  <Text style={styles.warningText}>
+                    ⚠️ Nilai ekstrem - beberapa drawer mungkin tidak merespon dengan baik
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.configItem}>
+                <Text style={styles.configLabel}>Pin Laci</Text>
+                <View style={styles.paperWidthSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.paperWidthOption,
+                      drawerConfig.pinNumber === DrawerPin.PIN_2 && styles.selectedOption,
+                    ]}
+                    onPress={() => {
+                      const updatedConfig = { ...drawerConfig, pinNumber: DrawerPin.PIN_2 };
+                      setDrawerConfig(updatedConfig);
+                      saveDrawerConfig(updatedConfig);
+                    }}
+                    testID="drawer-pin-2"
+                  >
+                    <Text
+                      style={[
+                        styles.paperWidthText,
+                        drawerConfig.pinNumber === DrawerPin.PIN_2 && styles.selectedText,
+                      ]}
+                    >
+                      Pin 2
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.paperWidthOption,
+                      drawerConfig.pinNumber === DrawerPin.PIN_5 && styles.selectedOption,
+                    ]}
+                    onPress={() => {
+                      const updatedConfig = { ...drawerConfig, pinNumber: DrawerPin.PIN_5 };
+                      setDrawerConfig(updatedConfig);
+                      saveDrawerConfig(updatedConfig);
+                    }}
+                    testID="drawer-pin-5"
+                  >
+                    <Text
+                      style={[
+                        styles.paperWidthText,
+                        drawerConfig.pinNumber === DrawerPin.PIN_5 && styles.selectedText,
+                      ]}
+                    >
+                      Pin 5
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.configItem}>
+                <TouchableOpacity
+                  style={styles.testDrawerButton}
+                  onPress={handleTestDrawer}
+                  disabled={isTestingDrawer || printerStatus !== PrinterStatus.CONNECTED}
+                  testID="test-drawer-button"
+                >
+                  {isTestingDrawer ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.testDrawerButtonText}>🧪 Tes Buka Laci</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Profile Management Section */}
@@ -589,6 +750,12 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
+  warningText: {
+    fontSize: 12,
+    color: '#F59E0B', // Orange/amber color for warnings
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   darknessSlider: {
     width: '100%',
   },
@@ -615,6 +782,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   testPrintButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testDrawerButton: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  testDrawerButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

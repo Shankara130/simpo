@@ -317,4 +317,138 @@ describe('ESCPOSGenerator', () => {
       expect(command).toContain(0x61);
     });
   });
+
+  // ============================================================================
+  // Cash Drawer Support Tests (Story 7.4)
+  // ============================================================================
+
+  describe('Cash Drawer Kick Command', () => {
+    it('should generate cash drawer kick command for Pin 2', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0, // Pin 2
+      });
+
+      expect(command).toBeInstanceOf(Uint8Array);
+      expect(command.length).toBe(6); // ESC p + 4 parameters
+    });
+
+    it('should generate cash drawer kick command for Pin 5', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 1, // Pin 5
+      });
+
+      expect(command).toBeInstanceOf(Uint8Array);
+      expect(command.length).toBe(6);
+    });
+
+    it('should have correct ESC p command structure', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0,
+      });
+
+      // ESC = 0x1B, p = 0x70
+      expect(command[0]).toBe(0x1B); // ESC
+      expect(command[1]).toBe(0x70); // p
+      expect(command[2]).toBe(0x00); // Pin 2
+      expect(command[3]).toBe(0x00); // Pulse mode
+    });
+
+    it('should calculate pulse units correctly', () => {
+      // 100ms pulse = 50 units (100 / 2)
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0,
+      });
+
+      const pulseUnits = Math.floor(100 / 2); // 50
+      expect(command[4]).toBe(pulseUnits); // Pulse on time
+      expect(command[5]).toBe(pulseUnits); // Pulse off time
+    });
+
+    it('should support different pulse timings', () => {
+      // Test 50ms pulse = 25 units
+      const command50 = generator.generateCashDrawerKick({
+        pulseTiming: 50,
+        pinNumber: 0,
+      });
+      expect(command50[4]).toBe(25);
+      expect(command50[5]).toBe(25);
+
+      // Test 200ms pulse = 100 units
+      const command200 = generator.generateCashDrawerKick({
+        pulseTiming: 200,
+        pinNumber: 0,
+      });
+      expect(command200[4]).toBe(100);
+      expect(command200[5]).toBe(100);
+    });
+
+    it('should set correct pin number for Pin 2', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0, // Pin 2
+      });
+
+      expect(command[2]).toBe(0x00); // Drawer 1 (Pin 2)
+    });
+
+    it('should set correct pin number for Pin 5', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 1, // Pin 5
+      });
+
+      expect(command[2]).toBe(0x01); // Drawer 2 (Pin 5)
+    });
+
+    it('should always use pulse mode (mode 0x00)', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0,
+      });
+
+      expect(command[3]).toBe(0x00); // Pulse mode
+    });
+
+    it('should handle boundary pulse timing values', () => {
+      // Minimum: 50ms
+      const minCommand = generator.generateCashDrawerKick({
+        pulseTiming: 50,
+        pinNumber: 0,
+      });
+      expect(minCommand[4]).toBe(25); // 50 / 2 = 25
+
+      // Maximum: 500ms
+      const maxCommand = generator.generateCashDrawerKick({
+        pulseTiming: 500,
+        pinNumber: 0,
+      });
+      expect(maxCommand[4]).toBe(250); // 500 / 2 = 250
+    });
+
+    it('should handle odd pulse timing values', () => {
+      // 101ms should round down to 50 units
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 101,
+        pinNumber: 0,
+      });
+
+      const expectedUnits = Math.floor(101 / 2); // 50
+      expect(command[4]).toBe(expectedUnits);
+      expect(command[5]).toBe(expectedUnits);
+    });
+
+    it('should generate complete command bytes in correct order', () => {
+      const command = generator.generateCashDrawerKick({
+        pulseTiming: 100,
+        pinNumber: 0,
+      });
+
+      // Expected: ESC (0x1B), p (0x70), pin (0x00), mode (0x00), t1 (50), t2 (50)
+      expect(command).toEqual(new Uint8Array([0x1B, 0x70, 0x00, 0x00, 50, 50]));
+    });
+  });
 });

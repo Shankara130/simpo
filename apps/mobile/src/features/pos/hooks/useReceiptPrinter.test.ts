@@ -13,6 +13,38 @@ import { ReceiptData } from '../types/receipt.types';
 // Mock ReceiptPrinterService
 jest.mock('../services/ReceiptPrinterService');
 
+// Mock PrinterConfigService for cash drawer configuration
+jest.mock('../services/PrinterConfigService', () => ({
+  loadDrawerConfig: jest.fn().mockResolvedValue({
+    autoOpen: true,
+    pulseMs: 100,
+    pinNumber: 0,
+  }),
+  saveDrawerConfig: jest.fn(),
+  resetDrawerConfig: jest.fn(),
+}));
+
+// Mock thermal printer module
+jest.mock('@finan-me/react-native-thermal-printer', () => {
+  const ThermalPrinterModule = {
+    getUsbDevices: jest.fn(() => Promise.resolve([
+      { id: 'usb-1', name: 'Xprinter XP-58IIH', connectionType: 'USB' },
+    ])),
+    connectToUsbDevice: jest.fn(() => Promise.resolve(true)),
+    getBluetoothDevices: jest.fn(() => Promise.resolve([])),
+    connectToBluetoothDevice: jest.fn(() => Promise.resolve(true)),
+    getNetPrinters: jest.fn(() => Promise.resolve([])),
+    connectToNetPrinter: jest.fn(() => Promise.resolve(true)),
+    disconnect: jest.fn(() => Promise.resolve(true)),
+    print: jest.fn(() => Promise.resolve(true)),
+  };
+  return {
+    __esModule: true,
+    default: { ThermalPrinterModule },
+    ThermalPrinterModule,
+  };
+});
+
 describe('useReceiptPrinter Hook', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -424,6 +456,143 @@ describe('useReceiptPrinter Hook', () => {
       });
 
       expect(result.current.error).toContain('Tidak ada struk');
+    });
+  });
+
+  // ============================================================================
+  // Cash Drawer Integration Tests (Story 7.4)
+  // ============================================================================
+
+  describe('Cash Drawer Integration', () => {
+    const cashPaymentReceipt: ReceiptData = {
+      ...mockReceiptData,
+      payment: {
+        method: PaymentMethod.CASH,
+        cashDetails: {
+          change: '5000.00',
+        },
+      },
+    };
+
+    const transferPaymentReceipt: ReceiptData = {
+      ...mockReceiptData,
+      payment: {
+        method: PaymentMethod.TRANSFER,
+        transferDetails: {
+          accountName: 'John Doe',
+          referenceNumber: 'REF123',
+        },
+      },
+    };
+
+    it('should open cash drawer for CASH payments when enabled', async () => {
+      const { result } = renderHook(() => useReceiptPrinter({ openCashDrawer: true }));
+
+      // Connect to printer first
+      let printers;
+      await act(async () => {
+        printers = await result.current.discoverPrinters();
+        await result.current.connectPrinter(printers[0].id);
+      });
+
+      // Print receipt with CASH payment
+      let success;
+      await act(async () => {
+        success = await result.current.printReceipt(cashPaymentReceipt);
+      });
+
+      expect(success).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    it('should NOT open cash drawer for TRANSFER payments', async () => {
+      const { result } = renderHook(() => useReceiptPrinter({ openCashDrawer: true }));
+
+      // Connect to printer first
+      let printers;
+      await act(async () => {
+        printers = await result.current.discoverPrinters();
+        await result.current.connectPrinter(printers[0].id);
+      });
+
+      // Print receipt with TRANSFER payment
+      let success;
+      await act(async () => {
+        success = await result.current.printReceipt(transferPaymentReceipt);
+      });
+
+      expect(success).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    it('should NOT open cash drawer when openCashDrawer is disabled', async () => {
+      const { result } = renderHook(() => useReceiptPrinter({ openCashDrawer: false }));
+
+      // Connect to printer first
+      let printers;
+      await act(async () => {
+        printers = await result.current.discoverPrinters();
+        await result.current.connectPrinter(printers[0].id);
+      });
+
+      // Print receipt with CASH payment but drawer disabled
+      let success;
+      await act(async () => {
+        success = await result.current.printReceipt(cashPaymentReceipt);
+      });
+
+      expect(success).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    it('should continue transaction even if drawer opening fails', async () => {
+      const { result } = renderHook(() => useReceiptPrinter({ openCashDrawer: true }));
+
+      // Connect to printer first
+      let printers;
+      await act(async () => {
+        printers = await result.current.discoverPrinters();
+        await result.current.connectPrinter(printers[0].id);
+      });
+
+      // Print receipt with CASH payment
+      let success;
+      await act(async () => {
+        success = await result.current.printReceipt(cashPaymentReceipt);
+      });
+
+      // Transaction should succeed even if drawer fails
+      expect(success).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    it('should respect drawer autoOpen setting from configuration', async () => {
+      const { result } = renderHook(() => useReceiptPrinter({ openCashDrawer: true }));
+
+      // Connect to printer first
+      let printers;
+      await act(async () => {
+        printers = await result.current.discoverPrinters();
+        await result.current.connectPrinter(printers[0].id);
+      });
+
+      // Mock loadDrawerConfig to return disabled config for this test
+      const { loadDrawerConfig } = require('../services/PrinterConfigService');
+      loadDrawerConfig.mockResolvedValueOnce({
+        autoOpen: false, // Drawer disabled in config
+        pulseMs: 100,
+        pinNumber: 0,
+      });
+
+      // Print receipt with CASH payment
+      let success;
+      await act(async () => {
+        success = await result.current.printReceipt(cashPaymentReceipt);
+      });
+
+      // Receipt should print successfully even if drawer is disabled
+      expect(success).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
     });
   });
 });

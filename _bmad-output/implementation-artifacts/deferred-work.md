@@ -315,3 +315,16 @@ This file tracks work items that were identified during reviews but deferred to 
   - Why deferred: Same pattern as user role assertion - consistent with Gin middleware design
   - Recommendation: Keep as-is for consistency with existing authentication patterns
 
+## Deferred from: code review of Story 7-4 (2026-05-28)
+
+### Hardware Integration - Mobile
+
+- **AC1 Enhancement - Actual Drawer Connection Detection**
+  - Story: 7-4-implement-cash-drawer-control-via-printer-kick
+  - File: PrinterManager.ts:438
+  - Issue: Current implementation infers drawer connection from printer status (`get isDrawerConnected(): boolean { return this.currentStatus === PrinterStatus.CONNECTED; }`), not actual drawer detection
+  - Impact: System cannot detect if drawer is actually connected to printer via RJ-12 or if drawer is disconnected/faulty
+  - Why deferred: Requires hardware research and implementation of actual drawer detection mechanism via printer feedback, circuit detection, or drawer status polling
+  - Recommendation: Implement as enhancement in future story with proper hardware testing and validation
+  - Priority: HIGH for compliance and operational reliability
+

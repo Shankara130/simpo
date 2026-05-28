@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text, TextInput } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text, TextInput, ToastAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types/product.types';
 import { PaymentData } from '../types/payment.types';
@@ -20,6 +20,7 @@ import { CartTotal } from '../components/CartTotal';
 import { ActionButtons } from '../components/ActionButtons';
 import { PrinterStatusComponent } from '../components/PrinterStatus';
 import { ScannerFeedback } from '../components/ScannerFeedback';
+import { CashDrawerStatus } from '../components/CashDrawerStatus';
 import { useReceiptPrinter } from '../hooks/useReceiptPrinter';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useKeyboardInput } from '../hooks/useKeyboardInput';
@@ -31,6 +32,7 @@ import { ScannerState } from '../types/scanner.types';
 import { TransactionService } from '../services/TransactionService';
 import { ProductService } from '../services/ProductService';
 import { TransactionResponse } from '../types/transaction.types';
+import { DrawerStatus } from '../hardware/printer';
 
 interface POSScreenProps {
   products?: Product[];
@@ -64,6 +66,10 @@ export const POSScreen: React.FC<POSScreenProps> = ({
   const [transactionError, setTransactionError] = useState<string | null>(null);
   const [currentIdempotencyKey, setCurrentIdempotencyKey] = useState<string | null>(null); // CRITICAL FIX: Store idempotency key for retry
 
+  // Story 7.4: Cash drawer state tracking
+  const [drawerStatus, setDrawerStatus] = useState<DrawerStatus>('disconnected');
+  const [drawerError, setDrawerError] = useState<string | null>(null);
+
   // Update transaction start time when first item is added
   useEffect(() => {
     // HIGH FIX: Use ref to check transaction started state (prevents race condition with stale closure)
@@ -87,7 +93,24 @@ export const POSScreen: React.FC<POSScreenProps> = ({
     clearError,
   } = useReceiptPrinter({
     autoRetry: false,
+    openCashDrawer: true, // Story 7.4: Enable automatic drawer opening for CASH payments
   });
+
+  // Story 7.4: Update drawer status based on printer status changes
+  // Drawer status follows printer status (drawer connects via printer)
+  // Only update drawer status when printer status changes to avoid race conditions
+  useEffect(() => {
+    // Reset drawer status to disconnected when printer disconnects
+    // This prevents stale 'failed' state from persisting through reconnection
+    if (printerStatus === PrinterStatus.DISCONNECTED) {
+      setDrawerStatus('disconnected');
+      setDrawerError(null);
+    }
+    // Clear drawer error when printer connects successfully
+    else if (printerStatus === PrinterStatus.CONNECTED && drawerStatus === 'disconnected') {
+      setDrawerError(null);
+    }
+  }, [printerStatus, drawerStatus]);
 
   // Story 7.2: Barcode scanner hook - handles barcode validation, debouncing, feedback
   const scanner = useBarcodeScanner({
@@ -282,6 +305,14 @@ export const POSScreen: React.FC<POSScreenProps> = ({
       // Print receipt with backend transaction data
       const printSuccess = await printReceipt(receiptData);
 
+      // Story 7.4: Show drawer error toast if drawer failed to open
+      if (drawerStatus === 'failed' && drawerError) {
+        ToastAndroid.show(
+          'Laci uang gagal dibuka - silakan buka manual',
+          ToastAndroid.LONG
+        );
+      }
+
       if (printSuccess) {
         // Story 3.6 AC3: Cart cleared ONLY after successful transaction creation
         // CRITICAL FIX: Clear idempotency key on success
@@ -439,6 +470,12 @@ export const POSScreen: React.FC<POSScreenProps> = ({
               testID="pos-printer-status"
             />
           </View>
+
+          {/* Story 7.4: Cash Drawer Status Indicator */}
+          <CashDrawerStatus
+            status={drawerStatus}
+            error={drawerError}
+          />
 
           {/* Story 7.3: Bluetooth Connection Status Indicator */}
           {bluetoothScanner.connectedDevice && (

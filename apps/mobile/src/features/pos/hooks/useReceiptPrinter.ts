@@ -6,9 +6,10 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { PrinterManager, getPrinterManager } from '../hardware/PrinterManager';
-import { PrinterStatus, PrinterError, PrinterErrorType } from '../hardware/printer';
+import { PrinterStatus, PrinterError, PrinterErrorType, DrawerStatus } from '../hardware/printer';
 import { ReceiptPrinterService } from '../services/ReceiptPrinterService';
 import { ReceiptData } from '../types/receipt.types';
+import { PaymentMethod } from '../types/payment.types';
 
 /**
  * Receipt printing state
@@ -19,6 +20,8 @@ export interface ReceiptPrintingState {
   error: string | null;
   printerStatus: PrinterStatus;
   printerName: string | null;
+  drawerStatus: DrawerStatus; // Story 7.4: Cash drawer status
+  drawerError: string | null; // Story 7.4: Cash drawer error message
 }
 
 /**
@@ -57,6 +60,8 @@ export interface UseReceiptPrinterConfig {
   retryDelay?: number;
   /** Auto-connect to last used printer */
   autoConnect?: boolean;
+  /** Enable automatic cash drawer opening for CASH payments */
+  openCashDrawer?: boolean;
 }
 
 const DEFAULT_CONFIG: UseReceiptPrinterConfig = {
@@ -64,6 +69,7 @@ const DEFAULT_CONFIG: UseReceiptPrinterConfig = {
   maxRetries: 3,
   retryDelay: 1000,
   autoConnect: false,
+  openCashDrawer: true, // Default to true for cash payments
 };
 
 /**
@@ -79,6 +85,8 @@ export function useReceiptPrinter(config: UseReceiptPrinterConfig = {}): UseRece
     error: null,
     printerStatus: PrinterStatus.DISCONNECTED,
     printerName: null,
+    drawerStatus: 'disconnected', // Story 7.4: Initial drawer status
+    drawerError: null, // Story 7.4: Initial drawer error
   });
 
   const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
@@ -165,6 +173,88 @@ export function useReceiptPrinter(config: UseReceiptPrinterConfig = {}): UseRece
           isSuccess: true,
           error: null,
         }));
+
+        // Open cash drawer for CASH payments if enabled
+        if (finalConfig.openCashDrawer && receiptData.payment.method === PaymentMethod.CASH) {
+          try {
+            // Load drawer configuration for pulse timing and pin settings
+            const { loadDrawerConfig } = await import('../services/PrinterConfigService');
+            const drawerConfig = await loadDrawerConfig();
+
+            if (drawerConfig.autoOpen) {
+              const drawerOpened = await printerManager.openCashDrawer({
+                enabled: true,
+                pulseTiming: drawerConfig.pulseMs,
+                pinNumber: drawerConfig.pinNumber,
+              });
+
+              if (!drawerOpened) {
+                // Log drawer failure to audit trail with transaction context
+                try {
+                  const { getAuditLogService } = await import('../services/AuditLogService');
+                  const auditService = getAuditLogService();
+                  await auditService.logCashDrawerOpen(
+                    receiptData.transactionNumber, // Use actual transaction ID
+                    undefined, // User ID - requires authentication context integration
+                    'failed',
+                    { reason: 'Drawer operation returned false', pulseTiming: drawerConfig.pulseMs }
+                  );
+                } catch (auditError) {
+                  console.error('[useReceiptPrinter] Failed to log drawer failure:', auditError);
+                }
+
+                // Set drawer error state for UI feedback
+                setState((prev) => ({
+                  ...prev,
+                  drawerError: 'Gagal membuka laci uang - silakan buka manual',
+                }));
+
+                console.warn('[useReceiptPrinter] Failed to open cash drawer');
+              } else {
+                // Log successful drawer opening to audit trail
+                try {
+                  const { getAuditLogService } = await import('../services/AuditLogService');
+                  const auditService = getAuditLogService();
+                  await auditService.logCashDrawerOpen(
+                    receiptData.transactionNumber, // Use actual transaction ID
+                    undefined, // User ID - requires authentication context integration
+                    'opened',
+                    { pulseTiming: drawerConfig.pulseMs, pinNumber: drawerConfig.pinNumber }
+                  );
+                } catch (auditError) {
+                  console.error('[useReceiptPrinter] Failed to log drawer success:', auditError);
+                }
+
+                // Update drawer status for UI feedback
+                setState((prev) => ({
+                  ...prev,
+                  drawerStatus: 'connected',
+                  drawerError: null,
+                }));
+              }
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            // Log drawer error to audit trail
+            try {
+              const { getAuditLogService } = await import('../services/AuditLogService');
+              const auditService = getAuditLogService();
+              await auditService.logCashDrawerOpen(
+                receiptData.transactionNumber, // Use actual transaction ID
+                undefined, // User ID - requires authentication context integration
+                'failed',
+                { error: errorMessage, reason: 'Exception during drawer operation' }
+              );
+            } catch (auditError) {
+              console.error('[useReceiptPrinter] Failed to log drawer exception:', auditError);
+            }
+
+            console.error('[useReceiptPrinter] Error opening cash drawer:', error);
+            // Don't fail the transaction if drawer opening fails
+          }
+        }
+
         return true;
       } else {
         throw new Error('Gagal mencetak struk');
