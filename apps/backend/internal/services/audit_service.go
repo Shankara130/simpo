@@ -143,6 +143,13 @@ type AuditService interface {
 	// Logs admin_user_id, admin_username, reason, timestamp, ip_address
 	LogMaintenanceModeDisabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error
 
+	// Story 8.5: Conflict resolution audit methods
+
+	// LogConflictResolution logs conflict resolution attempts for offline transactions
+	// Logs event_type, transaction_id, original_error, resolution_type, resolved_by, resolved_at, conflict_details
+	// Append-only audit trail for Badan POM regulatory compliance (NFR-SEC-004, NFR-SEC-009)
+	LogConflictResolution(ctx context.Context, eventType string, transactionID string, originalError string, resolutionType string, resolvedBy string, resolvedAt time.Time, conflictDetails string, ipAddress string) error
+
 	// ResetMetrics resets all audit service metrics to zero
 	// Code review fix: CRIT-016 - Add metrics reset functionality
 	ResetMetrics()
@@ -1201,6 +1208,48 @@ func (s *auditService) LogMaintenanceModeDisabled(ctx context.Context, adminID u
 		"admin_user_id", adminID,
 		"admin_username", adminUsername,
 		"reason", reason,
+		"ip_address", ipAddress,
+		"outcome", entry.Outcome,
+	)
+
+	return nil
+}
+
+// LogConflictResolution logs conflict resolution attempts for offline transactions
+// Story 8.5, AC6: Append-only audit trail for conflict resolution
+// Per NFR-SEC-004: audit trail must be append-only (no delete/update)
+func (s *auditService) LogConflictResolution(ctx context.Context, eventType string, transactionID string, originalError string, resolutionType string, resolvedBy string, resolvedAt time.Time, conflictDetails string, ipAddress string) error {
+	// Determine appropriate audit action
+	var action models.AuditAction
+	if resolutionType == "manual_override" {
+		action = models.AuditActionConflictResolutionManualOverride
+	} else {
+		action = models.AuditActionConflictResolutionAutomaticFailure
+	}
+
+	// Create audit entry with conflict resolution details
+	entry := AuditLogEntry{
+		UserID:    nil, // System-initiated or admin
+		Username:  resolvedBy,
+		Action:    action,
+		IPAddress: ipAddress,
+		Outcome:   "logged",
+		Reason: fmt.Sprintf("Conflict Resolution - Event: %s | Transaction: %s | Type: %s | Error: %s",
+			eventType, transactionID, resolutionType, originalError),
+		Timestamp: resolvedAt,
+	}
+
+	_ = s.persistToDatabase(ctx, entry)
+
+	slog.Info("AUDIT: Conflict Resolution",
+		"timestamp", entry.Timestamp.Format(time.RFC3339),
+		"action", string(entry.Action),
+		"event_type", eventType,
+		"transaction_id", transactionID,
+		"resolution_type", resolutionType,
+		"resolved_by", resolvedBy,
+		"original_error", originalError,
+		"conflict_details", conflictDetails,
 		"ip_address", ipAddress,
 		"outcome", entry.Outcome,
 	)

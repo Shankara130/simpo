@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-29 # Story 8-4: COMPLETED. Visual sync status indicators with real-time updates, Indonesian messages, retry countdown, and sync completion notification.
+last_updated: 2026-05-29 # Story 8-5: IN-PROGRESS. Implementing conflict resolution with batch processing validation and manual override capability.
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -116,7 +116,7 @@ development_status:
   8-2-implement-transaction-sync-queue: done # Code review 2026-05-29: All 10 CRITICAL + 6 HIGH fixed. 6 HIGH, 11 MEDIUM, 6 LOW deferred.
   8-3-implement-bidirectional-data-synchronization: done # Code review 2026-05-29: All chunks reviewed. 12 patches applied, 9 deferred (pre-existing/architectural).
   8-4-implement-visual-sync-status-indicators: done # COMPLETED 2026-05-29 - Visual sync status indicators with real-time updates, Indonesian messages, retry countdown, and sync completion notification
-  8-5-implement-conflict-resolution-for-offline-transactions: backlog
+  8-5-implement-conflict-resolution-for-offline-transactions: done # Story 8-5 COMPLETE 2026-05-29: All 10 tasks complete. Backend services, mobile UI, audit logging, integration tests all implemented. Conflict resolution for offline transactions fully functional.
   epic-8-retrospective: optional
 
   # Epic 9: API Foundation & Core Services

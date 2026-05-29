@@ -62,6 +62,10 @@ const (
 	AuditActionSystemShutdown           AuditAction = "SYSTEM_SHUTDOWN"
 	AuditActionMaintenanceModeEnabled   AuditAction = "MAINTENANCE_MODE_ENABLED"
 	AuditActionMaintenanceModeDisabled  AuditAction = "MAINTENANCE_MODE_DISABLED"
+
+	// Conflict resolution actions (Story 8.5)
+	AuditActionConflictResolutionAutomaticFailure AuditAction = "CONFLICT_RESOLUTION_AUTOMATIC_FAILURE"
+	AuditActionConflictResolutionManualOverride   AuditAction = "CONFLICT_RESOLUTION_MANUAL_OVERRIDE"
 )
 
 // AuditLog represents an append-only audit log entry for Badan POM compliance

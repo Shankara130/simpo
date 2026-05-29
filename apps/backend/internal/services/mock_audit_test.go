@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"time"
+
+	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
 )
 
 // MockAuditService is a mock implementation of AuditService for testing
@@ -38,6 +41,9 @@ type MockAuditService struct {
 	LogSystemShutdownFunc             func(ctx context.Context, systemID string, reason string, ipAddress string) error
 	LogMaintenanceModeEnabledFunc     func(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error
 	LogMaintenanceModeDisabledFunc    func(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error
+
+	// Story 8.5: Conflict resolution audit method
+	LogConflictResolutionFunc func(ctx context.Context, eventType string, transactionID string, originalError string, resolutionType string, resolvedBy string, resolvedAt time.Time, conflictDetails string, ipAddress string) error
 
 	LogCount                      int // Track how many times logging was called
 }
@@ -261,5 +267,13 @@ func (m *MockAuditService) LogMaintenanceModeDisabled(ctx context.Context, admin
 
 // Shutdown gracefully shuts down the audit service (Story 6.4, CRIT-001)
 func (m *MockAuditService) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (m *MockAuditService) LogConflictResolution(ctx context.Context, eventType string, transactionID string, originalError string, resolutionType string, resolvedBy string, resolvedAt time.Time, conflictDetails string, ipAddress string) error {
+	m.LogCount++
+	if m.LogConflictResolutionFunc != nil {
+		return m.LogConflictResolutionFunc(ctx, eventType, transactionID, originalError, resolutionType, resolvedBy, resolvedAt, conflictDetails, ipAddress)
+	}
 	return nil
 }
