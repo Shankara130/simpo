@@ -328,3 +328,30 @@ This file tracks work items that were identified during reviews but deferred to 
   - Recommendation: Implement as enhancement in future story with proper hardware testing and validation
   - Priority: HIGH for compliance and operational reliability
 
+
+## Deferred from: Code Review of Story 8.3 (2026-05-29 - Chunk 1: Core Services)
+
+### UI Components
+
+- **Missing: UI component implementation for visual indicators**
+  Story: 8-3-implement-bidirectional-data-synchronization
+  File: No files found
+  Issue: Hook implementation complete but UI display components not yet implemented
+  Why deferred: Story 8.3 Task 6 explicitly deferred in original story ("admin intervention UI for permanently failed syncs" not implemented)
+  Recommendation: Implement UI components in dedicated UI story or as part of Story 8-4 (Visual Sync Status Indicators)
+
+### Code Quality & Standards
+
+- **Hardcoded API URLs in constructor**
+  Story: 8-3-implement-bidirectional-data-synchronization
+  File: ProductSyncService.ts:34-36, UserSyncService.ts:32-34
+  Issue: API URLs hardcoded as `http://localhost:8080/api/v1` in dev and `https://api.simpo.pharmacy/api/v1` in production
+  Why deferred: Pre-existing pattern from other services; requires centralized config architecture to fix properly
+  Recommendation: Extract to config system when implementing story for configuration management
+
+- **Magic number timeout hardcoded (30000)**
+  Story: 8-3-implement-bidirectional-data-synchronization
+  File: ProductSyncService.ts:103, 176; UserSyncService.ts:799
+  Issue: 30-second timeout hardcoded in multiple locations as `30000`
+  Why deferred: Code quality issue that should be addressed consistently across codebase
+  Recommendation: Extract to named constant (e.g., `SYNC_REQUEST_TIMEOUT_MS = 30000`) in future code quality improvement

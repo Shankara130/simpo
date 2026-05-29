@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OfflineStorageService from './OfflineStorageService';
 import { SyncAPI } from './SyncAPI';
+import { ConflictResolutionService } from './ConflictResolutionService';
 import { OfflineTransactionWithItems } from '../types/offline.types';
 import {
   SyncQueueError,
@@ -38,10 +39,12 @@ class SyncQueue {
   private abortController: AbortController | null = null;
   private offlineStorage: ReturnType<typeof OfflineStorageService.getInstance>;
   private syncAPI: ReturnType<typeof SyncAPI.getInstance>;
+  private conflictResolution: ReturnType<typeof ConflictResolutionService.getInstance>;
 
   private constructor() {
     this.offlineStorage = OfflineStorageService.getInstance();
     this.syncAPI = SyncAPI.getInstance();
+    this.conflictResolution = ConflictResolutionService.getInstance();
   }
 
   /**
@@ -228,6 +231,20 @@ class SyncQueue {
       };
     } catch (error) {
       if (error instanceof SyncQueueError) {
+        // AC6: Handle conflict errors with ConflictResolutionService
+        if (error.errorType === SyncErrorType.CONFLICT && error.originalError) {
+          // Try to parse conflict error details
+          const conflictError = this.conflictResolution.parseConflictError(error.originalError);
+          if (conflictError) {
+            // Mark transaction as failed with conflict error
+            try {
+              await this.conflictResolution.markTransactionFailed(transaction.id, conflictError);
+            } catch (markError) {
+              console.warn('[SyncQueue] Failed to mark transaction conflict:', markError);
+            }
+          }
+        }
+
         return {
           transactionId: transaction.id,
           transactionNumber: transaction.transaction_number,
