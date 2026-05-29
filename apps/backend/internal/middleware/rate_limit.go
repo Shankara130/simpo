@@ -28,7 +28,56 @@ var (
 var defaultStore = expirable.NewLRU[string, *rate.Limiter](DefaultCacheSize, nil, DefaultTTL)
 
 // NewRateLimitMiddleware installs a token-bucket rate limiter per key.
-// R = requests / window (req/s). Burst = requests (allows short spikes up to N).
+//
+// The rate limiter uses a token-bucket algorithm with the following parameters:
+//   - R = requests / window (tokens per second)
+//   - Burst = requests (allows short spikes up to N concurrent requests)
+//
+// When the rate limit is exceeded, the middleware:
+//   - Aborts the request with HTTP 429 Too Many Requests
+//   - Sets Retry-After header indicating when to retry
+//   - Returns RFC 7807 compliant error response
+//
+// Rate Limit Key Function:
+//   - For authenticated requests: extracts user ID from JWT context ("user" key)
+//   - For unauthenticated requests: falls back to IP address
+//   - Key format: "user:{userID}" or "ip:{ipAddress}"
+//
+// Response Headers (all responses):
+//   - X-RateLimit-Limit: Maximum requests allowed in window
+//   - X-RateLimit-Remaining: Requests remaining in current window
+//   - X-RateLimit-Reset: Unix timestamp when window resets
+//
+// Response Headers (on 429):
+//   - Retry-After: Seconds until client should retry
+//
+// Rate Limit Response (429 Too Many Requests):
+//   {
+//     "success": false,
+//     "error": {
+//       "type": "https://api.simpo.com/errors/TOO_MANY_REQUESTS",
+//       "title": "Rate Limit Exceeded",
+//       "status": 429,
+//       "detail": "Rate limit exceeded",
+//       "code": "TOO_MANY_REQUESTS",
+//       "details": "Too many requests. Please try again in {N} seconds.",
+//       "retry_after": {N}
+//     }
+//   }
+//
+// Example usage:
+//
+//	router.Use(middleware.NewRateLimitMiddleware(
+//	    time.Minute,        // 1 minute window
+//	    100,                // 100 requests per window
+//	    func(c *gin.Context) string {
+//	        if userID, exists := c.Get("userID"); exists {
+//	            return fmt.Sprintf("user:%v", userID)
+//	        }
+//	        return "ip:" + c.ClientIP()
+//	    },
+//	    nil,                // Use default LRU store
+//	))
 func NewRateLimitMiddleware(
 	window time.Duration,
 	requests int,

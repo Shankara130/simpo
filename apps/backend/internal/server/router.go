@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -100,6 +101,16 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				rlCfg.Window,
 				rlCfg.Requests,
 				func(c *gin.Context) string {
+					// Story 9.3: Try to get user ID from JWT context first
+					// Auth middleware sets "user" context key with auth.Claims
+					if userValue, exists := c.Get("user"); exists {
+						// Type assertion with safety checks - handle nil and invalid types
+						if claims, ok := userValue.(*auth.Claims); ok && claims != nil && claims.UserID > 0 {
+							// Track by user ID for authenticated requests
+							return fmt.Sprintf("user:%d", claims.UserID)
+						}
+					}
+					// Fallback to IP for unauthenticated requests
 					ip := c.ClientIP()
 					if ip == "" {
 						ip = c.GetHeader("X-Forwarded-For")
@@ -110,7 +121,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 							ip = "unknown"
 						}
 					}
-					return ip
+					return fmt.Sprintf("ip:%s", ip)
 				},
 				nil,
 			),
