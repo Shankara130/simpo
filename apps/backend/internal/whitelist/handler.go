@@ -34,20 +34,21 @@ func (h *Handler) SetAuditService(auditService services.AuditService) {
 }
 
 // AddDomain godoc
-// @Summary Add email domain to whitelist
-// @Description Add a new email domain to the whitelist for staff self-registration (SYSTEM_ADMIN only)
-// @Tags whitelist
-// @Accept json
-// @Produce json
-// @Param request body AddWhitelistEntryRequest true "Add whitelist entry request"
-// @Success 201 {object} apiErrors.Response{success=bool,data=WhitelistEntryResponse} "Whitelist entry created"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
-// @Failure 401 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - SYSTEM_ADMIN only"
-// @Failure 409 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Domain already exists"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/whitelist [post]
-// @Security BearerAuth
+//
+//	@Summary		Add email domain to whitelist
+//	@Description	Add a new email domain to the whitelist for staff self-registration (SYSTEM_ADMIN only)
+//	@Tags			whitelist
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		AddWhitelistEntryRequest									true	"Add whitelist entry request"
+//	@Success		201		{object}	errors.Response{success=bool,data=WhitelistEntryResponse}	"Whitelist entry created"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Validation error"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		409		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Domain already exists"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Internal server error"
+//	@Router			/api/v1/whitelist [post]
+//	@Security		BearerAuth
 func (h *Handler) AddDomain(c *gin.Context) {
 	var req AddWhitelistEntryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -86,16 +87,17 @@ func (h *Handler) AddDomain(c *gin.Context) {
 }
 
 // ListDomains godoc
-// @Summary List all whitelisted domains
-// @Description Retrieve all email domains in the whitelist (SYSTEM_ADMIN only)
-// @Tags whitelist
-// @Produce json
-// @Success 200 {object} apiErrors.Response{success=bool,data=[]WhitelistEntryResponse} "List of whitelist entries"
-// @Failure 401 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - SYSTEM_ADMIN only"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/whitelist [get]
-// @Security BearerAuth
+//
+//	@Summary		List all whitelisted domains
+//	@Description	Retrieve all email domains in the whitelist (SYSTEM_ADMIN only)
+//	@Tags			whitelist
+//	@Produce		json
+//	@Success		200	{object}	errors.Response{success=bool,data=[]WhitelistEntryResponse}	"List of whitelist entries"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Internal server error"
+//	@Router			/api/v1/whitelist [get]
+//	@Security		BearerAuth
 func (h *Handler) ListDomains(c *gin.Context) {
 	entries, err := h.service.ListDomains(c.Request.Context())
 	if err != nil {
@@ -113,19 +115,20 @@ func (h *Handler) ListDomains(c *gin.Context) {
 }
 
 // GetDomain godoc
-// @Summary Get whitelist entry by ID
-// @Description Retrieve a specific whitelist entry by ID (SYSTEM_ADMIN only)
-// @Tags whitelist
-// @Produce json
-// @Param id path int true "Whitelist entry ID"
-// @Success 200 {object} apiErrors.Response{success=bool,data=WhitelistEntryResponse} "Whitelist entry"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Invalid ID"
-// @Failure 401 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - SYSTEM_ADMIN only"
-// @Failure 404 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Whitelist entry not found"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/whitelist/{id} [get]
-// @Security BearerAuth
+//
+//	@Summary		Get whitelist entry by ID
+//	@Description	Retrieve a specific whitelist entry by ID (SYSTEM_ADMIN only)
+//	@Tags			whitelist
+//	@Produce		json
+//	@Param			id	path		int															true	"Whitelist entry ID"
+//	@Success		200	{object}	errors.Response{success=bool,data=WhitelistEntryResponse}	"Whitelist entry"
+//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Invalid ID"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Whitelist entry not found"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Internal server error"
+//	@Router			/api/v1/whitelist/{id} [get]
+//	@Security		BearerAuth
 func (h *Handler) GetDomain(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -147,21 +150,22 @@ func (h *Handler) GetDomain(c *gin.Context) {
 }
 
 // UpdateDomain godoc
-// @Summary Update whitelist entry
-// @Description Update a whitelist entry's default role and/or description (SYSTEM_ADMIN only)
-// @Tags whitelist
-// @Accept json
-// @Produce json
-// @Param id path int true "Whitelist entry ID"
-// @Param request body UpdateWhitelistEntryRequest true "Update whitelist entry request"
-// @Success 200 {object} apiErrors.Response{success=bool,data=WhitelistEntryResponse} "Updated whitelist entry"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
-// @Failure 401 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - SYSTEM_ADMIN only"
-// @Failure 404 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Whitelist entry not found"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/whitelist/{id} [put]
-// @Security BearerAuth
+//
+//	@Summary		Update whitelist entry
+//	@Description	Update a whitelist entry's default role and/or description (SYSTEM_ADMIN only)
+//	@Tags			whitelist
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int															true	"Whitelist entry ID"
+//	@Param			request	body		UpdateWhitelistEntryRequest									true	"Update whitelist entry request"
+//	@Success		200		{object}	errors.Response{success=bool,data=WhitelistEntryResponse}	"Updated whitelist entry"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Validation error"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Whitelist entry not found"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Internal server error"
+//	@Router			/api/v1/whitelist/{id} [put]
+//	@Security		BearerAuth
 func (h *Handler) UpdateDomain(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -202,19 +206,20 @@ func (h *Handler) UpdateDomain(c *gin.Context) {
 }
 
 // DeleteDomain godoc
-// @Summary Delete whitelist entry
-// @Description Remove a domain from the whitelist (SYSTEM_ADMIN only)
-// @Tags whitelist
-// @Produce json
-// @Param id path int true "Whitelist entry ID"
-// @Success 204 "Whitelist entry deleted"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Invalid ID"
-// @Failure 401 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - SYSTEM_ADMIN only"
-// @Failure 404 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Whitelist entry not found"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/whitelist/{id} [delete]
-// @Security BearerAuth
+//
+//	@Summary		Delete whitelist entry
+//	@Description	Remove a domain from the whitelist (SYSTEM_ADMIN only)
+//	@Tags			whitelist
+//	@Produce		json
+//	@Param			id	path	int	true	"Whitelist entry ID"
+//	@Success		204	"Whitelist entry deleted"
+//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid ID"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Whitelist entry not found"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Internal server error"
+//	@Router			/api/v1/whitelist/{id} [delete]
+//	@Security		BearerAuth
 func (h *Handler) DeleteDomain(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

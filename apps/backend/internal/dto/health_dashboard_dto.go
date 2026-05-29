@@ -14,14 +14,14 @@ const (
 // EnhancedHealthDashboardResponse represents the comprehensive health metrics for admin dashboard
 // Story 6.2, AC1-7: Dashboard displays system uptime, DB/Redis status, sessions, errors, response time, disk
 type EnhancedHealthDashboardResponse struct {
-	Status           HealthStatus `json:"status"`
-	UptimePercentage float64      `json:"uptime_percentage"`
-	Uptime           string       `json:"uptime"`
-	Version          string       `json:"version"`
-	Timestamp        time.Time    `json:"timestamp"`
+	Status           HealthStatus  `json:"status"`
+	UptimePercentage float64       `json:"uptime_percentage"`
+	Uptime           string        `json:"uptime"`
+	Version          string        `json:"version"`
+	Timestamp        time.Time     `json:"timestamp"`
 	Metrics          HealthMetrics `json:"metrics"`
-	Alerts           []Alert      `json:"alerts"`
-	Environment      string       `json:"environment,omitempty"`
+	Alerts           []Alert       `json:"alerts"`
+	Environment      string        `json:"environment,omitempty"`
 }
 
 // HealthMetrics contains all health monitoring metrics
@@ -60,8 +60,8 @@ type APIMetrics struct {
 
 // ErrorsMetrics represents error rate information
 type ErrorsMetrics struct {
-	Rate         float64 `json:"rate"`          // Error rate as percentage
-	Count        int     `json:"count"`         // Total error count
+	Rate          float64 `json:"rate"`           // Error rate as percentage
+	Count         int     `json:"count"`          // Total error count
 	TotalRequests int     `json:"total_requests"` // Total request count for rate calculation
 }
 
@@ -75,19 +75,19 @@ type DiskMetrics struct {
 // BackupMetrics represents backup status information
 // Story 6.3, Task 6: Backup health monitoring integration
 type BackupMetrics struct {
-	IsRunning      bool      `json:"is_running"`
-	LastBackupTime string    `json:"last_backup_time,omitempty"` // ISO 8601 format
-	LastStatus     string    `json:"last_status"`                // success, failed, pending
-	NextBackupTime string    `json:"next_backup_time,omitempty"` // ISO 8601 format
-	SuccessRate    float64   `json:"success_rate"`               // Percentage (0-100)
-	TotalBackups   int       `json:"total_backups"`              // Total number of backups
-	TotalSize      int64     `json:"total_size_bytes"`           // Total size of all backups
+	IsRunning      bool    `json:"is_running"`
+	LastBackupTime string  `json:"last_backup_time,omitempty"` // ISO 8601 format
+	LastStatus     string  `json:"last_status"`                // success, failed, pending
+	NextBackupTime string  `json:"next_backup_time,omitempty"` // ISO 8601 format
+	SuccessRate    float64 `json:"success_rate"`               // Percentage (0-100)
+	TotalBackups   int     `json:"total_backups"`              // Total number of backups
+	TotalSize      int64   `json:"total_size_bytes"`           // Total size of all backups
 }
 
 // Alert represents a system health alert
 // Story 6.2, AC9-12: Alerts for DB/Redis failures, error rate, disk space
 type Alert struct {
-	Severity  string    `json:"severity"`  // critical, warning, info
+	Severity  string    `json:"severity"` // critical, warning, info
 	Message   string    `json:"message"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -112,8 +112,8 @@ type AlertResponse struct {
 
 // MetricsRequest represents query parameters for metrics endpoint
 type MetricsRequest struct {
-	StartTime *time.Time `form:"start_time"`
-	EndTime   *time.Time `form:"end_time"`
-	MetricType string    `form:"metric_type"` // uptime, errors, response_time, disk
-	Limit     int       `form:"limit" default:"100"`
+	StartTime  *time.Time `form:"start_time"`
+	EndTime    *time.Time `form:"end_time"`
+	MetricType string     `form:"metric_type"` // uptime, errors, response_time, disk
+	Limit      int        `form:"limit" default:"100"`
 }

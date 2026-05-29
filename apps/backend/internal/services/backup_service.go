@@ -66,22 +66,22 @@ type BackupService interface {
 
 // BackupProgress represents progress information for a running backup
 type BackupProgress struct {
-	StartTime   int64  `json:"start_time"`
-	Elapsed     int64  `json:"elapsed_seconds"`
-	CurrentSize int64  `json:"current_size_bytes"`
-	Estimated   int64  `json:"estimated_size_bytes"`
+	StartTime   int64   `json:"start_time"`
+	Elapsed     int64   `json:"elapsed_seconds"`
+	CurrentSize int64   `json:"current_size_bytes"`
+	Estimated   int64   `json:"estimated_size_bytes"`
 	Percentage  float64 `json:"percentage"`
 }
 
 // BackupResult represents the result of a completed backup operation
 type BackupResult struct {
-	Success    bool             `json:"success"`
-	Filename   string           `json:"filename"`
-	Size       int64            `json:"size_bytes"`
-	Checksum   string           `json:"checksum"`
-	Duration   int64            `json:"duration_seconds"`
-	Error      string           `json:"error,omitempty"`
-	Metadata   *BackupMetadata  `json:"metadata,omitempty"`
+	Success  bool            `json:"success"`
+	Filename string          `json:"filename"`
+	Size     int64           `json:"size_bytes"`
+	Checksum string          `json:"checksum"`
+	Duration int64           `json:"duration_seconds"`
+	Error    string          `json:"error,omitempty"`
+	Metadata *BackupMetadata `json:"metadata,omitempty"`
 }
 
 // BackupMetadata represents additional metadata about a backup
@@ -95,9 +95,9 @@ type BackupMetadata struct {
 
 // RestoreProgress represents progress information for a running restore
 type RestoreProgress struct {
-	StartTime   int64  `json:"start_time"`
-	Elapsed     int64  `json:"elapsed_seconds"`
-	TableCount  int    `json:"total_tables"`
-	CurrentTable int   `json:"current_table"`
-	Percentage  float64 `json:"percentage"`
+	StartTime    int64   `json:"start_time"`
+	Elapsed      int64   `json:"elapsed_seconds"`
+	TableCount   int     `json:"total_tables"`
+	CurrentTable int     `json:"current_table"`
+	Percentage   float64 `json:"percentage"`
 }

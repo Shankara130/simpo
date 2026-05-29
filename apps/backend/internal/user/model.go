@@ -17,22 +17,22 @@ const (
 // Updated for Story 1.5: Added Username, Status, Role, BranchID fields
 // Story 1.10: Added DeactivatedAt, DeactivatedBy, DeactivationReason fields
 type User struct {
-	ID                  uint           `gorm:"primaryKey" json:"id"`
-	Name                string         `gorm:"not null" json:"name"`
-	Username            string         `gorm:"uniqueIndex;not null" json:"username"` // Story 1.5: Username for login
-	Email               string         `gorm:"uniqueIndex;not null" json:"email"`
-	PasswordHash        string         `gorm:"not null;column:password_hash" json:"-"` // Story 1.5: bcrypt hash
-	Status              string         `gorm:"not null;default:ACTIVE" json:"status"` // Story 1.5: ACTIVE/INACTIVE/PENDING
-	Role                string         `gorm:"not null;default:CASHIER" json:"role"`  // Story 1.5: Single role (not many-to-many)
-	BranchID            *uint          `gorm:"index" json:"branch_id,omitempty"`      // Story 1.5: Nullable for system admin
+	ID           uint   `gorm:"primaryKey" json:"id"`
+	Name         string `gorm:"not null" json:"name"`
+	Username     string `gorm:"uniqueIndex;not null" json:"username"` // Story 1.5: Username for login
+	Email        string `gorm:"uniqueIndex;not null" json:"email"`
+	PasswordHash string `gorm:"not null;column:password_hash" json:"-"` // Story 1.5: bcrypt hash
+	Status       string `gorm:"not null;default:ACTIVE" json:"status"`  // Story 1.5: ACTIVE/INACTIVE/PENDING
+	Role         string `gorm:"not null;default:CASHIER" json:"role"`   // Story 1.5: Single role (not many-to-many)
+	BranchID     *uint  `gorm:"index" json:"branch_id,omitempty"`       // Story 1.5: Nullable for system admin
 	// Story 1.10: Deactivation tracking fields
-	DeactivatedAt       *time.Time     `gorm:"column:deactivated_at" json:"deactivated_at,omitempty"`
-	DeactivatedBy       *uint          `gorm:"column:deactivated_by" json:"deactivated_by,omitempty"`
-	DeactivationReason  string         `gorm:"column:deactivation_reason" json:"deactivation_reason,omitempty"`
-	Roles               []Role         `gorm:"many2many:user_roles;joinForeignKey:UserID;joinReferences:RoleID" json:"-"` // Legacy: GRAB compatibility (deprecated)
-	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
-	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
+	DeactivatedAt      *time.Time     `gorm:"column:deactivated_at" json:"deactivated_at,omitempty"`
+	DeactivatedBy      *uint          `gorm:"column:deactivated_by" json:"deactivated_by,omitempty"`
+	DeactivationReason string         `gorm:"column:deactivation_reason" json:"deactivation_reason,omitempty"`
+	Roles              []Role         `gorm:"many2many:user_roles;joinForeignKey:UserID;joinReferences:RoleID" json:"-"` // Legacy: GRAB compatibility (deprecated)
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	DeletedAt          gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // UserRole represents the many-to-many relationship between users and roles

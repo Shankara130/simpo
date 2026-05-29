@@ -11,10 +11,10 @@ import (
 // AlertService evaluates health metrics against thresholds and generates alerts
 // Story 6.2, Task 2: Implement alert system with thresholds
 type AlertService struct {
-	thresholds   dto.AlertThresholdsConfig
-	alerts       []dto.Alert
-	alertsMutex  sync.RWMutex
-	maxAlerts    int // Maximum number of alerts to store in memory
+	thresholds  dto.AlertThresholdsConfig
+	alerts      []dto.Alert
+	alertsMutex sync.RWMutex
+	maxAlerts   int // Maximum number of alerts to store in memory
 }
 
 // NewAlertService creates a new alert service with the given thresholds

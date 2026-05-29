@@ -18,14 +18,14 @@ type StockCacheService struct {
 
 // StockCacheEntry represents a cached stock level
 type StockCacheEntry struct {
-	ProductID   uint      `json:"product_id"`
-	BranchID    uint      `json:"branch_id"`
-	SKU         string    `json:"sku"`
-	Name        string    `json:"name"`
-	StockQty    int64     `json:"stock_qty"`
-	IsLowStock  bool      `json:"is_low_stock"`
-	Price       string    `json:"price"`
-	CachedAt    time.Time `json:"cached_at"`
+	ProductID  uint      `json:"product_id"`
+	BranchID   uint      `json:"branch_id"`
+	SKU        string    `json:"sku"`
+	Name       string    `json:"name"`
+	StockQty   int64     `json:"stock_qty"`
+	IsLowStock bool      `json:"is_low_stock"`
+	Price      string    `json:"price"`
+	CachedAt   time.Time `json:"cached_at"`
 }
 
 // NewStockCacheService creates a new stock cache service
@@ -151,13 +151,13 @@ func (s *StockCacheService) WarmCache(ctx context.Context, products []ProductSto
 
 // ProductStockData represents minimal data needed for cache warming
 type ProductStockData struct {
-	ProductID       uint
-	BranchID        uint
-	SKU             string
-	Name            string
-	StockQty        int64
+	ProductID        uint
+	BranchID         uint
+	SKU              string
+	Name             string
+	StockQty         int64
 	ReorderThreshold int64
-	Price           string
+	Price            string
 }
 
 // GetMultiple retrieves multiple cached stock levels
@@ -257,7 +257,6 @@ func (s *StockCacheService) WarmFromRepository(ctx context.Context, repo Product
 type ProductStockRepository interface {
 	ListAllStockLevels(ctx context.Context) ([]ProductStockData, error)
 }
-
 
 // CacheStats represents cache statistics
 type CacheStats struct {

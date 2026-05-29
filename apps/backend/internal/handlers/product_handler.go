@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/websocket"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
@@ -34,35 +34,35 @@ const (
 type ProductHandler interface {
 	ListProducts(c *gin.Context)
 	SubscribeStockUpdates(c *gin.Context) // Story 4.2, Task 4.1-4.6: WebSocket subscription
-	AdjustStock(c *gin.Context)            // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
-	GetLowStockProducts(c *gin.Context)    // Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
-	GetExpiringProducts(c *gin.Context)    // Story 4.5, Task 5.1-5.5: GET /api/v1/products/expiring
-		GetProductBySKU(c *gin.Context)         // Story 4.6, Task 6: GET /api/v1/products/sku/:sku - Barcode scan with expired blocking
+	AdjustStock(c *gin.Context)           // Story 4.3, Task 4.1-4.7: POST /api/v1/products/stock/adjust
+	GetLowStockProducts(c *gin.Context)   // Story 4.4, Task 5.1-5.4: GET /api/v1/products/low-stock
+	GetExpiringProducts(c *gin.Context)   // Story 4.5, Task 5.1-5.5: GET /api/v1/products/expiring
+	GetProductBySKU(c *gin.Context)       // Story 4.6, Task 6: GET /api/v1/products/sku/:sku - Barcode scan with expired blocking
 }
 
 // productHandler implements ProductHandler
 type productHandler struct {
-	productService      services.ProductService
-	stockEventService    services.StockEventService // Story 4.2, Task 4.1: Stock event service dependency
-	jwtSecret           string                      // Story 4.2, Task 4.5: JWT secret for token validation
-	upgrader             *websocket.Upgrader
+	productService    services.ProductService
+	stockEventService services.StockEventService // Story 4.2, Task 4.1: Stock event service dependency
+	jwtSecret         string                     // Story 4.2, Task 4.5: JWT secret for token validation
+	upgrader          *websocket.Upgrader
 }
 
 // Story 4.2, Task 4.3: Client represents a WebSocket client connection
 // Story 4.4: Extended to handle both stock.updated and stock.low events
 type wsClient struct {
-	id         string
-	branches   []uint
-	conn       *websocket.Conn
+	id          string
+	branches    []uint
+	conn        *websocket.Conn
 	messageChan chan services.StockEvent
 }
 
 // Story 4.2, Task 4.3: Active WebSocket clients registry with mutex protection
 var (
-	wsClients        = make(map[string]*wsClient)
-	wsClientsMutex   sync.RWMutex
-	wsRegister       = make(chan *wsClient)
-	wsUnregister     = make(chan string)
+	wsClients      = make(map[string]*wsClient)
+	wsClientsMutex sync.RWMutex
+	wsRegister     = make(chan *wsClient)
+	wsUnregister   = make(chan string)
 )
 
 // NewProductHandler creates a new product handler
@@ -87,9 +87,9 @@ func NewProductHandler(productService services.ProductService, stockEventService
 	}
 
 	return &productHandler{
-		productService:   productService,
+		productService:    productService,
 		stockEventService: stockEventService,
-		jwtSecret:       jwtSecret,
+		jwtSecret:         jwtSecret,
 		upgrader:          upgrader,
 	}
 }
@@ -102,20 +102,20 @@ func NewProductHandler(productService services.ProductService, stockEventService
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			search	query		string	false	"Search by name or SKU"
-//	@Param			category	query		string	false	"Filter by category"
-//	@Param			branch_id	query		int		false	"Filter by branch (Owner only)"
-//	@Param			low_stock	query		bool	false	"Filter for low stock items"
-//	@Param			expired	query		bool	false	"Filter for expired items"
-//	@Param			page		query		int		false	"Page number (default 1)"
-//	@Param			limit		query		int		false	"Items per page (default 20, max 1000)"
-//	@Param			sort_by		query		string	false	"Field to sort by"	Enums(id, name, sku, price, stock_qty, category, created_at)
-//	@Param			sort_order	query		string	false	"Sort order"	Enums(asc, desc)
-//	@Success		200			{object}	apiErrors.Response{success=bool,data=dto.ProductListResponse}	"Success response with product list"
-//	@Failure		400			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Validation error - invalid input parameters"
-//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
-//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
-//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Param			search		query		string														false	"Search by name or SKU"
+//	@Param			category	query		string														false	"Filter by category"
+//	@Param			branch_id	query		int															false	"Filter by branch (Owner only)"
+//	@Param			low_stock	query		bool														false	"Filter for low stock items"
+//	@Param			expired		query		bool														false	"Filter for expired items"
+//	@Param			page		query		int															false	"Page number (default 1)"
+//	@Param			limit		query		int															false	"Items per page (default 20, max 1000)"
+//	@Param			sort_by		query		string														false	"Field to sort by"	Enums(id, name, sku, price, stock_qty, category, created_at)
+//	@Param			sort_order	query		string														false	"Sort order"		Enums(asc, desc)
+//	@Success		200			{object}	errors.Response{success=bool,data=dto.ProductListResponse}	"Success response with product list"
+//	@Failure		400			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Validation error - invalid input parameters"
+//	@Failure		401			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized - authentication required"
+//	@Failure		403			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - insufficient permissions"
+//	@Failure		500			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Server error"
 //	@Router			/api/v1/products [get]
 func (h *productHandler) ListProducts(c *gin.Context) {
 	// Story 4.1, Task 1.3: Bind and validate query parameters
@@ -193,15 +193,15 @@ func (h *productHandler) ListProducts(c *gin.Context) {
 
 	// Build service filter from request
 	filter := &services.ProductFilter{
-		BranchID:     req.BranchID,
-		Category:     req.Category,
-		SearchQuery:  req.Search,
-		LowStock:     req.LowStock != nil && *req.LowStock,
-		Expired:      req.Expired != nil && *req.Expired,
-		Page:         req.Page,
-		Limit:        req.Limit,
-		SortBy:       req.SortBy,
-		SortOrder:    req.SortOrder,
+		BranchID:    req.BranchID,
+		Category:    req.Category,
+		SearchQuery: req.Search,
+		LowStock:    req.LowStock != nil && *req.LowStock,
+		Expired:     req.Expired != nil && *req.Expired,
+		Page:        req.Page,
+		Limit:       req.Limit,
+		SortBy:      req.SortBy,
+		SortOrder:   req.SortOrder,
 	}
 
 	// Call service layer
@@ -265,8 +265,8 @@ func (h *productHandler) ListProducts(c *gin.Context) {
 //	@Summary		Subscribe to real-time stock updates
 //	@Description	WebSocket endpoint for receiving real-time stock updates. JWT token required via query parameter.
 //	@Tags			products
-//	@Param			token	query		string	true	"JWT authentication token"
-//	@Param			branches	query		string	false	"Comma-separated branch IDs to filter (Owner only, defaults to user's branch)"
+//	@Param			token		query	string	true	"JWT authentication token"
+//	@Param			branches	query	string	false	"Comma-separated branch IDs to filter (Owner only, defaults to user's branch)"
 //	@Router			/api/v1/products/stock/subscribe [get]
 func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 	// Story 4.2, Task 4.5: JWT authentication validation
@@ -365,14 +365,14 @@ func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 
 	// Story 4.2, Task 4.3: Generate client ID and register
 	clientID := fmt.Sprintf("client-%d", time.Now().UnixNano())
-	
+
 	// Create message channel for this client (increased to 1000 for backpressure handling)
 	messageChan := make(chan services.StockEvent, 1000)
-	
+
 	client := &wsClient{
-		id:         clientID,
-		branches:   branches,
-		conn:       conn,
+		id:          clientID,
+		branches:    branches,
+		conn:        conn,
 		messageChan: messageChan,
 	}
 
@@ -381,8 +381,8 @@ func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 		h.stockEventService.RegisterClient(clientID, branches, messageChan)
 	}
 	wsClientsMutex.Lock()
-		wsClients[clientID] = client
-		wsClientsMutex.Unlock()
+	wsClients[clientID] = client
+	wsClientsMutex.Unlock()
 
 	// Start goroutine to send messages to this client
 	go h.handleClientMessages(client)
@@ -404,7 +404,7 @@ func (h *productHandler) SubscribeStockUpdates(c *gin.Context) {
 		if err != nil {
 			break
 		}
-		
+
 		// Handle incoming messages if needed (e.g., ping/pong, subscription changes)
 		_ = messageType
 		_ = message
@@ -453,13 +453,13 @@ func (h *productHandler) handleClientMessages(client *wsClient) {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body	dto.StockAdjustmentRequest	true	"Stock adjustment request"
-//	@Success		200			{object}	services.StockAdjustmentResult	"Success response with adjustment details"
-//	@Failure		400			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Validation error"
-//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
-//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
-//	@Failure		404			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Not Found"
-//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Param			request	body		dto.StockAdjustmentRequest								true	"Stock adjustment request"
+//	@Success		200		{object}	services.StockAdjustmentResult							"Success response with adjustment details"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Validation error"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
+//	@Failure		404		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Not Found"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
 //	@Router			/api/v1/products/stock/adjust [post]
 func (h *productHandler) AdjustStock(c *gin.Context) {
 	// Story 4.3, Task 4.3: Extract user context (user ID, username, IP address) for audit trail
@@ -560,11 +560,11 @@ func (h *productHandler) AdjustStock(c *gin.Context) {
 //	@Description	Retrieves products where current stock is below reorder threshold. Supports optional branch_id filtering for Owners, Cashiers see their assigned branch only.
 //	@Tags			products
 //	@Produce		json
-//	@Param			branch_id	query		int		false	"Filter by branch ID (Owner only, defaults to user's branch)"
-//	@Success		200			{object}	apiErrors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with low stock products list"
-//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
-//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
-//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Param			branch_id	query		int															false	"Filter by branch ID (Owner only, defaults to user's branch)"
+//	@Success		200			{object}	errors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with low stock products list"
+//	@Failure		401			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized - authentication required"
+//	@Failure		403			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - insufficient permissions"
+//	@Failure		500			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Server error"
 //	@Router			/api/v1/products/low-stock [get]
 func (h *productHandler) GetLowStockProducts(c *gin.Context) {
 	// Story 4.4, Task 5.2: Extract user context for RBAC
@@ -679,13 +679,13 @@ func (h *productHandler) GetLowStockProducts(c *gin.Context) {
 //	@Description	Retrieves products expiring within specified days threshold (7, 14, or 30). Supports optional branch_id filtering for Owners, Cashiers see their assigned branch only.
 //	@Tags			products
 //	@Produce		json
-//	@Param			days		query		int		false	"Days threshold (default: 30, max: 365)"
-//	@Param			branch_id	query		int		false	"Filter by branch ID (Owner only, defaults to user's branch)"
-//	@Success		200			{object}	apiErrors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with expiring products list"
-//	@Failure		400			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Validation error - invalid input parameters"
-//	@Failure		401			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
-//	@Failure		403			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions"
-//	@Failure		500			{object}	apiErrors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Param			days		query		int															false	"Days threshold (default: 30, max: 365)"
+//	@Param			branch_id	query		int															false	"Filter by branch ID (Owner only, defaults to user's branch)"
+//	@Success		200			{object}	errors.Response{success=bool,data=[]dto.ProductListItem}	"Success response with expiring products list"
+//	@Failure		400			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Validation error - invalid input parameters"
+//	@Failure		401			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Unauthorized - authentication required"
+//	@Failure		403			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - insufficient permissions"
+//	@Failure		500			{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Server error"
 //	@Router			/api/v1/products/expiring [get]
 func (h *productHandler) GetExpiringProducts(c *gin.Context) {
 	// Story 4.5, Task 5.2: Extract user context for RBAC
@@ -802,7 +802,6 @@ func (h *productHandler) GetExpiringProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, errors.Success(productItems))
 }
 
-
 // GetProductBySKU retrieves a product by SKU (barcode scan)
 // Story 4.6, Task 6.1-6.5: GET /api/v1/products/sku/:sku - Barcode scan with expired blocking
 // Returns RFC 7807 error response for expired products
@@ -811,8 +810,8 @@ func (h *productHandler) GetExpiringProducts(c *gin.Context) {
 //	@Description	Retrieves a product by SKU. Used for barcode scanning in POS. Returns error if product is expired.
 //	@Tags			products
 //	@Produce		json
-//	@Param			sku	path		string	true	"Product SKU (barcode)"
-//	@Success		200	{object}	object{product=models.Product}	"Product found"
+//	@Param			sku	path		string															true	"Product SKU (barcode)"
+//	@Success		200	{object}	object{product=models.Product}									"Product found"
 //	@Failure		400	{object}	object{type=string,title=string,status=integer,detail=string}	"Product expired (RFC 7807)"
 //	@Failure		404	{object}	object{type=string,title=string,status=integer,detail=string}	"Product not found"
 //	@Router			/api/v1/products/sku/{sku} [get]

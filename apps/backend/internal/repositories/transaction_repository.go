@@ -57,28 +57,28 @@ type TransactionRepository interface {
 // TransactionFilter defines filtering options for transaction listing
 // AC4: Complex query support with filtering by branch, cashier, date range, payment method, status
 type TransactionFilter struct {
-	BranchID         *uint     // Filter by branch
-	CashierID        *uint     // Filter by cashier
+	BranchID          *uint      // Filter by branch
+	CashierID         *uint      // Filter by cashier
 	StartDate         *time.Time // Filter for transactions on or after this date
 	EndDate           *time.Time // Filter for transactions on or before this date
-	PaymentMethod    string    // Filter by payment method (CASH, TRANSFER, E-WALLET, etc.)
-	Status           string    // Filter by status (COMPLETED, CANCELLED, etc.)
-	TransactionNumber string   // Filter by transaction number (partial match)
-	CustomerName     string    // Filter by customer name (partial match)
-	Page              int       // Page number (1-indexed)
-	Limit             int       // Items per page
-	SortBy            string    // Field to sort by
-	SortOrder         string    // "asc" or "desc"
+	PaymentMethod     string     // Filter by payment method (CASH, TRANSFER, E-WALLET, etc.)
+	Status            string     // Filter by status (COMPLETED, CANCELLED, etc.)
+	TransactionNumber string     // Filter by transaction number (partial match)
+	CustomerName      string     // Filter by customer name (partial match)
+	Page              int        // Page number (1-indexed)
+	Limit             int        // Items per page
+	SortBy            string     // Field to sort by
+	SortOrder         string     // "asc" or "desc"
 }
 
 // TransactionSummary represents aggregated transaction data
 type TransactionSummary struct {
-	TotalTransactions int64    `json:"total_transactions"`
-	TotalAmount        string   `json:"total_amount"`     // Decimal string for precision
-	SubtotalAmount     string   `json:"subtotal_amount"`   // Before tax and discount
-	TaxAmount          string   `json:"tax_amount"`        // Total tax collected
-	DiscountAmount     string   `json:"discount_amount"`   // Total discount given
-	PaymentMethods     []PaymentMethodSummary `json:"payment_methods"`
+	TotalTransactions int64                  `json:"total_transactions"`
+	TotalAmount       string                 `json:"total_amount"`    // Decimal string for precision
+	SubtotalAmount    string                 `json:"subtotal_amount"` // Before tax and discount
+	TaxAmount         string                 `json:"tax_amount"`      // Total tax collected
+	DiscountAmount    string                 `json:"discount_amount"` // Total discount given
+	PaymentMethods    []PaymentMethodSummary `json:"payment_methods"`
 }
 
 // PaymentMethodSummary represents transaction count and total per payment method

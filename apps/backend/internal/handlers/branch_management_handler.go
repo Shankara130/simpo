@@ -144,20 +144,21 @@ type DeactivateBranchResponse struct {
 }
 
 // CreateBranch godoc
-// @Summary      Create new branch
-// @Description  Creates a new pharmacy branch with audit logging (Story 6.4, AC1, AC2)
-// @Tags         Branch Management
-// @Accept       json
-// @Produce      json
-// @Param        request body handlers.CreateBranchRequest true "Branch creation request"
-// @Security     BearerAuth
-// @Success      201  {object}  handlers.CreateBranchResponse  "Branch created successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - OWNER/ADMIN only"
-// @Failure      409  {object}  map[string]string  "Branch name already exists"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/branches [post]
+//
+//	@Summary		Create new branch
+//	@Description	Creates a new pharmacy branch with audit logging (Story 6.4, AC1, AC2)
+//	@Tags			Branch Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	handlers.CreateBranchRequest	true	"Branch creation request"
+//	@Security		BearerAuth
+//	@Success		201	{object}	handlers.CreateBranchResponse	"Branch created successfully"
+//	@Failure		400	{object}	map[string]string				"Invalid request"
+//	@Failure		401	{object}	map[string]string				"Unauthorized"
+//	@Failure		403	{object}	map[string]string				"Forbidden - OWNER/ADMIN only"
+//	@Failure		409	{object}	map[string]string				"Branch name already exists"
+//	@Failure		500	{object}	map[string]string				"Internal server error"
+//	@Router			/api/v1/admin/branches [post]
 func (h *BranchManagementHandler) CreateBranch(c *gin.Context) {
 	// Parse request
 	var req CreateBranchRequest
@@ -207,21 +208,22 @@ func (h *BranchManagementHandler) CreateBranch(c *gin.Context) {
 }
 
 // UpdateBranch godoc
-// @Summary      Update branch information
-// @Description  Updates a branch's information with audit logging (Story 6.4, AC1, AC2)
-// @Tags         Branch Management
-// @Accept       json
-// @Produce      json
-// @Param        branch_id path int true "Branch ID"
-// @Param        request body handlers.UpdateBranchRequest true "Branch update request"
-// @Security     BearerAuth
-// @Success      200  {object}  handlers.UpdateBranchResponse  "Branch updated successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - OWNER/ADMIN only"
-// @Failure      404  {object}  map[string]string  "Branch not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/branches/{branch_id} [put]
+//
+//	@Summary		Update branch information
+//	@Description	Updates a branch's information with audit logging (Story 6.4, AC1, AC2)
+//	@Tags			Branch Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			branch_id	path	int								true	"Branch ID"
+//	@Param			request		body	handlers.UpdateBranchRequest	true	"Branch update request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	handlers.UpdateBranchResponse	"Branch updated successfully"
+//	@Failure		400	{object}	map[string]string				"Invalid request"
+//	@Failure		401	{object}	map[string]string				"Unauthorized"
+//	@Failure		403	{object}	map[string]string				"Forbidden - OWNER/ADMIN only"
+//	@Failure		404	{object}	map[string]string				"Branch not found"
+//	@Failure		500	{object}	map[string]string				"Internal server error"
+//	@Router			/api/v1/admin/branches/{branch_id} [put]
 func (h *BranchManagementHandler) UpdateBranch(c *gin.Context) {
 	// Extract branch ID from path
 	branchIDStr := c.Param("branch_id")
@@ -249,8 +251,8 @@ func (h *BranchManagementHandler) UpdateBranch(c *gin.Context) {
 
 	// TODO: Implement actual branch update via branch service/repository
 	// For now, create mock old and new values
-	oldName := "Jakarta Central"    // Mock old name
-	oldLocation := "Old Address"     // Mock old location
+	oldName := "Jakarta Central" // Mock old name
+	oldLocation := "Old Address" // Mock old location
 	newName := req.Name
 	if newName == "" {
 		newName = oldName
@@ -302,21 +304,22 @@ func (h *BranchManagementHandler) UpdateBranch(c *gin.Context) {
 }
 
 // DeactivateBranch godoc
-// @Summary      Deactivate branch
-// @Description  Deactivates a pharmacy branch with audit logging (Story 6.4, AC1, AC2)
-// @Tags         Branch Management
-// @Accept       json
-// @Produce      json
-// @Param        branch_id path int true "Branch ID"
-// @Param        request body handlers.DeactivateBranchRequest true "Deactivation request"
-// @Security     BearerAuth
-// @Success      200  {object}  handlers.DeactivateBranchResponse  "Branch deactivated successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - OWNER only"
-// @Failure      404  {object}  map[string]string  "Branch not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/branches/{branch_id} [delete]
+//
+//	@Summary		Deactivate branch
+//	@Description	Deactivates a pharmacy branch with audit logging (Story 6.4, AC1, AC2)
+//	@Tags			Branch Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			branch_id	path	int									true	"Branch ID"
+//	@Param			request		body	handlers.DeactivateBranchRequest	true	"Deactivation request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	handlers.DeactivateBranchResponse	"Branch deactivated successfully"
+//	@Failure		400	{object}	map[string]string					"Invalid request"
+//	@Failure		401	{object}	map[string]string					"Unauthorized"
+//	@Failure		403	{object}	map[string]string					"Forbidden - OWNER only"
+//	@Failure		404	{object}	map[string]string					"Branch not found"
+//	@Failure		500	{object}	map[string]string					"Internal server error"
+//	@Router			/api/v1/admin/branches/{branch_id} [delete]
 func (h *BranchManagementHandler) DeactivateBranch(c *gin.Context) {
 	// Extract branch ID from path
 	branchIDStr := c.Param("branch_id")
@@ -369,7 +372,7 @@ func (h *BranchManagementHandler) DeactivateBranch(c *gin.Context) {
 
 // branchAdminUserContext holds validated admin user context information
 type branchAdminUserContext struct {
-	adminID      uint
+	adminID       uint
 	adminUsername string
 }
 
@@ -414,7 +417,7 @@ func (h *BranchManagementHandler) extractUserContext(c *gin.Context) (branchAdmi
 	}
 
 	return branchAdminUserContext{
-		adminID:      adminID,
+		adminID:       adminID,
 		adminUsername: adminUsername,
 	}, true
 }

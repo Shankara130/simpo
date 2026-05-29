@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-29 # Story 8-5: IN-PROGRESS. Implementing conflict resolution with batch processing validation and manual override capability.
+last_updated: 2026-05-29 # Story 9-2: DONE. API documentation with Swagger approved.
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -122,7 +122,7 @@ development_status:
   # Epic 9: API Foundation & Core Services
   epic-9: in-progress
   9-1-implement-api-health-check-endpoint: done
-  9-2-implement-api-documentation-with-swagger: backlog
+  9-2-implement-api-documentation-with-swagger: done # Code review complete 2026-05-29. Swagger 2.0 accepted, all ACs met.
   9-3-implement-rate-limiting-middleware: backlog
   9-4-implement-cors-middleware-for-cross-origin-requests: backlog
   9-5-implement-structured-logging-with-zap: backlog

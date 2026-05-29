@@ -30,10 +30,10 @@ type AuditLogger interface {
 
 // Handler handles user-related HTTP requests
 type Handler struct {
-	userService     Service
-	authService     auth.Service
-	auditLogger     AuditLogger
-	sessionManager  *middleware.SessionManager // Story 1.8: Session tracking and blocklist
+	userService    Service
+	authService    auth.Service
+	auditLogger    AuditLogger
+	sessionManager *middleware.SessionManager // Story 1.8: Session tracking and blocklist
 }
 
 // NewHandler creates a new user handler
@@ -69,17 +69,18 @@ type RefreshResponse struct {
 }
 
 // Register godoc
-// @Summary Register a new user
-// @Description Register a new user with name, email and password, returns access and refresh tokens
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body RegisterRequest true "Registration request"
-// @Success 200 {object} errors.Response{success=bool,data=AuthResponse} "Success response with user data and tokens"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
-// @Failure 409 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Email already exists"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to register user or generate token"
-// @Router /api/v1/auth/register [post]
+//
+//	@Summary		Register a new user
+//	@Description	Register a new user with name, email and password, returns access and refresh tokens
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RegisterRequest											true	"Registration request"
+//	@Success		200		{object}	errors.Response{success=bool,data=AuthResponse}			"Success response with user data and tokens"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Validation error"
+//	@Failure		409		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Email already exists"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to register user or generate token"
+//	@Router			/api/v1/auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -113,17 +114,18 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary Login user
-// @Description Authenticate user with email and password, returns access and refresh tokens
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body LoginRequest true "Login request"
-// @Success 200 {object} errors.Response{success=bool,data=AuthResponse} "Success response with user data and tokens"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid email or password"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to authenticate user or generate token"
-// @Router /api/v1/auth/login [post]
+//
+//	@Summary		Login user
+//	@Description	Authenticate user with email and password, returns access and refresh tokens
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest											true	"Login request"
+//	@Success		200		{object}	errors.Response{success=bool,data=AuthResponse}			"Success response with user data and tokens"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Validation error"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid email or password"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to authenticate user or generate token"
+//	@Router			/api/v1/auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -157,20 +159,21 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 // GetUser godoc
-// @Summary Get user by ID
-// @Description Get a user by their ID (requires authentication)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param id path int true "User ID"
-// @Security BearerAuth
-// @Success 200 {object} errors.Response{success=bool,data=UserResponse} "Success response with user data"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid user ID"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Forbidden user ID"
-// @Failure 404 {object} errors.Response{success=bool,error=errors.ErrorInfo} "User not found"
-// @Failure 429 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Rate limit exceeded"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to get user"
-// @Router /api/v1/users/{id} [get]
+//
+//	@Summary		Get user by ID
+//	@Description	Get a user by their ID (requires authentication)
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path	int	true	"User ID"
+//	@Security		BearerAuth
+//	@Success		200	{object}	errors.Response{success=bool,data=UserResponse}			"Success response with user data"
+//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid user ID"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden user ID"
+//	@Failure		404	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"User not found"
+//	@Failure		429	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Rate limit exceeded"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to get user"
+//	@Router			/api/v1/users/{id} [get]
 func (h *Handler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -203,22 +206,23 @@ func (h *Handler) GetUser(c *gin.Context) {
 }
 
 // UpdateUser godoc
-// @Summary Update user
-// @Description Update user information (requires authentication)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param id path int true "User ID"
-// @Param request body UpdateUserRequest true "Update request"
-// @Security BearerAuth
-// @Success 200 {object} errors.Response{success=bool,data=UserResponse} "Success response with updated user data"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid user ID or Validation error"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Forbidden user ID"
-// @Failure 404 {object} errors.Response{success=bool,error=errors.ErrorInfo} "User not found"
-// @Failure 409 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Email already exists"
-// @Failure 429 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Rate limit exceeded"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to update user"
-// @Router /api/v1/users/{id} [put]
+//
+//	@Summary		Update user
+//	@Description	Update user information (requires authentication)
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	int					true	"User ID"
+//	@Param			request	body	UpdateUserRequest	true	"Update request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	errors.Response{success=bool,data=UserResponse}			"Success response with updated user data"
+//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid user ID or Validation error"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden user ID"
+//	@Failure		404	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"User not found"
+//	@Failure		409	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Email already exists"
+//	@Failure		429	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Rate limit exceeded"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to update user"
+//	@Router			/api/v1/users/{id} [put]
 func (h *Handler) UpdateUser(c *gin.Context) {
 	// Parse ID from URL
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -263,20 +267,21 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 }
 
 // DeleteUser godoc
-// @Summary Delete user
-// @Description Delete a user by ID (requires authentication)
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param id path int true "User ID"
-// @Security BearerAuth
-// @Success 204
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid user ID"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Forbidden user ID"
-// @Failure 404 {object} errors.Response{success=bool,error=errors.ErrorInfo} "User not found"
-// @Failure 429 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Rate limit exceeded"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to delete user"
-// @Router /api/v1/users/{id} [delete]
+//
+//	@Summary		Delete user
+//	@Description	Delete a user by ID (requires authentication)
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path	int	true	"User ID"
+//	@Security		BearerAuth
+//	@Success		204
+//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid user ID"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden user ID"
+//	@Failure		404	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"User not found"
+//	@Failure		429	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Rate limit exceeded"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to delete user"
+//	@Router			/api/v1/users/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	// Parse ID from URL
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -310,18 +315,19 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 }
 
 // RefreshToken godoc
-// @Summary Refresh access token
-// @Description Exchange refresh token for new access and refresh tokens with automatic rotation
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body auth.RefreshTokenRequest true "Refresh token request"
-// @Success 200 {object} errors.Response{success=bool,data=auth.TokenPairResponse} "Success response with new token pair"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Validation error"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid or expired refresh token"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Token reuse detected - all tokens revoked"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to refresh token"
-// @Router /api/v1/auth/refresh [post]
+//
+//	@Summary		Refresh access token
+//	@Description	Exchange refresh token for new access and refresh tokens with automatic rotation
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		auth.RefreshTokenRequest									true	"Refresh token request"
+//	@Success		200		{object}	errors.Response{success=bool,data=auth.TokenPairResponse}	"Success response with new token pair"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Validation error"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Invalid or expired refresh token"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Token reuse detected - all tokens revoked"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Failed to refresh token"
+//	@Router			/api/v1/auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	// Story 1.8, AC4: Token refresh uses current JWT token from Authorization header
 	// Extract token from context (set by SessionAuthMiddleware)
@@ -405,16 +411,17 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 }
 
 // Logout godoc
-// @Summary Logout user
-// @Description Invalidate current JWT token (Story 1.8, AC5)
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} errors.Response{success=bool,data=object} "Successfully logged out"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to logout"
-// @Router /api/v1/auth/logout [post]
+//
+//	@Summary		Logout user
+//	@Description	Invalidate current JWT token (Story 1.8, AC5)
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	errors.Response{success=bool,data=object}				"Successfully logged out"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to logout"
+//	@Router			/api/v1/auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	// Story 1.8, AC5: Logout invalidates the current JWT token immediately
 	// Extract token ID from context (set by SessionAuthMiddleware)
@@ -478,17 +485,18 @@ func (h *Handler) Logout(c *gin.Context) {
 }
 
 // RegisterStaff godoc
-// @Summary Register a new staff member via self-registration
-// @Description Self-registration for staff with whitelisted email domains (Public endpoint)
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body StaffRegistrationRequest true "Staff self-registration request"
-// @Success 201 {object} apiErrors.Response{success=bool,data=StaffRegistrationResponse} "User registered with PENDING status"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Validation error or duplicate username/email"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Email domain not whitelisted"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/auth/register-staff [post]
+//
+//	@Summary		Register a new staff member via self-registration
+//	@Description	Self-registration for staff with whitelisted email domains (Public endpoint)
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		StaffRegistrationRequest										true	"Staff self-registration request"
+//	@Success		201		{object}	errors.Response{success=bool,data=StaffRegistrationResponse}	"User registered with PENDING status"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Validation error or duplicate username/email"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Email domain not whitelisted"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Internal server error"
+//	@Router			/api/v1/auth/register-staff [post]
 func (h *Handler) RegisterStaff(c *gin.Context) {
 	var req StaffRegistrationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -516,13 +524,13 @@ func (h *Handler) RegisterStaff(c *gin.Context) {
 
 	// Story 1.9, AC9: Return response with verification_sent flag
 	response := StaffRegistrationResponse{
-		ID:              user.ID,
-		Username:        user.Username,
-		Email:           user.Email,
-		Role:            user.Role,
-		Status:          user.Status,
+		ID:               user.ID,
+		Username:         user.Username,
+		Email:            user.Email,
+		Role:             user.Role,
+		Status:           user.Status,
 		VerificationSent: token != "",
-		CreatedAt:       user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:        user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 
 	// Story 1.9, AC8: Log self-registration to audit trail
@@ -539,16 +547,17 @@ func (h *Handler) RegisterStaff(c *gin.Context) {
 }
 
 // VerifyEmail godoc
-// @Summary Verify email and activate account
-// @Description Verify email verification token and activate user account (Public endpoint)
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body VerifyEmailRequest true "Email verification request"
-// @Success 200 {object} apiErrors.Response{success=bool,data=UserResponse} "Account activated successfully"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Invalid or expired verification token"
-// @Failure 500 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/auth/verify-email [post]
+//
+//	@Summary		Verify email and activate account
+//	@Description	Verify email verification token and activate user account (Public endpoint)
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		VerifyEmailRequest										true	"Email verification request"
+//	@Success		200		{object}	errors.Response{success=bool,data=UserResponse}			"Account activated successfully"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid or expired verification token"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Internal server error"
+//	@Router			/api/v1/auth/verify-email [post]
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	var req VerifyEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -578,16 +587,17 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 }
 
 // GetMe godoc
-// @Summary Get current user
-// @Description Get the currently authenticated user's information with roles
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} errors.Response{success=bool,data=UserResponse} "Success response with current user data"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to get user"
-// @Router /api/v1/auth/me [get]
+//
+//	@Summary		Get current user
+//	@Description	Get the currently authenticated user's information with roles
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	errors.Response{success=bool,data=UserResponse}			"Success response with current user data"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to get user"
+//	@Router			/api/v1/auth/me [get]
 func (h *Handler) GetMe(c *gin.Context) {
 	userID := contextutil.GetUserID(c)
 	if userID == 0 {
@@ -609,23 +619,24 @@ func (h *Handler) GetMe(c *gin.Context) {
 }
 
 // ListUsers godoc
-// @Summary List all users (Admin only)
-// @Description Get paginated list of all users with optional filtering (requires admin role)
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param page query int false "Page number" default(1)
-// @Param per_page query int false "Items per page (max 100)" default(20)
-// @Param role query string false "Filter by role (user or admin)"
-// @Param search query string false "Search by name or email"
-// @Param sort query string false "Sort by field (created_at, updated_at, name, email)" default(created_at)
-// @Param order query string false "Sort order (asc or desc)" default(desc)
-// @Success 200 {object} errors.Response{success=bool,data=UserListResponse} "Success response with paginated user list"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid parameters"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Admin access required"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Failed to list users"
-// @Router /api/v1/admin/users [get]
+//
+//	@Summary		List all users (Admin only)
+//	@Description	Get paginated list of all users with optional filtering (requires admin role)
+//	@Tags			admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			page		query		int														false	"Page number"				default(1)
+//	@Param			per_page	query		int														false	"Items per page (max 100)"	default(20)
+//	@Param			role		query		string													false	"Filter by role (user or admin)"
+//	@Param			search		query		string													false	"Search by name or email"
+//	@Param			sort		query		string													false	"Sort by field (created_at, updated_at, name, email)"	default(created_at)
+//	@Param			order		query		string													false	"Sort order (asc or desc)"								default(desc)
+//	@Success		200			{object}	errors.Response{success=bool,data=UserListResponse}		"Success response with paginated user list"
+//	@Failure		400			{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid parameters"
+//	@Failure		403			{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Admin access required"
+//	@Failure		500			{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Failed to list users"
+//	@Router			/api/v1/admin/users [get]
 func (h *Handler) ListUsers(c *gin.Context) {
 	pagination := middleware.ParsePaginationParams(c)
 	filters := ParseUserFilters(c)
@@ -662,24 +673,27 @@ func (h *Handler) ListUsers(c *gin.Context) {
 }
 
 // CreateUser godoc
-// @Summary Create a new user (Admin only)
-// @Description Create a new user with role assignment. Only users with SYSTEM_ADMIN role can access this endpoint.
+//
+//	@Summary		Create a new user (Admin only)
+//	@Description	Create a new user with role assignment. Only users with SYSTEM_ADMIN role can access this endpoint.
+//
 // Required fields: username (min 3 chars), password (min 8 chars), email (valid format), role (SYSTEM_ADMIN, OWNER, or CASHIER).
 // Optional field: branch_id (required for CASHIER role, must reference existing branch).
 // User is created with ACTIVE status. Password is hashed using bcrypt (cost factor 12).
 // Story 1.7, AC1-8: User registration with admin approval.
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body CreateUserRequest true "User creation request" SchemaExample(true, "Example SYSTEM_ADMIN user", "{\"username\":\"newadmin\",\"password\":\"SecurePass123!\",\"email\":\"newadmin@example.com\",\"role\":\"SYSTEM_ADMIN\"}") SchemaExample(true, "Example CASHIER user", "{\"username\":\"newcashier\",\"password\":\"SecurePass123!\",\"email\":\"cashier@example.com\",\"role\":\"CASHIER\",\"branch_id\":1}")
-// @Success 201 {object} errors.Response{success=bool,data=CreateUserResponse} "User created successfully"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid request or validation error (missing fields, invalid format, invalid role, missing branch_id for CASHIER)"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Unauthorized - user not authenticated"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - insufficient permissions (SYSTEM_ADMIN role required)"
-// @Failure 409 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Conflict - username or email already exists"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Internal server error"
-// @Router /api/v1/users [post]
+//
+//	@Tags			admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		CreateUserRequest										true	"User creation request"	SchemaExample(true, "Example SYSTEM_ADMIN user", "{\"username\":\"newadmin\",\"password\":\"SecurePass123!\",\"email\":\"newadmin@example.com\",\"role\":\"SYSTEM_ADMIN\"}")	SchemaExample(true, "Example CASHIER user", "{\"username\":\"newcashier\",\"password\":\"SecurePass123!\",\"email\":\"cashier@example.com\",\"role\":\"CASHIER\",\"branch_id\":1}")
+//	@Success		201		{object}	errors.Response{success=bool,data=CreateUserResponse}	"User created successfully"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid request or validation error (missing fields, invalid format, invalid role, missing branch_id for CASHIER)"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - user not authenticated"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions (SYSTEM_ADMIN role required)"
+//	@Failure		409		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Conflict - username or email already exists"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Internal server error"
+//	@Router			/api/v1/users [post]
 func (h *Handler) CreateUser(c *gin.Context) {
 	// Extract admin user ID from JWT context
 	adminID := contextutil.GetUserID(c)
@@ -760,19 +774,21 @@ func isValidID(id uint) bool {
 }
 
 // DeactivateUser godoc
-// @Summary Deactivate user account
-// @Description Deactivate a user account (SYSTEM_ADMIN only). Requires reason field.
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "User ID to deactivate"
-// @Param request body DeactivateUserRequest true "Deactivation request"
-// @Success 200 {object} apiErrors.Response{success=bool,data=DeactivateUserResponse} "User deactivated successfully"
-// @Failure 400 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Cannot deactivate own account or invalid reason"
-// @Failure 403 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "Forbidden - insufficient permissions"
-// @Failure 404 {object} apiErrors.Response{success=bool,error=errors.ErrorInfo} "User not found"
-// @Router /api/v1/users/{id}/deactivate [put]
+//
+//	@Summary		Deactivate user account
+//	@Description	Deactivate a user account (SYSTEM_ADMIN only). Requires reason field.
+//	@Tags			admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int															true	"User ID to deactivate"
+//	@Param			request	body		DeactivateUserRequest										true	"Deactivation request"
+//	@Success		200		{object}	errors.Response{success=bool,data=DeactivateUserResponse}	"User deactivated successfully"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Cannot deactivate own account or invalid reason"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"Forbidden - insufficient permissions"
+//	@Failure		404		{object}	errors.Response{success=bool,error=errors.ErrorInfo}		"User not found"
+//	@Router			/api/v1/users/{id}/deactivate [put]
+//
 // Story 1.10, AC1-AC7: User deactivation endpoint with reason, token revocation, and audit logging
 func (h *Handler) DeactivateUser(c *gin.Context) {
 	// Parse target user ID

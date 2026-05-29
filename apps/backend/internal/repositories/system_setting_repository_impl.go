@@ -88,7 +88,7 @@ func (r *systemSettingRepository) UpdateValue(ctx context.Context, key, value st
 	result := r.db.WithContext(ctx).Model(&models.SystemSetting{}).
 		Where("key = ?", key).
 		Updates(map[string]interface{}{
-			"value":     value,
+			"value":      value,
 			"updated_by": updatedBy,
 		})
 

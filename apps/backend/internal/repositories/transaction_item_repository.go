@@ -47,7 +47,7 @@ type TransactionItemFilter struct {
 
 // TransactionItemSummary represents aggregated transaction item data
 type TransactionItemSummary struct {
-	TotalItems       int64  `json:"total_items"`
-	TotalQuantity    int64  `json:"total_quantity"`
-	TotalSubtotal    string `json:"total_subtotal"` // Decimal string for precision
+	TotalItems    int64  `json:"total_items"`
+	TotalQuantity int64  `json:"total_quantity"`
+	TotalSubtotal string `json:"total_subtotal"` // Decimal string for precision
 }

@@ -177,17 +177,52 @@ endif
 swag:
 ifdef CONTAINER_RUNNING
 	@echo "$(ENV_MSG)"
-	@$(EXEC_CMD) swag init -g ./cmd/server/main.go -o ./api/docs
-	@echo "✅ Swagger docs generated"
+	@$(EXEC_CMD) swag init -g cmd/server/main.go -o docs
+	@echo "✅ Swagger docs generated to docs/"
 else
 	@if command -v swag >/dev/null 2>&1; then \
 		echo "$(ENV_MSG)"; \
-		swag init -g ./cmd/server/main.go -o ./api/docs; \
-		echo "✅ Swagger docs generated"; \
+		swag init -g cmd/server/main.go -o docs; \
+		echo "✅ Swagger docs generated to docs/"; \
 	else \
 		echo "❌ Error: Docker container not running and swag not installed"; \
 		echo "Please run: make up"; \
 		echo "Or install: go install github.com/swaggo/swag/cmd/swag@latest"; \
+		exit 1; \
+	fi
+endif
+
+## swagger-serve: Generate Swagger docs and start server with Swagger UI
+swagger-serve: swag
+	@echo "🚀 Starting server with Swagger UI..."
+ifdef CONTAINER_RUNNING
+	@echo "📍 Swagger UI: http://localhost:8080/swagger/index.html"
+	@echo "📍 API Health: http://localhost:8080/health"
+else
+	@if command -v go >/dev/null 2>&1; then \
+		echo "📍 Swagger UI: http://localhost:8080/swagger/index.html"; \
+		echo "📍 API Health: http://localhost:8080/health"; \
+		go run cmd/server/main.go; \
+	else \
+		echo "❌ Error: Go not installed on host"; \
+		echo "Please run: make up"; \
+		exit 1; \
+	fi
+endif
+
+## swagger-validate: Validate and format Swagger specification
+swagger-validate:
+ifdef CONTAINER_RUNNING
+	@echo "$(ENV_MSG)"
+	@$(EXEC_CMD) swag fmt -g cmd/server/main.go -o docs
+	@echo "✅ Swagger spec validated and formatted"
+else
+	@if command -v swag >/dev/null 2>&1; then \
+		echo "$(ENV_MSG)"; \
+		swag fmt -g cmd/server/main.go -o docs; \
+		echo "✅ Swagger spec validated and formatted"; \
+	else \
+		echo "❌ Error: swag not installed"; \
 		exit 1; \
 	fi
 endif

@@ -6,11 +6,11 @@ import (
 
 // ConflictDetails contains specifics about a stock conflict
 type ConflictDetails struct {
-	ProductID         uint `json:"product_id"`
+	ProductID         uint   `json:"product_id"`
 	ProductSKU        string `json:"product_sku"`
-	RequestedQuantity int `json:"requested_qty"`
-	AvailableStock    int64 `json:"available_stock"`
-	Shortfall         int `json:"shortfall"`
+	RequestedQuantity int    `json:"requested_qty"`
+	AvailableStock    int64  `json:"available_stock"`
+	Shortfall         int    `json:"shortfall"`
 }
 
 // ConflictErrorResponse is RFC 7807 formatted error response for insufficient stock
@@ -29,13 +29,13 @@ type ConflictErrorResponse struct {
 // Story 8-5, AC3: Error response must include type, title, status, detail, instance, transaction_id, conflict_details
 func BuildConflictErrorResponse(details ConflictDetails, transactionID, instance string) ConflictErrorResponse {
 	return ConflictErrorResponse{
-		Type:          "https://api.simpo.com/errors/conflict-insufficient-stock",
-		Title:         "Insufficient Stock",
-		Status:        409,
-		Detail:        fmt.Sprintf("Product %s has insufficient stock. Requested: %d, Available: %d",
+		Type:   "https://api.simpo.com/errors/conflict-insufficient-stock",
+		Title:  "Insufficient Stock",
+		Status: 409,
+		Detail: fmt.Sprintf("Product %s has insufficient stock. Requested: %d, Available: %d",
 			details.ProductSKU, details.RequestedQuantity, details.AvailableStock),
-		Instance:      instance,
-		TransactionID: transactionID,
+		Instance:        instance,
+		TransactionID:   transactionID,
 		ConflictDetails: details,
 	}
 }

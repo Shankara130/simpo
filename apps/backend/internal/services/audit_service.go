@@ -15,13 +15,13 @@ import (
 
 // AuditLogEntry represents an append-only audit log entry (Story 1.5, AC7, NFR-SEC-004)
 type AuditLogEntry struct {
-	UserID    *uint           `json:"user_id,omitempty"`
-	Username  string          `json:"username"`
+	UserID    *uint              `json:"user_id,omitempty"`
+	Username  string             `json:"username"`
 	Action    models.AuditAction `json:"action"`
-	IPAddress string          `json:"ip_address"`
-	Outcome   string          `json:"outcome"`
-	Reason    string          `json:"reason,omitempty"`
-	Timestamp time.Time       `json:"timestamp"`
+	IPAddress string             `json:"ip_address"`
+	Outcome   string             `json:"outcome"`
+	Reason    string             `json:"reason,omitempty"`
+	Timestamp time.Time          `json:"timestamp"`
 }
 
 // AuditRepository defines the interface for audit log persistence
@@ -162,19 +162,19 @@ type AuditService interface {
 // Story 5.4: Implements persistent audit trail storage (replaces MVP stdout logging)
 // AuditServiceConfig configures audit service behavior
 type AuditServiceConfig struct {
-	EnableRetry        bool          // Enable retry queue for failed audit writes
-	MaxRetries         int           // Maximum retry attempts per audit entry
-	RetryInterval      time.Duration // Initial retry interval (with exponential backoff)
-	RetryQueueSize     int           // Maximum queue size for pending retries
+	EnableRetry    bool          // Enable retry queue for failed audit writes
+	MaxRetries     int           // Maximum retry attempts per audit entry
+	RetryInterval  time.Duration // Initial retry interval (with exponential backoff)
+	RetryQueueSize int           // Maximum queue size for pending retries
 }
 
 // DefaultAuditServiceConfig returns default configuration for audit service
 func DefaultAuditServiceConfig() AuditServiceConfig {
 	return AuditServiceConfig{
-		EnableRetry:    true,    // Enable retry by default for compliance
-		MaxRetries:     3,       // Retry up to 3 times
+		EnableRetry:    true, // Enable retry by default for compliance
+		MaxRetries:     3,    // Retry up to 3 times
 		RetryInterval:  5 * time.Second,
-		RetryQueueSize: 1000,    // Allow up to 1000 pending retries
+		RetryQueueSize: 1000, // Allow up to 1000 pending retries
 	}
 }
 
@@ -386,11 +386,31 @@ func (s *auditService) ResetMetrics() {
 }
 
 // Metrics increment helpers
-func (s *auditService) incrementTotal() { s.metrics.Lock(); s.metrics.totalWrites++; s.metrics.Unlock() }
-func (s *auditService) incrementSuccess() { s.metrics.Lock(); s.metrics.successfulWrites++; s.metrics.Unlock() }
-func (s *auditService) incrementFailed() { s.metrics.Lock(); s.metrics.failedWrites++; s.metrics.Unlock() }
-func (s *auditService) incrementRetried() { s.metrics.Lock(); s.metrics.retriedWrites++; s.metrics.Unlock() }
-func (s *auditService) incrementAbandoned() { s.metrics.Lock(); s.metrics.abandonedWrites++; s.metrics.Unlock() }
+func (s *auditService) incrementTotal() {
+	s.metrics.Lock()
+	s.metrics.totalWrites++
+	s.metrics.Unlock()
+}
+func (s *auditService) incrementSuccess() {
+	s.metrics.Lock()
+	s.metrics.successfulWrites++
+	s.metrics.Unlock()
+}
+func (s *auditService) incrementFailed() {
+	s.metrics.Lock()
+	s.metrics.failedWrites++
+	s.metrics.Unlock()
+}
+func (s *auditService) incrementRetried() {
+	s.metrics.Lock()
+	s.metrics.retriedWrites++
+	s.metrics.Unlock()
+}
+func (s *auditService) incrementAbandoned() {
+	s.metrics.Lock()
+	s.metrics.abandonedWrites++
+	s.metrics.Unlock()
+}
 
 // createAuditLogEntry creates an AuditLog model from AuditLogEntry
 func (s *auditService) createAuditLogEntry(entry AuditLogEntry) *models.AuditLog {
@@ -404,7 +424,7 @@ func (s *auditService) createAuditLogEntry(entry AuditLogEntry) *models.AuditLog
 		Username:  entry.Username,
 		Action:    models.AuditAction(entry.Action),
 		IPAddress: entry.IPAddress,
-			Outcome:   entry.Outcome,
+		Outcome:   entry.Outcome,
 		Reason:    entry.Reason,
 		Timestamp: entry.Timestamp,
 	}
@@ -747,7 +767,6 @@ func (s *auditService) LogReportExport(ctx context.Context, userID uint, usernam
 
 	return nil
 }
-
 
 // LogBlockedSaleAttempt logs blocked sale attempts for expired products to append-only audit trail
 // Story 4.6, AC6: Audit trail logging for blocked sale attempts (regulatory compliance)

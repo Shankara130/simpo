@@ -66,7 +66,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.True(t, response.Success)
@@ -106,7 +106,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.True(t, response.Success)
@@ -149,7 +149,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.True(t, response.Success)
@@ -182,7 +182,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusConflict,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.False(t, response.Success)
@@ -206,7 +206,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusConflict,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.False(t, response.Success)
@@ -230,7 +230,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.False(t, response.Success)
@@ -255,7 +255,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.False(t, response.Success)
@@ -275,7 +275,7 @@ func TestHandler_CreateUser(t *testing.T) {
 			setupMocks:     func(ms *MockService, mas *MockAuthService) {},
 			expectedStatus: http.StatusUnauthorized,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response apiErrors.Response
+				var response errors.Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
 				assert.False(t, response.Success)
@@ -434,7 +434,7 @@ func TestHandler_CreateUser_ValidationErrors(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			var response apiErrors.Response
+			var response errors.Response
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
 			assert.False(t, response.Success)
@@ -492,7 +492,7 @@ func TestHandler_CreateUser_ServiceErrors(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			var response apiErrors.Response
+			var response errors.Response
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
 			assert.False(t, response.Success)

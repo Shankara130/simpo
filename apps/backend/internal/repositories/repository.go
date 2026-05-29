@@ -3,11 +3,11 @@ package repositories
 // Repository is the main repository container
 // AC5: Dependency injection pattern - all repositories accessible through this container
 type Repository struct {
-	Branch         BranchRepository
-	Product        ProductRepository
-	Transaction    TransactionRepository
+	Branch          BranchRepository
+	Product         ProductRepository
+	Transaction     TransactionRepository
 	TransactionItem TransactionItemRepository
-	User           UserRepository
+	User            UserRepository
 }
 
 // NewRepositories creates a new repository container with all repositories
@@ -20,11 +20,11 @@ func NewRepositories(
 	userRepo UserRepository,
 ) *Repository {
 	return &Repository{
-		Branch:         branchRepo,
-		Product:        productRepo,
-		Transaction:    transactionRepo,
+		Branch:          branchRepo,
+		Product:         productRepo,
+		Transaction:     transactionRepo,
 		TransactionItem: transactionItemRepo,
-		User:           userRepo,
+		User:            userRepo,
 	}
 }
 

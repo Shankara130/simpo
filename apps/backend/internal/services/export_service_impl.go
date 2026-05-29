@@ -29,7 +29,7 @@ type ExportServiceImpl struct {
 	pdfGenerator   *utils.PDFGenerator
 	excelGenerator *utils.ExcelGenerator
 	// In-memory job tracking for MVP scope (should be database-backed in production)
-	jobs     map[string]*dto.ExportJob
+	jobs      map[string]*dto.ExportJob
 	jobsMutex sync.RWMutex
 }
 
@@ -57,7 +57,7 @@ func NewExportService(reportService ReportService, fileStorage FileStorageServic
 		systemService:  systemService,
 		pdfGenerator:   pdfGen,
 		excelGenerator: excelGen,
-		jobs:          make(map[string]*dto.ExportJob), // Initialize job tracking
+		jobs:           make(map[string]*dto.ExportJob), // Initialize job tracking
 	}
 }
 
@@ -544,9 +544,6 @@ func (s *ExportServiceImpl) CleanupExpiredJobs(ctx context.Context) error {
 	return nil
 }
 
-
-
-
 // validateExportRequest validates the export request parameters
 func (s *ExportServiceImpl) validateExportRequest(req *dto.ExportRequest) error {
 	if req.ReportType == "" {
@@ -618,6 +615,7 @@ func sanitizeFilename(input string) string {
 
 	return input
 }
+
 // Story 5.3, AC4: File naming convention with timestamp and branch
 // Code review fix: CRITICAL-004 - Improved branch name handling to prevent panic
 func (s *ExportServiceImpl) generateFilename(reportType, format, dateRange, branchName string) string {
@@ -637,15 +635,14 @@ func (s *ExportServiceImpl) generateFilename(reportType, format, dateRange, bran
 
 	// Code review fix: CRITICAL-005 - Sanitize dateRange to prevent path traversal
 
-
 	safeDateRange := sanitizeFilename(dateRange)
 	return fmt.Sprintf("%sReport_%s_%s_%s.%s",
 		capitalize(reportType),
 		safeDateRange,
 		branchPart,
-			timestamp,
-			format,
-		)
+		timestamp,
+		format,
+	)
 }
 
 // createExportMetadata creates metadata for the exported file
@@ -704,7 +701,7 @@ func generateDailySalesPDF(data *dto.DailySalesSummaryDTO, businessName, busines
 		// Code review fix: HIGH-003 Round 6 - Pre-process currency string to remove symbols and commas
 		cleanSalesStr := strings.TrimSpace(data.TotalSales)
 		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, "Rp", "")
-		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ".", "") // Remove thousand separators
+		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ".", "")  // Remove thousand separators
 		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ",", ".") // Convert decimal comma to dot
 
 		totalSalesFloat, err := strconv.ParseFloat(cleanSalesStr, 64)
@@ -774,7 +771,7 @@ func generateDailySalesExcel(data *dto.DailySalesSummaryDTO, businessName, busin
 		// Code review fix: HIGH-003 Round 6 - Pre-process currency string to remove symbols and commas
 		cleanSalesStr := strings.TrimSpace(data.TotalSales)
 		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, "Rp", "")
-		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ".", "") // Remove thousand separators
+		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ".", "")  // Remove thousand separators
 		cleanSalesStr = strings.ReplaceAll(cleanSalesStr, ",", ".") // Convert decimal comma to dot
 
 		totalSalesFloat, err := strconv.ParseFloat(cleanSalesStr, 64)

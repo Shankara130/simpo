@@ -28,7 +28,7 @@ type Product struct {
 	Expired          bool           `gorm:"-" json:"isExpired"`
 
 	// Relationships
-	Branch           *Branch        `json:"-" gorm:"foreignKey:BranchID"`
+	Branch           *Branch           `json:"-" gorm:"foreignKey:BranchID"`
 	TransactionItems []TransactionItem `json:"-" gorm:"foreignKey:ProductID"`
 }
 

@@ -288,15 +288,15 @@ type DailySalesReportData struct {
 
 // ProfitLossReportData represents the data structure for profit/loss PDF generation
 type ProfitLossReportData struct {
-	PeriodStart        string
-	PeriodEnd          string
-	BranchName         string
-	Revenue            string
-	CostOfGoodsSold    string
-	GrossProfit        string
-	GrossProfitMargin  float64
-	BreakdownType      string
-	Breakdowns         []BreakdownItem
+	PeriodStart       string
+	PeriodEnd         string
+	BranchName        string
+	Revenue           string
+	CostOfGoodsSold   string
+	GrossProfit       string
+	GrossProfitMargin float64
+	BreakdownType     string
+	Breakdowns        []BreakdownItem
 }
 
 // TopProductItem represents a top-selling product for PDF

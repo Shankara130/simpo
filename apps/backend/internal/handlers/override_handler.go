@@ -15,20 +15,20 @@ type OverrideHandler struct {
 
 // OverrideRequest represents the request body for manual override
 type OverrideRequest struct {
-	TransactionID    string `json:"transaction_id" binding:"required"`
-	AdminUserID      uint   `json:"admin_user_id" binding:"required"`
-	AdminUsername    string `json:"admin_username" binding:"required"`
-	Reason           string `json:"reason" binding:"required"`
-	ForceProcessing  bool   `json:"force_processing"`
+	TransactionID   string `json:"transaction_id" binding:"required"`
+	AdminUserID     uint   `json:"admin_user_id" binding:"required"`
+	AdminUsername   string `json:"admin_username" binding:"required"`
+	Reason          string `json:"reason" binding:"required"`
+	ForceProcessing bool   `json:"force_processing"`
 }
 
 // OverrideResponse represents successful override response
 type OverrideResponse struct {
-	Success          bool   `json:"success"`
-	Message          string `json:"message"`
-	TransactionID    string `json:"transaction_id"`
-	ProcessedBy      string `json:"processed_by"`
-	OverrideTime     string `json:"override_time"`
+	Success       bool   `json:"success"`
+	Message       string `json:"message"`
+	TransactionID string `json:"transaction_id"`
+	ProcessedBy   string `json:"processed_by"`
+	OverrideTime  string `json:"override_time"`
 }
 
 // NewOverrideHandler creates a new override handler

@@ -52,13 +52,13 @@ func GetRolePermissions(role string) RolePermissions {
 
 	case RoleOwner:
 		return RolePermissions{
-			Role:              RoleOwner,
-			Permissions:       []Permission{PermRead, PermWrite},
+			Role:        RoleOwner,
+			Permissions: []Permission{PermRead, PermWrite},
 			AllowedEndpoints: []string{
 				"/api/v1/products",
 				"/api/v1/transactions",
 				"/api/v1/reports",
-				"/api/v1/users",				// Can view and list users
+				"/api/v1/users", // Can view and list users
 				"/api/v1/inventory",
 				"/api/v1/branches",
 			},
@@ -67,8 +67,8 @@ func GetRolePermissions(role string) RolePermissions {
 
 	case RoleCashier:
 		return RolePermissions{
-			Role:              RoleCashier,
-			Permissions:       []Permission{PermRead, PermWrite},
+			Role:        RoleCashier,
+			Permissions: []Permission{PermRead, PermWrite},
 			AllowedEndpoints: []string{
 				"/api/v1/transactions", // Can process transactions
 				"/api/v1/products",     // Can check stock (read-only)

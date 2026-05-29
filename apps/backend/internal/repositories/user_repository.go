@@ -51,14 +51,14 @@ type UserRepository interface {
 // UserFilter defines filtering options for user listing
 // AC4: Complex query support with filtering by role, branch, status
 type UserFilter struct {
-	BranchID  *uint   // Filter by branch assignment
-	Role      string  // Filter by role (SYSTEM_ADMIN, OWNER, CASHIER)
-	Status    string  // Filter by status (ACTIVE, INACTIVE, PENDING)
+	BranchID    *uint  // Filter by branch assignment
+	Role        string // Filter by role (SYSTEM_ADMIN, OWNER, CASHIER)
+	Status      string // Filter by status (ACTIVE, INACTIVE, PENDING)
 	SearchQuery string // Search by name, username, or email (ILIKE)
-	Page      int     // Page number (1-indexed)
-	Limit     int     // Items per page
-	SortBy    string  // Field to sort by
-	SortOrder string  // "asc" or "desc"
+	Page        int    // Page number (1-indexed)
+	Limit       int    // Items per page
+	SortBy      string // Field to sort by
+	SortOrder   string // "asc" or "desc"
 }
 
 // UserSummary represents aggregated user data

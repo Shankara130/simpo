@@ -34,7 +34,7 @@ type BackupServiceImpl struct {
 	schedulerCancel context.CancelFunc
 	jobStatus       *dto.BackupJobStatus
 	jobStatusLock   sync.RWMutex
-	db              any // Database connection for consistency checks (optional, can be nil)
+	db              any          // Database connection for consistency checks (optional, can be nil)
 	auditService    AuditService // Story 6.4: Audit logging for backup operations
 }
 

@@ -93,10 +93,10 @@ type Service interface {
 }
 
 type service struct {
-	repo               Repository
-	whitelistRepo      WhitelistRepository
-	verificationRepo   VerificationRepository
-	sessionManager     SessionManager // Story 1.10: For token revocation on deactivation
+	repo             Repository
+	whitelistRepo    WhitelistRepository
+	verificationRepo VerificationRepository
+	sessionManager   SessionManager // Story 1.10: For token revocation on deactivation
 }
 
 // SessionManager defines the interface for session management operations (Story 1.8, Story 1.10)
@@ -580,7 +580,7 @@ func (s *service) RegisterStaff(ctx context.Context, req StaffRegistrationReques
 			PasswordHash: hashedPassword,
 			Role:         defaultRole,
 			Status:       UserStatusPending, // Story 1.9, AC7: PENDING until email verified
-			BranchID:     nil, // Story 1.9, AC7: Branch assignment optional for self-registration
+			BranchID:     nil,               // Story 1.9, AC7: Branch assignment optional for self-registration
 		}
 
 		if err := s.repo.Create(txCtx, createdUser); err != nil {

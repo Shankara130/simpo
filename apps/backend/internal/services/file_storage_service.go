@@ -11,10 +11,10 @@ import (
 // InMemoryFileStorage is a simple in-memory implementation of FileStorageService
 // Story 5.3, Task 6: Basic file storage for export files
 type InMemoryFileStorage struct {
-	files      map[string][]byte
-	mutex      sync.RWMutex
-	basePath   string
-	maxSizeMB  int64
+	files     map[string][]byte
+	mutex     sync.RWMutex
+	basePath  string
+	maxSizeMB int64
 }
 
 // NewInMemoryFileStorage creates a new in-memory file storage service

@@ -266,14 +266,14 @@ func (s *userService) ListUsers(ctx context.Context, filter *UserFilter) ([]*use
 
 	// Convert to repository filter
 	repoFilter := &repositories.UserFilter{
-		BranchID:     filter.BranchID,
-		Role:         filter.Role,
-		Status:       filter.Status,
-		SearchQuery:  filter.SearchQuery,
-		Page:         filter.Page,
-		Limit:        filter.Limit,
-		SortBy:       filter.SortBy,
-		SortOrder:    filter.SortOrder,
+		BranchID:    filter.BranchID,
+		Role:        filter.Role,
+		Status:      filter.Status,
+		SearchQuery: filter.SearchQuery,
+		Page:        filter.Page,
+		Limit:       filter.Limit,
+		SortBy:      filter.SortBy,
+		SortOrder:   filter.SortOrder,
 	}
 
 	// Sanitize search input (Epic 2 retro: remove wildcard characters)

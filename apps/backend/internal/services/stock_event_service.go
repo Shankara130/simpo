@@ -26,8 +26,8 @@ type StockUpdatedEvent struct {
 // StockEvent represents a union type for all stock-related events
 // Story 4.4: Support both stock.updated and stock.low events
 type StockEvent struct {
-	EventType string                `json:"event"` // "stock.updated" or "stock.low"
-	Data      interface{}           `json:"data"`
+	EventType string      `json:"event"` // "stock.updated" or "stock.low"
+	Data      interface{} `json:"data"`
 }
 
 // LowStockEvent represents a low stock notification event payload
@@ -75,8 +75,8 @@ type StockEventService interface {
 type stockEventService struct {
 	redisClient *redis.Client
 	// WebSocket client management
-	clients        map[string]clientSubscription
-	clientsMutex   sync.RWMutex
+	clients      map[string]clientSubscription
+	clientsMutex sync.RWMutex
 	// Channel for broadcaster control
 	broadcasterCtx    context.Context
 	broadcasterCancel context.CancelFunc
@@ -317,4 +317,3 @@ func (s *stockEventService) shouldSendToClient(client clientSubscription, event 
 
 	return false
 }
-

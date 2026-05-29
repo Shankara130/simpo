@@ -22,12 +22,12 @@ type SyncRequest struct {
 
 // SyncResponse represents successful sync response
 type SyncResponse struct {
-	Success                 bool                              `json:"success"`
-	Message                 string                            `json:"message"`
-	ProcessedTransactions    int                               `json:"processed_transactions"`
-	SuccessfulTransactions   []services.OfflineTransaction     `json:"successful_transactions"`
-	FailedTransactions       []services.OfflineTransaction     `json:"failed_transactions"`
-	ConflictErrors           []dto.ConflictErrorResponse       `json:"conflict_errors,omitempty"`
+	Success                bool                          `json:"success"`
+	Message                string                        `json:"message"`
+	ProcessedTransactions  int                           `json:"processed_transactions"`
+	SuccessfulTransactions []services.OfflineTransaction `json:"successful_transactions"`
+	FailedTransactions     []services.OfflineTransaction `json:"failed_transactions"`
+	ConflictErrors         []dto.ConflictErrorResponse   `json:"conflict_errors,omitempty"`
 }
 
 // NewSyncHandler creates a new sync handler
@@ -47,7 +47,7 @@ func (h *SyncHandler) SyncTransactions(c *gin.Context) {
 	var req SyncRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":  "Invalid request body",
 			"detail": err.Error(),
 		})
 		return
@@ -63,9 +63,9 @@ func (h *SyncHandler) SyncTransactions(c *gin.Context) {
 	if len(conflictErrors) > 0 {
 		// Return conflict error response (AC3)
 		c.JSON(http.StatusConflict, SyncResponse{
-			Success:               false,
-			Message:               "Conflict detected during transaction sync",
-			ProcessedTransactions: len(req.Transactions),
+			Success:                false,
+			Message:                "Conflict detected during transaction sync",
+			ProcessedTransactions:  len(req.Transactions),
 			SuccessfulTransactions: result.SuccessfulTransactions,
 			FailedTransactions:     result.FailedTransactions,
 			ConflictErrors:         conflictErrors,
@@ -78,9 +78,9 @@ func (h *SyncHandler) SyncTransactions(c *gin.Context) {
 	// h.syncSvc.ProcessTransactions(ctx, result.SuccessfulTransactions)
 
 	c.JSON(http.StatusOK, SyncResponse{
-		Success:               true,
-		Message:               "Transactions synchronized successfully",
-		ProcessedTransactions: len(req.Transactions),
+		Success:                true,
+		Message:                "Transactions synchronized successfully",
+		ProcessedTransactions:  len(req.Transactions),
 		SuccessfulTransactions: result.SuccessfulTransactions,
 		FailedTransactions:     result.FailedTransactions,
 	})

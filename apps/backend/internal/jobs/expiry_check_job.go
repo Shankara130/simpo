@@ -29,14 +29,14 @@ type ExpiryCheckJob struct {
 // ExpiryJobMetrics tracks metrics for the expiry check job
 // Story 4.5, Task 4.4: Add metrics: count of alerts generated per day per alert level
 type ExpiryJobMetrics struct {
-	TotalRuns        int64
-	TotalAlerts      int64
-	WarningAlerts    int64 // 30-day alerts
-	CriticalAlerts   int64 // 14-day alerts
-	UrgentAlerts     int64 // 7-day alerts
-	Errors           int64
-	LastRunTime      time.Time
-	LastAlertCount   int
+	TotalRuns      int64
+	TotalAlerts    int64
+	WarningAlerts  int64 // 30-day alerts
+	CriticalAlerts int64 // 14-day alerts
+	UrgentAlerts   int64 // 7-day alerts
+	Errors         int64
+	LastRunTime    time.Time
+	LastAlertCount int
 }
 
 // NewExpiryCheckJob creates a new expiry check job

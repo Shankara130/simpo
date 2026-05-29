@@ -92,8 +92,8 @@ func (d *diskChecker) Check(ctx context.Context) CheckResult {
 	duration := time.Since(start)
 
 	return CheckResult{
-		Status:  status,
-		Message: message,
+		Status:       status,
+		Message:      message,
 		ResponseTime: duration.String(),
 		Details: map[string]interface{}{
 			"used_gb":         usedGB,

@@ -35,12 +35,12 @@ type AuditRepository interface {
 // AuditLogFilter defines filtering options for audit log queries
 // Story 5.4, Task 3.4: Query parameters for audit log retrieval
 type AuditLogFilter struct {
-	UserID    *uint      // Filter by specific user (optional)
-	Action    *string   // Filter by audit action (optional)
-	StartDate *string   // Filter by start date (optional, format: YYYY-MM-DD)
-	EndDate   *string   // Filter by end date (optional, format: YYYY-MM-DD)
-	Limit     int        // Pagination limit (default: 20, max: 100)
-	Offset    int        // Pagination offset (default: 0)
+	UserID    *uint   // Filter by specific user (optional)
+	Action    *string // Filter by audit action (optional)
+	StartDate *string // Filter by start date (optional, format: YYYY-MM-DD)
+	EndDate   *string // Filter by end date (optional, format: YYYY-MM-DD)
+	Limit     int     // Pagination limit (default: 20, max: 100)
+	Offset    int     // Pagination offset (default: 0)
 }
 
 // AuditLogExportFormat defines supported export formats

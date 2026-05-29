@@ -48,16 +48,16 @@ type ProductRepository interface {
 // ProductFilter defines filtering options for product listing
 // AC4: Complex query support with filtering, pagination, and sorting
 type ProductFilter struct {
-	BranchID    *uint     // Filter by branch
-	Category    string    // Filter by category
-	SearchQuery string    // Search by name or SKU (ILIKE)
-	LowStock    bool      // Filter for low stock items
-	Expired     bool      // Filter for expired items
+	BranchID     *uint      // Filter by branch
+	Category     string     // Filter by category
+	SearchQuery  string     // Search by name or SKU (ILIKE)
+	LowStock     bool       // Filter for low stock items
+	Expired      bool       // Filter for expired items
 	ExpiryBefore *time.Time // Filter for items expiring before date
-	Page        int       // Page number (1-indexed)
-	Limit       int       // Items per page
-	SortBy      string    // Field to sort by (name, price, stock_qty, etc.)
-	SortOrder   string    // "asc" or "desc"
+	Page         int        // Page number (1-indexed)
+	Limit        int        // Items per page
+	SortBy       string     // Field to sort by (name, price, stock_qty, etc.)
+	SortOrder    string     // "asc" or "desc"
 }
 
 // ProductSummary represents aggregated product data

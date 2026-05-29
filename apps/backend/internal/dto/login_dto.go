@@ -18,11 +18,11 @@ func (lr *LoginRequest) ValidateStruct(v *validator.Validate) error {
 
 // UserInfo represents user information in authentication response (Story 1.5, AC4)
 type UserInfo struct {
-	ID       uint    `json:"id" example:"1"`
-	Username string  `json:"username" example:"admin"`
-	Email    string  `json:"email" example:"admin@simpo.pharmacy"`
-	Role     string  `json:"role" example:"SYSTEM_ADMIN"`
-	BranchID *uint  `json:"branch_id,omitempty" example:"null"`
+	ID       uint   `json:"id" example:"1"`
+	Username string `json:"username" example:"admin"`
+	Email    string `json:"email" example:"admin@simpo.pharmacy"`
+	Role     string `json:"role" example:"SYSTEM_ADMIN"`
+	BranchID *uint  `json:"branch_id,omitempty"`
 }
 
 // LoginResponse represents successful authentication response (Story 1.5, AC4)

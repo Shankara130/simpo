@@ -58,14 +58,14 @@ const (
 
 // SalesReport represents daily sales summary report
 type SalesReport struct {
-	BranchID        uint
-	BranchName      string
-	StartDate       time.Time
-	EndDate         time.Time
-	TotalSales      string
-	TotalTransactions int64
+	BranchID                uint
+	BranchName              string
+	StartDate               time.Time
+	EndDate                 time.Time
+	TotalSales              string
+	TotalTransactions       int64
 	AverageTransactionValue string
-	PaymentMethods  []PaymentMethodBreakdown
+	PaymentMethods          []PaymentMethodBreakdown
 }
 
 // ProfitLossReport represents profit and loss report

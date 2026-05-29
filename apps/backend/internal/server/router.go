@@ -5,9 +5,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
@@ -88,6 +88,9 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 	})
 	adminHealthHandler := handlers.NewAdminHealthHandler(healthService, metricsCollector, alertService, checkers)
 
+	// Swagger UI for API documentation
+	router.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Legacy swagger endpoint for backward compatibility
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	rlCfg := cfg.Ratelimit
@@ -149,7 +152,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			authStrictGroup.Use(
 				middleware.NewRateLimitMiddleware(
 					15*time.Minute, // 15 minute window
-					5,               // Max 5 requests per window (stricter than global limit)
+					5,              // Max 5 requests per window (stricter than global limit)
 					func(c *gin.Context) string {
 						ip := c.ClientIP()
 						if ip == "" {
@@ -203,7 +206,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		// Story 1.8, Task 6: Use SessionAuthMiddleware for session tracking
 		usersGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
 		{
-			usersGroup.POST("", userHandler.CreateUser)    // Story 1.7: SYSTEM_ADMIN only
+			usersGroup.POST("", userHandler.CreateUser) // Story 1.7: SYSTEM_ADMIN only
 			usersGroup.GET("", userHandler.ListUsers)
 			usersGroup.GET("/:id", userHandler.GetUser)
 			usersGroup.PUT("/:id", userHandler.UpdateUser)
@@ -241,7 +244,7 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		{
 			transactionsGroup.POST("", transactionHandler.CreateTransaction)
 			// Story 3.7: Transaction history and detail endpoints
-			transactionsGroup.GET("", transactionHandler.ListTransactions)  // List with filters and pagination
+			transactionsGroup.GET("", transactionHandler.ListTransactions)       // List with filters and pagination
 			transactionsGroup.GET("/:id", transactionHandler.GetTransactionByID) // Get transaction details
 		}
 

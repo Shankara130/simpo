@@ -59,11 +59,11 @@ func GetPharmacySettingsKeys() []string {
 
 // PharmacySettings represents the collection of pharmacy-related settings
 type PharmacySettings struct {
-	Name     string `json:"businessName"`
-	Address  string `json:"address"`
-	Phone    string `json:"phone"`
-	Email    string `json:"email"`
-	LogoURL  string `json:"logoUrl,omitempty"`
+	Name    string `json:"businessName"`
+	Address string `json:"address"`
+	Phone   string `json:"phone"`
+	Email   string `json:"email"`
+	LogoURL string `json:"logoUrl,omitempty"`
 }
 
 // ToSystemSettings converts PharmacySettings to a slice of SystemSetting

@@ -17,9 +17,9 @@ import (
 // SystemSettingsHandler defines system settings handler interface
 // Story 6.1, Task 5: Handler interface for system settings operations
 type SystemSettingsHandler interface {
-	GetSettings(c *gin.Context)         // GET /api/v1/settings - Get all settings (admin only)
-	UpdateSettings(c *gin.Context)      // PUT /api/v1/settings - Update settings (admin only)
-	GetPublicSettings(c *gin.Context)   // GET /api/v1/settings/public - Public settings (no auth)
+	GetSettings(c *gin.Context)       // GET /api/v1/settings - Get all settings (admin only)
+	UpdateSettings(c *gin.Context)    // PUT /api/v1/settings - Update settings (admin only)
+	GetPublicSettings(c *gin.Context) // GET /api/v1/settings/public - Public settings (no auth)
 }
 
 // systemSettingsHandler implements SystemSettingsHandler
@@ -48,9 +48,9 @@ func NewSystemSettingsHandler(systemService services.SystemService) SystemSettin
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	errors.Response{success=bool,data=dto.SystemSettingsResponse}	"Success response with system settings"
-//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
-//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions (System Admin only)"
-//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Unauthorized - authentication required"
+//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Forbidden - insufficient permissions (System Admin only)"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Server error"
 //	@Router			/api/v1/settings [get]
 //	@Security		BearerAuth
 func (h *systemSettingsHandler) GetSettings(c *gin.Context) {
@@ -107,12 +107,12 @@ func (h *systemSettingsHandler) GetSettings(c *gin.Context) {
 //	@Tags			settings
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body	dto.SystemSettingsRequest	true	"Settings update request"
-//	@Success		200	{object}	errors.Response{success=bool,data=dto.SettingsUpdateResponse}	"Success response with update confirmation"
-//	@Failure		400	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Validation error - invalid input"
-//	@Failure		401	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Unauthorized - authentication required"
-//	@Failure		403	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Forbidden - insufficient permissions (System Admin only)"
-//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Param			request	body		dto.SystemSettingsRequest										true	"Settings update request"
+//	@Success		200		{object}	errors.Response{success=bool,data=dto.SettingsUpdateResponse}	"Success response with update confirmation"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Validation error - invalid input"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Unauthorized - authentication required"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Forbidden - insufficient permissions (System Admin only)"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Server error"
 //	@Router			/api/v1/settings [put]
 //	@Security		BearerAuth
 func (h *systemSettingsHandler) UpdateSettings(c *gin.Context) {
@@ -224,7 +224,7 @@ func (h *systemSettingsHandler) UpdateSettings(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	errors.Response{success=bool,data=dto.PublicSettingsResponse}	"Success response with public settings"
-//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Failure		500	{object}	errors.Response{success=bool,error=errors.ErrorInfo}			"Server error"
 //	@Router			/api/v1/settings/public [get]
 func (h *systemSettingsHandler) GetPublicSettings(c *gin.Context) {
 	// Get public settings from service

@@ -8,19 +8,20 @@ import (
 // BranchAccessInfo contains branch access information for the current user
 // Story 1.6, AC4: Branch-Level Data Isolation
 type BranchAccessInfo struct {
-	UserRole        string  // User's role (SYSTEM_ADMIN, OWNER, CASHIER)
-	AssignedBranch  *uint   // Branch ID assigned to user (nil for admin/owner)
-	CanAccessAll    bool    // Whether user can access all branches
+	UserRole       string // User's role (SYSTEM_ADMIN, OWNER, CASHIER)
+	AssignedBranch *uint  // Branch ID assigned to user (nil for admin/owner)
+	CanAccessAll   bool   // Whether user can access all branches
 }
 
 // GetBranchAccessInfo extracts branch access information from request context
 // Story 1.6, AC4: CASHIER can only access assigned branch, OWNER/SYSTEM_ADMIN can access all branches
 //
 // Usage:
-//   branchAccess := GetBranchAccessInfo(c)
-//   if !branchAccess.CanAccessAll {
-//       // Filter by branchAccess.AssignedBranch
-//   }
+//
+//	branchAccess := GetBranchAccessInfo(c)
+//	if !branchAccess.CanAccessAll {
+//	    // Filter by branchAccess.AssignedBranch
+//	}
 func GetBranchAccessInfo(c *gin.Context) *BranchAccessInfo {
 	userRole := GetUserRole(c)
 	if userRole == "" {
@@ -49,9 +50,10 @@ func GetBranchAccessInfo(c *gin.Context) *BranchAccessInfo {
 // Returns specific branch ID if user can only access assigned branch
 //
 // Usage in repository:
-//   branchFilter := GetBranchFilter(c)
-//   query := db.Where("branch_id = ?", *branchFilter) // if branchFilter != nil
-//   query := db // if branchFilter == nil (no filter)
+//
+//	branchFilter := GetBranchFilter(c)
+//	query := db.Where("branch_id = ?", *branchFilter) // if branchFilter != nil
+//	query := db // if branchFilter == nil (no filter)
 func GetBranchFilter(c *gin.Context) *uint {
 	branchAccess := GetBranchAccessInfo(c)
 	if branchAccess.CanAccessAll {
@@ -66,9 +68,10 @@ func GetBranchFilter(c *gin.Context) *uint {
 // Returns true if user can access the branch, false otherwise
 //
 // Usage:
-//   if !ValidateBranchAccess(c, requestedBranchID) {
-//       return 403 Forbidden
-//   }
+//
+//	if !ValidateBranchAccess(c, requestedBranchID) {
+//	    return 403 Forbidden
+//	}
 func ValidateBranchAccess(c *gin.Context, requestedBranchID uint) bool {
 	branchAccess := GetBranchAccessInfo(c)
 

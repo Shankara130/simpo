@@ -12,7 +12,7 @@ import (
 
 // systemServiceImpl implements SystemService interface
 type systemServiceImpl struct {
-	settingRepo repositories.SystemSettingRepository
+	settingRepo  repositories.SystemSettingRepository
 	auditService AuditService
 }
 
@@ -22,7 +22,7 @@ func NewSystemService(
 	auditService AuditService,
 ) SystemService {
 	return &systemServiceImpl{
-		settingRepo: settingRepo,
+		settingRepo:  settingRepo,
 		auditService: auditService,
 	}
 }

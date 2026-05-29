@@ -38,7 +38,7 @@ const (
 // AuditHandler handles audit log-related HTTP requests
 // Story 5.4, Task 5: Handler for audit log query and export APIs
 type AuditHandler struct {
-	auditRepo repositories.AuditRepository
+	auditRepo    repositories.AuditRepository
 	auditService services.AuditService
 }
 
@@ -46,7 +46,7 @@ type AuditHandler struct {
 // Story 5.4, Task 5.1: Constructor with dependency injection
 func NewAuditHandler(auditRepo repositories.AuditRepository, auditService services.AuditService) *AuditHandler {
 	return &AuditHandler{
-		auditRepo: auditRepo,
+		auditRepo:    auditRepo,
 		auditService: auditService,
 	}
 }
@@ -167,22 +167,22 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 	if action := c.Query("action"); action != "" {
 		// Validate action is a valid AuditAction
 		validActions := map[models.AuditAction]bool{
-			models.AuditActionLoginSuccess:       true,
-			models.AuditActionLoginFailure:       true,
-			models.AuditActionLogout:             true,
-			models.AuditActionPasswordReset:      true,
-			models.AuditActionAuthFailure:        true,
-			models.AuditActionForbiddenAccess:    true,
-			models.AuditActionUserCreated:        true,
-			models.AuditActionUserDeactivated:    true,
-			models.AuditActionSelfRegistration:   true,
-			models.AuditActionEmailVerified:      true,
-			models.AuditActionWhitelistDomainAdded:    true,
-			models.AuditActionWhitelistDomainUpdated:  true,
-			models.AuditActionWhitelistDomainDeleted:  true,
-			models.AuditActionStockAdjustment:     true,
-			models.AuditActionBlockedSaleAttempt:  true,
-			models.AuditActionExportReport:        true,
+			models.AuditActionLoginSuccess:           true,
+			models.AuditActionLoginFailure:           true,
+			models.AuditActionLogout:                 true,
+			models.AuditActionPasswordReset:          true,
+			models.AuditActionAuthFailure:            true,
+			models.AuditActionForbiddenAccess:        true,
+			models.AuditActionUserCreated:            true,
+			models.AuditActionUserDeactivated:        true,
+			models.AuditActionSelfRegistration:       true,
+			models.AuditActionEmailVerified:          true,
+			models.AuditActionWhitelistDomainAdded:   true,
+			models.AuditActionWhitelistDomainUpdated: true,
+			models.AuditActionWhitelistDomainDeleted: true,
+			models.AuditActionStockAdjustment:        true,
+			models.AuditActionBlockedSaleAttempt:     true,
+			models.AuditActionExportReport:           true,
 		}
 		actionEnum := models.AuditAction(action)
 		if !validActions[actionEnum] {
@@ -353,9 +353,9 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 	response := gin.H{
 		"data": data,
 		"pagination": gin.H{
-			"total":      total,
-			"limit":      filter.Limit,
-			"offset":     filter.Offset,
+			"total":       total,
+			"limit":       filter.Limit,
+			"offset":      filter.Offset,
 			"total_pages": totalPages,
 		},
 	}
@@ -575,9 +575,9 @@ func (h *AuditHandler) CleanupAuditLogs(c *gin.Context) {
 		Reason:    reason,
 		Timestamp: time.Now(),
 	}
-		// HIGH-002: Use LogAuthorizationFailure for cleanup logging (more appropriate than LogLoginAttempt)
-		// TODO: Add dedicated LogRetentionCleanup method to AuditService interface
-		_ = h.auditService.LogAuthorizationFailure(context.Background(), entry)
+	// HIGH-002: Use LogAuthorizationFailure for cleanup logging (more appropriate than LogLoginAttempt)
+	// TODO: Add dedicated LogRetentionCleanup method to AuditService interface
+	_ = h.auditService.LogAuthorizationFailure(context.Background(), entry)
 
 	// Perform cleanup
 	ctx, cancel := context.WithTimeout(context.Background(), auditCleanupTimeout)
@@ -598,12 +598,12 @@ func (h *AuditHandler) CleanupAuditLogs(c *gin.Context) {
 
 	// Return summary
 	response := gin.H{
-		"message": fmt.Sprintf("Successfully deleted %d audit log entries older than %s", deletedCount, cutoffDateFormatted),
-		"deleted_count": deletedCount,
-		"cutoff_date": cutoffDateFormatted,
+		"message":          fmt.Sprintf("Successfully deleted %d audit log entries older than %s", deletedCount, cutoffDateFormatted),
+		"deleted_count":    deletedCount,
+		"cutoff_date":      cutoffDateFormatted,
 		"retention_policy": "5 years",
-		"performed_by": username,
-		"performed_at": time.Now().Format(time.RFC3339),
+		"performed_by":     username,
+		"performed_at":     time.Now().Format(time.RFC3339),
 	}
 
 	slog.Info("Audit log retention cleanup completed",

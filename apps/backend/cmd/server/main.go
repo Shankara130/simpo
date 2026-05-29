@@ -15,7 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
-	_ "github.com/vahiiiid/go-rest-api-boilerplate/api/docs"
+	_ "github.com/vahiiiid/go-rest-api-boilerplate/docs"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/config"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/db"
@@ -34,25 +34,24 @@ import (
 // Use a dedicated system user ID (999) instead of "0" for system operations
 const SystemUserID = "999"
 
-// @title Go REST API Boilerplate
-// @version 1.0
-// @description A production-ready REST API boilerplate in Go with JWT authentication
-// @termsOfService http://swagger.io/terms/
+//	@title			simpo Pharmacy Management System API
+//	@version		1.0
+//	@description	API for simpo pharmacy management system supporting POS, inventory, reporting, and multi-branch operations.
+//	@termsOfService	https://simpo.com/terms
 
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
+//	@contact.name	API Support
+//	@contact.email	support@simpo.com
 
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
+//	@license.name	MIT
+//	@license.url	https://opensource.org/licenses/MIT
 
-// @host localhost:8080
-// @BasePath /
+//	@host		localhost:8080
+//	@BasePath	/api/v1
 
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	if err := run(); err != nil {
@@ -162,13 +161,13 @@ func run() error {
 	sessionManager := middleware.NewSessionManager(redisClient)
 	userHandler.SetSessionManager(sessionManager)
 
-		// Story 4.2: Create stock event service for real-time stock updates
-		stockEventService := services.NewStockEventService(redisClient)
-		// Story 4.2, Task 15: Create stock cache service for caching stock levels
-			var stockCacheService *services.StockCacheService
-			if redisClient != nil {
-				stockCacheService = services.NewStockCacheService(redisClient)
-			}
+	// Story 4.2: Create stock event service for real-time stock updates
+	stockEventService := services.NewStockEventService(redisClient)
+	// Story 4.2, Task 15: Create stock cache service for caching stock levels
+	var stockCacheService *services.StockCacheService
+	if redisClient != nil {
+		stockCacheService = services.NewStockCacheService(redisClient)
+	}
 
 	// Story 4.4: Create alert service for low stock and expiry notifications
 	alertService := services.NewAlertService(nil, auditService, redisClient)
@@ -177,63 +176,63 @@ func run() error {
 	systemSettingRepo := repositories.NewSystemSettingRepository(database)
 	systemService := services.NewSystemService(systemSettingRepo, auditService)
 
-		// Story 3.6: Create transaction repositories, service, and handler
-		transactionRepo := repositories.NewTransactionRepository(database)
-		transactionItemRepo := repositories.NewTransactionItemRepository(database)
-		productRepo := repositories.NewProductRepository(database)
+	// Story 3.6: Create transaction repositories, service, and handler
+	transactionRepo := repositories.NewTransactionRepository(database)
+	transactionItemRepo := repositories.NewTransactionItemRepository(database)
+	productRepo := repositories.NewProductRepository(database)
 
-		// Story 4.1: Create product service and handler
-		// Story 4.4: Add alertService parameter for low stock notifications
-		// Story 4.6: Moved before transactionService creation (dependency)
-		productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService, alertService)
-		productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
+	// Story 4.1: Create product service and handler
+	// Story 4.4: Add alertService parameter for low stock notifications
+	// Story 4.6: Moved before transactionService creation (dependency)
+	productService := services.NewProductService(productRepo, auditService, stockEventService, stockCacheService, alertService)
+	productHandler := handlers.NewProductHandler(productService, stockEventService, cfg.JWT.Secret)
 
-		// Story 4.6: Create transaction service with productService for expired product validation
-		transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService, systemService)
-		transactionHandler := handlers.NewTransactionHandler(transactionService)
-		// Story 4.5: Create expiry check service and job
-		expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
-		var expiryCheckJob *jobs.ExpiryCheckJob
-		if expiryCheckService != nil {
-			expiryCheckJob = jobs.NewExpiryCheckJob(expiryCheckService, logger)
-		}
+	// Story 4.6: Create transaction service with productService for expired product validation
+	transactionService := services.NewTransactionService(transactionRepo, transactionItemRepo, productRepo, productService, auditService, stockEventService, alertService, systemService)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
+	// Story 4.5: Create expiry check service and job
+	expiryCheckService := services.NewExpiryCheckService(productRepo, alertService, redisClient, logger)
+	var expiryCheckJob *jobs.ExpiryCheckJob
+	if expiryCheckService != nil {
+		expiryCheckJob = jobs.NewExpiryCheckJob(expiryCheckService, logger)
+	}
 
-		// Story 5.1, 5.2: Create report repository, service, and handler
-		reportRepo := repositories.NewReportRepository(database)
-		reportService := services.NewReportService(transactionRepo, productRepo, reportRepo, auditService, redisClient)
+	// Story 5.1, 5.2: Create report repository, service, and handler
+	reportRepo := repositories.NewReportRepository(database)
+	reportService := services.NewReportService(transactionRepo, productRepo, reportRepo, auditService, redisClient)
 
-		// Story 5.3, Task 6: Create file storage service for exports
-		exportStoragePath := os.Getenv("EXPORT_STORAGE_PATH")
-		if exportStoragePath == "" {
-			exportStoragePath = "/tmp/simpo-exports"
-		}
-			// Code review fix: CRITICAL-003 (Round 4) - Validate export storage path is within expected boundaries
-			// Code review fix: CRITICAL-001 (Round 5) - Fix logic flaw: must be relative OR under /tmp
-			if strings.Contains(exportStoragePath, "..") || (strings.HasPrefix(exportStoragePath, "/") && !strings.HasPrefix(exportStoragePath, "/tmp/")) {
-				slog.Error("Invalid EXPORT_STORAGE_PATH: must be relative path (./) or within /tmp/")
-				os.Exit(1)
-			}
-		fileStorage := services.NewInMemoryFileStorage(exportStoragePath, 100) // 100MB max
+	// Story 5.3, Task 6: Create file storage service for exports
+	exportStoragePath := os.Getenv("EXPORT_STORAGE_PATH")
+	if exportStoragePath == "" {
+		exportStoragePath = "/tmp/simpo-exports"
+	}
+	// Code review fix: CRITICAL-003 (Round 4) - Validate export storage path is within expected boundaries
+	// Code review fix: CRITICAL-001 (Round 5) - Fix logic flaw: must be relative OR under /tmp
+	if strings.Contains(exportStoragePath, "..") || (strings.HasPrefix(exportStoragePath, "/") && !strings.HasPrefix(exportStoragePath, "/tmp/")) {
+		slog.Error("Invalid EXPORT_STORAGE_PATH: must be relative path (./) or within /tmp/")
+		os.Exit(1)
+	}
+	fileStorage := services.NewInMemoryFileStorage(exportStoragePath, 100) // 100MB max
 
-		// Story 5.3: Create export service with file storage
-			// Story 6.1, AC6: Add systemService for business info in reports
-			exportService := services.NewExportService(reportService, fileStorage, systemService)
+	// Story 5.3: Create export service with file storage
+	// Story 6.1, AC6: Add systemService for business info in reports
+	exportService := services.NewExportService(reportService, fileStorage, systemService)
 
-		reportHandler := handlers.NewReportHandler(reportService, exportService, auditService)
+	reportHandler := handlers.NewReportHandler(reportService, exportService, auditService)
 
-		// Story 5.4: Create audit handler for audit log query and export APIs
-		auditHandler := handlers.NewAuditHandler(auditRepo, auditService)
+	// Story 5.4: Create audit handler for audit log query and export APIs
+	auditHandler := handlers.NewAuditHandler(auditRepo, auditService)
 
-		// Story 6.1: Create system settings handler
-		systemSettingsHandler := handlers.NewSystemSettingsHandler(systemService)
+	// Story 6.1: Create system settings handler
+	systemSettingsHandler := handlers.NewSystemSettingsHandler(systemService)
 
-			// Story 6.3: Create backup service and handler
-			backupService := services.NewBackupService(cfg, auditService) // Story 6.4: Pass audit service for backup audit logging
-			backupHandler := handlers.NewBackupHandler(backupService)
+	// Story 6.3: Create backup service and handler
+	backupService := services.NewBackupService(cfg, auditService) // Story 6.4: Pass audit service for backup audit logging
+	backupHandler := handlers.NewBackupHandler(backupService)
 
-		router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, redisClient)
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, redisClient)
 
-		// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
+	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {
 		ctx := context.Background()
 		if err := stockEventService.StartBroadcaster(ctx); err != nil {
@@ -281,7 +280,7 @@ func run() error {
 
 	go func() {
 		logger.Info("Server starting", "address", srv.Addr)
-		logger.Info("Swagger UI available", "url", fmt.Sprintf("http://localhost:%s/swagger/index.html", port))
+		logger.Info("Swagger UI available", "url", fmt.Sprintf("http://localhost:%s/api/docs/index.html", port))
 		logger.Info("Health check available", "url", fmt.Sprintf("http://localhost:%s/health", port))
 		logger.Info("Liveness probe available", "url", fmt.Sprintf("http://localhost:%s/health/live", port))
 		logger.Info("Readiness probe available", "url", fmt.Sprintf("http://localhost:%s/health/ready", port))

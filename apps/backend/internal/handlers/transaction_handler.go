@@ -35,10 +35,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	if !exists {
 		// User not authenticated - middleware should have caught this
 		c.JSON(http.StatusUnauthorized, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/unauthorized",
-			Title:  "Unauthorized",
-			Status: http.StatusUnauthorized,
-			Detail: "Authentication required",
+			Type:     "https://api.simpo.com/errors/unauthorized",
+			Title:    "Unauthorized",
+			Status:   http.StatusUnauthorized,
+			Detail:   "Authentication required",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -48,10 +48,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	if !ok {
 		// HIGH FIX: Type assertion failed - invalid context value
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid user ID format in context",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid user ID format in context",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -60,10 +60,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	// HIGH FIX: Validate cashierID is not zero
 	if cashierID == 0 {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid user ID value",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid user ID value",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -73,10 +73,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	branchIDValue, exists := c.Get("branchID")
 	if !exists {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/missing-branch",
-			Title:  "Branch ID required",
-			Status: http.StatusBadRequest,
-			Detail: "Branch ID tidak ditemukan dalam konteks user",
+			Type:     "https://api.simpo.com/errors/missing-branch",
+			Title:    "Branch ID required",
+			Status:   http.StatusBadRequest,
+			Detail:   "Branch ID tidak ditemukan dalam konteks user",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -85,10 +85,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	branchID, ok := branchIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid branch ID format in context",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid branch ID format in context",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -97,10 +97,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	// HIGH FIX: Validate branchID is not zero
 	if branchID == 0 {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid branch ID value",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid branch ID value",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -110,10 +110,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	var saleRequest services.SaleRequest
 	if err := c.ShouldBindJSON(&saleRequest); err != nil {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/invalid-request",
-			Title:  "Invalid request",
-			Status: http.StatusBadRequest,
-			Detail: "Format JSON tidak valid: " + err.Error(),
+			Type:     "https://api.simpo.com/errors/invalid-request",
+			Title:    "Invalid request",
+			Status:   http.StatusBadRequest,
+			Detail:   "Format JSON tidak valid: " + err.Error(),
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -126,10 +126,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		// Limit length to prevent abuse
 		if len(customerName) > 100 {
 			c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-				Type:   "https://api.simpo.com/errors/invalid-request",
-				Title:  "Invalid Request",
-				Status: http.StatusBadRequest,
-				Detail: "Nama pelanggan terlalu panjang. Maksimal 100 karakter",
+				Type:     "https://api.simpo.com/errors/invalid-request",
+				Title:    "Invalid Request",
+				Status:   http.StatusBadRequest,
+				Detail:   "Nama pelanggan terlalu panjang. Maksimal 100 karakter",
 				Instance: c.Request.URL.Path,
 			})
 			return
@@ -139,10 +139,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		for _, pattern := range dangerousPatterns {
 			if strings.Contains(strings.ToLower(customerName), pattern) {
 				c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-					Type:   "https://api.simpo.com/errors/invalid-request",
-					Title:  "Invalid Request",
-					Status: http.StatusBadRequest,
-					Detail: "Nama pelanggan mengandung karakter tidak valid",
+					Type:     "https://api.simpo.com/errors/invalid-request",
+					Title:    "Invalid Request",
+					Status:   http.StatusBadRequest,
+					Detail:   "Nama pelanggan mengandung karakter tidak valid",
 					Instance: c.Request.URL.Path,
 				})
 				return
@@ -154,10 +154,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	// Validate cart is not empty
 	if len(saleRequest.Items) == 0 {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/empty-cart",
-			Title:  "Cart cannot be empty",
-			Status: http.StatusBadRequest,
-			Detail: "Keranjang belanja tidak boleh kosong",
+			Type:     "https://api.simpo.com/errors/empty-cart",
+			Title:    "Cart cannot be empty",
+			Status:   http.StatusBadRequest,
+			Detail:   "Keranjang belanja tidak boleh kosong",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -167,10 +167,10 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	const maxCartItems = 100 // Maximum items per transaction (Story 3.3)
 	if len(saleRequest.Items) > maxCartItems {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/cart-too-large",
-			Title:  "Cart Too Large",
-			Status: http.StatusBadRequest,
-			Detail: fmt.Sprintf("Keranjang tidak boleh lebih dari %d item", maxCartItems),
+			Type:     "https://api.simpo.com/errors/cart-too-large",
+			Title:    "Cart Too Large",
+			Status:   http.StatusBadRequest,
+			Detail:   fmt.Sprintf("Keranjang tidak boleh lebih dari %d item", maxCartItems),
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -255,10 +255,10 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	_, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/unauthorized",
-			Title:  "Unauthorized",
-			Status: http.StatusUnauthorized,
-			Detail: "Authentication required",
+			Type:     "https://api.simpo.com/errors/unauthorized",
+			Title:    "Unauthorized",
+			Status:   http.StatusUnauthorized,
+			Detail:   "Authentication required",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -268,10 +268,10 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	branchIDValue, exists := c.Get("branchID")
 	if !exists {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/missing-branch",
-			Title:  "Branch ID required",
-			Status: http.StatusBadRequest,
-			Detail: "Branch ID tidak ditemukan dalam konteks user",
+			Type:     "https://api.simpo.com/errors/missing-branch",
+			Title:    "Branch ID required",
+			Status:   http.StatusBadRequest,
+			Detail:   "Branch ID tidak ditemukan dalam konteks user",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -280,10 +280,10 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	branchID, ok := branchIDValue.(uint)
 	if !ok || branchID == 0 {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid branch ID format in context",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid branch ID format in context",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -291,7 +291,7 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 
 	// Parse query parameters
 	var startDate, endDate, status string
-	page := 1 // Default page
+	page := 1   // Default page
 	limit := 20 // Default limit per page
 
 	if startDateParam := c.Query("startDate"); startDateParam != "" {
@@ -343,10 +343,10 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	transactions, total, err := h.transactionService.ListTransactions(c.Request.Context(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Gagal memuat riwayat transaksi: " + err.Error(),
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Gagal memuat riwayat transaksi: " + err.Error(),
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -362,8 +362,8 @@ func (h *TransactionHandler) ListTransactions(c *gin.Context) {
 	response := gin.H{
 		"data": transactions,
 		"pagination": gin.H{
-			"total":      total,
-			"totalPages": totalPages,
+			"total":       total,
+			"totalPages":  totalPages,
 			"currentPage": page,
 		},
 	}
@@ -378,10 +378,10 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	_, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/unauthorized",
-			Title:  "Unauthorized",
-			Status: http.StatusUnauthorized,
-			Detail: "Authentication required",
+			Type:     "https://api.simpo.com/errors/unauthorized",
+			Title:    "Unauthorized",
+			Status:   http.StatusUnauthorized,
+			Detail:   "Authentication required",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -391,10 +391,10 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	branchIDValue, exists := c.Get("branchID")
 	if !exists {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/missing-branch",
-			Title:  "Branch ID required",
-			Status: http.StatusBadRequest,
-			Detail: "Branch ID tidak ditemukan dalam konteks user",
+			Type:     "https://api.simpo.com/errors/missing-branch",
+			Title:    "Branch ID required",
+			Status:   http.StatusBadRequest,
+			Detail:   "Branch ID tidak ditemukan dalam konteks user",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -403,24 +403,24 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	branchID, ok := branchIDValue.(uint)
 	if !ok || branchID == 0 {
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Invalid branch ID format in context",
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Invalid branch ID format in context",
 			Instance: c.Request.URL.Path,
 		})
 		return
 	}
 
 	// Parse transaction ID from URL parameter
- transactionIDParam := c.Param("id")
+	transactionIDParam := c.Param("id")
 	transactionID, err := strconv.ParseUint(transactionIDParam, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/invalid-id",
-			Title:  "Invalid Transaction ID",
-			Status: http.StatusBadRequest,
-			Detail: "Format ID transaksi tidak valid",
+			Type:     "https://api.simpo.com/errors/invalid-id",
+			Title:    "Invalid Transaction ID",
+			Status:   http.StatusBadRequest,
+			Detail:   "Format ID transaksi tidak valid",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -431,19 +431,19 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, middleware.RFC7807Error{
-				Type:   "https://api.simpo.com/errors/not-found",
-				Title:  "Transaction Not Found",
-				Status: http.StatusNotFound,
-				Detail: "Transaksi tidak ditemukan",
+				Type:     "https://api.simpo.com/errors/not-found",
+				Title:    "Transaction Not Found",
+				Status:   http.StatusNotFound,
+				Detail:   "Transaksi tidak ditemukan",
 				Instance: c.Request.URL.Path,
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/internal-error",
-			Title:  "Internal Error",
-			Status: http.StatusInternalServerError,
-			Detail: "Gagal memuat detail transaksi: " + err.Error(),
+			Type:     "https://api.simpo.com/errors/internal-error",
+			Title:    "Internal Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   "Gagal memuat detail transaksi: " + err.Error(),
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -452,10 +452,10 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	// RBAC check: Ensure cashier can only access transactions from their branch
 	if transaction.BranchID != branchID {
 		c.JSON(http.StatusForbidden, middleware.RFC7807Error{
-			Type:   "https://api.simpo.com/errors/forbidden",
-			Title:  "Access Denied",
-			Status: http.StatusForbidden,
-			Detail: "Anda tidak memiliki akses ke transaksi ini",
+			Type:     "https://api.simpo.com/errors/forbidden",
+			Title:    "Access Denied",
+			Status:   http.StatusForbidden,
+			Detail:   "Anda tidak memiliki akses ke transaksi ini",
 			Instance: c.Request.URL.Path,
 		})
 		return
@@ -471,13 +471,13 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 
 	// Build response with transaction details and receipt data
 	response := gin.H{
-		"id":               transaction.ID,
+		"id":                transaction.ID,
 		"transactionNumber": transaction.TransactionNumber,
-		"total":            transaction.Total,
-		"status":           transaction.Status,
-		"paymentMethod":    transaction.PaymentMethod,
-		"createdAt":        transaction.CreatedAt,
-		"items":            transaction.TransactionItems,
+		"total":             transaction.Total,
+		"status":            transaction.Status,
+		"paymentMethod":     transaction.PaymentMethod,
+		"createdAt":         transaction.CreatedAt,
+		"items":             transaction.TransactionItems,
 		"cashier": gin.H{
 			"id":   transaction.CashierID,
 			"name": "", // Will be populated from user data

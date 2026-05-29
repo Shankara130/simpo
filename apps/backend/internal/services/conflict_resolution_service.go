@@ -34,23 +34,23 @@ func NewConflictResolutionService(repo ProductRepository, auditSvc ConflictAudit
 
 // OfflineTransaction represents a transaction from mobile sync
 type OfflineTransaction struct {
-	ID              uint
+	ID                uint
 	TransactionNumber string
-	Timestamp       time.Time
-	CashierID       uint
-	PaymentMethod  string
-	Total           string
-	Items           []TransactionItem
+	Timestamp         time.Time
+	CashierID         uint
+	PaymentMethod     string
+	Total             string
+	Items             []TransactionItem
 }
 
 // TransactionItem represents items in a transaction
 type TransactionItem struct {
-	ProductID       uint
-	ProductSKU      string
-	ProductName     string
-	Quantity        int
-	UnitPrice       string
-	Subtotal        string
+	ProductID   uint
+	ProductSKU  string
+	ProductName string
+	Quantity    int
+	UnitPrice   string
+	Subtotal    string
 }
 
 // BatchProcessResult contains results from batch processing
@@ -62,14 +62,14 @@ type BatchProcessResult struct {
 
 // ConflictResolutionLog represents audit log entry
 type ConflictResolutionLog struct {
-	ID              uint      `gorm:"primaryKey"`
+	ID              uint `gorm:"primaryKey"`
 	EventType       string
 	TransactionID   string
 	OriginalError   string
 	ResolutionType  string
 	ResolvedBy      string
 	ResolvedAt      time.Time
-	ConflictDetails string    `gorm:"type:json"`
+	ConflictDetails string `gorm:"type:json"`
 	CreatedAt       time.Time
 }
 
@@ -128,7 +128,7 @@ func (s *ConflictResolutionService) ValidateStockAvailability(ctx context.Contex
 				ProductSKU:        item.ProductSKU,
 				RequestedQuantity: item.Quantity,
 				AvailableStock:    0,
-				Shortfall:          item.Quantity,
+				Shortfall:         item.Quantity,
 			}
 		}
 
@@ -142,7 +142,7 @@ func (s *ConflictResolutionService) ValidateStockAvailability(ctx context.Contex
 				ProductSKU:        item.ProductSKU,
 				RequestedQuantity: item.Quantity,
 				AvailableStock:    availableStock,
-				Shortfall:          item.Quantity - int(availableStock),
+				Shortfall:         item.Quantity - int(availableStock),
 			}
 		}
 	}
@@ -185,15 +185,15 @@ func (s *ConflictResolutionService) logAutomaticFailure(ctx context.Context, tx 
 	// This would log to the audit service in a real implementation
 	// For now, we'll create a log entry
 	log := ConflictResolutionLog{
-		EventType:       "conflict_resolution",
-		TransactionID:   tx.TransactionNumber,
-		OriginalError:   fmt.Sprintf("Insufficient stock for product %s", details.ProductSKU),
-		ResolutionType:  "automatic_failure",
-		ResolvedBy:      "system",
-		ResolvedAt:      time.Now().UTC(),
+		EventType:      "conflict_resolution",
+		TransactionID:  tx.TransactionNumber,
+		OriginalError:  fmt.Sprintf("Insufficient stock for product %s", details.ProductSKU),
+		ResolutionType: "automatic_failure",
+		ResolvedBy:     "system",
+		ResolvedAt:     time.Now().UTC(),
 		ConflictDetails: fmt.Sprintf(`{"product_id":%d,"product_sku":"%s","requested_qty":%d,"available_stock":%d,"shortfall":%d}`,
 			details.ProductID, details.ProductSKU, details.RequestedQuantity, details.AvailableStock, details.Shortfall),
-		CreatedAt:       time.Now().UTC(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	// In real implementation, we'd call auditSvc.LogConflictResolution(ctx, log)

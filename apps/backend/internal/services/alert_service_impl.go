@@ -69,7 +69,7 @@ func (s *alertService) CheckLowStockAlerts(ctx context.Context, branchID uint) (
 		if product.StockQty == 0 {
 			severity = "HIGH"
 			// PATCH: Fixed division by zero issue - check threshold before division
-			} else if product.ReorderThreshold > 2 && product.StockQty < int64(product.ReorderThreshold/2) {
+		} else if product.ReorderThreshold > 2 && product.StockQty < int64(product.ReorderThreshold/2) {
 			severity = "MEDIUM"
 		}
 

@@ -10,10 +10,10 @@ import (
 
 // InsufficientStockError represents an error when stock is insufficient
 type InsufficientStockError struct {
-	ProductID     uint
-	ProductName   string
-	RequestedQty  int64
-	AvailableQty  int64
+	ProductID    uint
+	ProductName  string
+	RequestedQty int64
+	AvailableQty int64
 }
 
 func (e *InsufficientStockError) Error() string {
@@ -94,8 +94,8 @@ func (e *DuplicateUsernameError) Error() string {
 
 // UnauthorizedError represents an error when action is not authorized
 type UnauthorizedError struct {
-	Action  string
-	Reason  string
+	Action string
+	Reason string
 }
 
 func (e *UnauthorizedError) Error() string {

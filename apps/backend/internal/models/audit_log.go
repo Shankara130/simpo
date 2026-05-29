@@ -13,55 +13,55 @@ type AuditAction string
 
 const (
 	// Authentication actions
-	AuditActionLoginSuccess       AuditAction = "LOGIN_SUCCESS"
-	AuditActionLoginFailure       AuditAction = "LOGIN_FAILURE"
-	AuditActionLogout             AuditAction = "LOGOUT"
-	AuditActionPasswordReset      AuditAction = "PASSWORD_RESET"
-	AuditActionAuthFailure        AuditAction = "AUTH_FAILURE"
-	AuditActionForbiddenAccess    AuditAction = "FORBIDDEN_ACCESS"
+	AuditActionLoginSuccess    AuditAction = "LOGIN_SUCCESS"
+	AuditActionLoginFailure    AuditAction = "LOGIN_FAILURE"
+	AuditActionLogout          AuditAction = "LOGOUT"
+	AuditActionPasswordReset   AuditAction = "PASSWORD_RESET"
+	AuditActionAuthFailure     AuditAction = "AUTH_FAILURE"
+	AuditActionForbiddenAccess AuditAction = "FORBIDDEN_ACCESS"
 
 	// User management actions
-	AuditActionUserCreated        AuditAction = "USER_CREATED"
-	AuditActionUserDeactivated    AuditAction = "USER_DEACTIVATED"
-	AuditActionSelfRegistration   AuditAction = "SELF_REGISTRATION"
-	AuditActionEmailVerified      AuditAction = "EMAIL_VERIFIED"
+	AuditActionUserCreated      AuditAction = "USER_CREATED"
+	AuditActionUserDeactivated  AuditAction = "USER_DEACTIVATED"
+	AuditActionSelfRegistration AuditAction = "SELF_REGISTRATION"
+	AuditActionEmailVerified    AuditAction = "EMAIL_VERIFIED"
 
 	// Whitelist management actions
-	AuditActionWhitelistDomainAdded    AuditAction = "WHITELIST_DOMAIN_ADDED"
-	AuditActionWhitelistDomainUpdated  AuditAction = "WHITELIST_DOMAIN_UPDATED"
-	AuditActionWhitelistDomainDeleted  AuditAction = "WHITELIST_DOMAIN_DELETED"
+	AuditActionWhitelistDomainAdded   AuditAction = "WHITELIST_DOMAIN_ADDED"
+	AuditActionWhitelistDomainUpdated AuditAction = "WHITELIST_DOMAIN_UPDATED"
+	AuditActionWhitelistDomainDeleted AuditAction = "WHITELIST_DOMAIN_DELETED"
 
 	// Inventory actions
-	AuditActionStockAdjustment     AuditAction = "STOCK_ADJUSTMENT"
-	AuditActionBlockedSaleAttempt  AuditAction = "BLOCKED_SALE_ATTEMPT"
+	AuditActionStockAdjustment    AuditAction = "STOCK_ADJUSTMENT"
+	AuditActionBlockedSaleAttempt AuditAction = "BLOCKED_SALE_ATTEMPT"
 
 	// Reporting actions
-	AuditActionExportReport        AuditAction = "EXPORT_REPORT"
+	AuditActionExportReport AuditAction = "EXPORT_REPORT"
 
 	// System settings actions (Story 6.4)
-	AuditActionSystemSettingsUpdated   AuditAction = "SYSTEM_SETTINGS_UPDATED"
-	AuditActionSystemConfigChanged     AuditAction = "SYSTEM_CONFIG_CHANGED"
+	AuditActionSystemSettingsUpdated AuditAction = "SYSTEM_SETTINGS_UPDATED"
+	AuditActionSystemConfigChanged   AuditAction = "SYSTEM_CONFIG_CHANGED"
 
 	// Backup operations (Story 6.4)
-	AuditActionBackupCreated           AuditAction = "BACKUP_CREATED"
-	AuditActionBackupRestored          AuditAction = "BACKUP_RESTORED"
-	AuditActionBackupDeleted           AuditAction = "BACKUP_DELETED"
+	AuditActionBackupCreated  AuditAction = "BACKUP_CREATED"
+	AuditActionBackupRestored AuditAction = "BACKUP_RESTORED"
+	AuditActionBackupDeleted  AuditAction = "BACKUP_DELETED"
 
 	// Role and permission management (Story 6.4)
-	AuditActionRoleUpdated             AuditAction = "ROLE_UPDATED"
-	AuditActionPermissionGranted       AuditAction = "PERMISSION_GRANTED"
-	AuditActionPermissionRevoked       AuditAction = "PERMISSION_REVOKED"
+	AuditActionRoleUpdated       AuditAction = "ROLE_UPDATED"
+	AuditActionPermissionGranted AuditAction = "PERMISSION_GRANTED"
+	AuditActionPermissionRevoked AuditAction = "PERMISSION_REVOKED"
 
 	// Branch management (Story 6.4)
-	AuditActionBranchCreated           AuditAction = "BRANCH_CREATED"
-	AuditActionBranchUpdated           AuditAction = "BRANCH_UPDATED"
-	AuditActionBranchDeactivated       AuditAction = "BRANCH_DEACTIVATED"
+	AuditActionBranchCreated     AuditAction = "BRANCH_CREATED"
+	AuditActionBranchUpdated     AuditAction = "BRANCH_UPDATED"
+	AuditActionBranchDeactivated AuditAction = "BRANCH_DEACTIVATED"
 
 	// System operations (Story 6.4)
-	AuditActionSystemStartup            AuditAction = "SYSTEM_STARTUP"
-	AuditActionSystemShutdown           AuditAction = "SYSTEM_SHUTDOWN"
-	AuditActionMaintenanceModeEnabled   AuditAction = "MAINTENANCE_MODE_ENABLED"
-	AuditActionMaintenanceModeDisabled  AuditAction = "MAINTENANCE_MODE_DISABLED"
+	AuditActionSystemStartup           AuditAction = "SYSTEM_STARTUP"
+	AuditActionSystemShutdown          AuditAction = "SYSTEM_SHUTDOWN"
+	AuditActionMaintenanceModeEnabled  AuditAction = "MAINTENANCE_MODE_ENABLED"
+	AuditActionMaintenanceModeDisabled AuditAction = "MAINTENANCE_MODE_DISABLED"
 
 	// Conflict resolution actions (Story 8.5)
 	AuditActionConflictResolutionAutomaticFailure AuditAction = "CONFLICT_RESOLUTION_AUTOMATIC_FAILURE"
@@ -85,7 +85,7 @@ type AuditLog struct {
 	Reason    string      `gorm:"type:text" json:"reason,omitempty"`
 	Timestamp time.Time   `gorm:"not null; default:now(); index" json:"timestamp"`
 	// Note: No UpdatedAt field - audit entries are immutable
-	CreatedAt time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 // TableName specifies the database table name for AuditLog

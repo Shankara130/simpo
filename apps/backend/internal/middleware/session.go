@@ -22,7 +22,7 @@ type SessionInfo struct {
 	Email        string    `json:"email"`
 	Role         string    `json:"role"`
 	BranchID     *uint     `json:"branch_id,omitempty"`
-	TokenID      string    `json:"token_id"`      // JWT ID claim for tracking
+	TokenID      string    `json:"token_id"` // JWT ID claim for tracking
 	IssuedAt     time.Time `json:"issued_at"`
 	LastActivity time.Time `json:"last_activity"`
 }

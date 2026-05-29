@@ -1,0 +1,4483 @@
+basePath: /api/v1
+definitions:
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.TokenPairResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  dto.APIMetrics:
+    properties:
+      avg_response_time:
+        type: string
+      requests_per_second:
+        type: number
+    type: object
+  dto.Alert:
+    properties:
+      message:
+        type: string
+      severity:
+        description: critical, warning, info
+        type: string
+      timestamp:
+        type: string
+    type: object
+  dto.AlertResponse:
+    properties:
+      alerts:
+        items:
+          $ref: '#/definitions/dto.Alert'
+        type: array
+      critical:
+        type: integer
+      info:
+        type: integer
+      total:
+        type: integer
+      warning:
+        type: integer
+    type: object
+  dto.BackupConfig:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      retention_days:
+        example: 30
+        type: integer
+      schedule:
+        description: Cron expression
+        example: 0 2 * * *
+        type: string
+      storage_path:
+        example: /backups
+        type: string
+    type: object
+  dto.BackupInfo:
+    properties:
+      checksum:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      duration_seconds:
+        type: integer
+      filename:
+        type: string
+      size:
+        type: integer
+      status:
+        $ref: '#/definitions/dto.BackupStatus'
+    type: object
+  dto.BackupJobStatus:
+    properties:
+      current_backup:
+        type: string
+      is_running:
+        type: boolean
+      last_backup:
+        type: string
+      last_status:
+        $ref: '#/definitions/dto.BackupStatus'
+      next_backup:
+        type: string
+      success_rate:
+        description: Percentage
+        type: number
+    type: object
+  dto.BackupListResponse:
+    properties:
+      backups:
+        items:
+          $ref: '#/definitions/dto.BackupInfo'
+        type: array
+      last_backup:
+        $ref: '#/definitions/dto.BackupInfo'
+      retention_days:
+        type: integer
+      total_size:
+        type: integer
+    type: object
+  dto.BackupMetrics:
+    properties:
+      is_running:
+        type: boolean
+      last_backup_time:
+        description: ISO 8601 format
+        type: string
+      last_status:
+        description: success, failed, pending
+        type: string
+      next_backup_time:
+        description: ISO 8601 format
+        type: string
+      success_rate:
+        description: Percentage (0-100)
+        type: number
+      total_backups:
+        description: Total number of backups
+        type: integer
+      total_size_bytes:
+        description: Total size of all backups
+        type: integer
+    type: object
+  dto.BackupStatus:
+    enum:
+    - pending
+    - running
+    - success
+    - failed
+    - corrupted
+    type: string
+    x-enum-varnames:
+    - BackupStatusPending
+    - BackupStatusRunning
+    - BackupStatusSuccess
+    - BackupStatusFailed
+    - BackupStatusCorrupted
+  dto.CreateBackupRequest:
+    properties:
+      description:
+        example: Manual backup before system update
+        type: string
+    type: object
+  dto.CreateBackupResponse:
+    properties:
+      estimated_time:
+        example: 2-5 min
+        type: string
+      filename:
+        example: simpo_20260527_143000.dump
+        type: string
+      message:
+        example: Backup operation started
+        type: string
+      status:
+        example: started
+        type: string
+    type: object
+  dto.DatabaseMetrics:
+    properties:
+      response_time:
+        type: string
+      status:
+        type: string
+    type: object
+  dto.DeleteBackupRequest:
+    properties:
+      confirmed:
+        example: true
+        type: boolean
+      reason:
+        example: Corrupted backup file
+        type: string
+    required:
+    - confirmed
+    - reason
+    type: object
+  dto.DiskMetrics:
+    properties:
+      free_percentage:
+        type: number
+      total_gb:
+        type: number
+      used_gb:
+        type: number
+    type: object
+  dto.EnhancedHealthDashboardResponse:
+    properties:
+      alerts:
+        items:
+          $ref: '#/definitions/dto.Alert'
+        type: array
+      environment:
+        type: string
+      metrics:
+        $ref: '#/definitions/dto.HealthMetrics'
+      status:
+        $ref: '#/definitions/dto.HealthStatus'
+      timestamp:
+        type: string
+      uptime:
+        type: string
+      uptime_percentage:
+        type: number
+      version:
+        type: string
+    type: object
+  dto.ErrorsMetrics:
+    properties:
+      count:
+        description: Total error count
+        type: integer
+      rate:
+        description: Error rate as percentage
+        type: number
+      total_requests:
+        description: Total request count for rate calculation
+        type: integer
+    type: object
+  dto.HealthMetrics:
+    properties:
+      api:
+        $ref: '#/definitions/dto.APIMetrics'
+      backup:
+        allOf:
+        - $ref: '#/definitions/dto.BackupMetrics'
+        description: 'Story 6.3: Backup status metrics'
+      database:
+        $ref: '#/definitions/dto.DatabaseMetrics'
+      disk:
+        $ref: '#/definitions/dto.DiskMetrics'
+      errors:
+        $ref: '#/definitions/dto.ErrorsMetrics'
+      redis:
+        $ref: '#/definitions/dto.RedisMetrics'
+      sessions:
+        $ref: '#/definitions/dto.SessionsMetrics'
+    type: object
+  dto.HealthStatus:
+    enum:
+    - healthy
+    - degraded
+    - unhealthy
+    type: string
+    x-enum-varnames:
+    - StatusHealthy
+    - StatusDegraded
+    - StatusUnhealthy
+  dto.LoginRequest:
+    properties:
+      password:
+        example: SecurePassword123!
+        minLength: 8
+        type: string
+      username:
+        example: admin
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.LoginResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expires_in:
+        description: 8 hours in seconds (NFR-SEC-002)
+        example: 28800
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserInfo'
+    type: object
+  dto.PaginationMetadata:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  dto.ProductListItem:
+    properties:
+      branchId:
+        type: integer
+      category:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      expiryDate:
+        type: string
+      id:
+        type: integer
+      isExpired:
+        description: 'Story 4.1, AC6: Expired indicator'
+        type: boolean
+      isLowStock:
+        description: 'Story 4.1, AC5: Low stock indicator'
+        type: boolean
+      name:
+        type: string
+      price:
+        type: string
+      reorderThreshold:
+        type: integer
+      sku:
+        type: string
+      stockQty:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  dto.ProductListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.ProductListItem'
+        type: array
+      pagination:
+        $ref: '#/definitions/dto.PaginationMetadata'
+    type: object
+  dto.PublicSettingsResponse:
+    properties:
+      address:
+        example: 123 Main St, Jakarta, Indonesia
+        type: string
+      businessName:
+        example: Simpo Pharmacy
+        type: string
+      email:
+        example: admin@simpo.pharmacy
+        type: string
+      phone:
+        example: +62-21-1234-5678
+        type: string
+    type: object
+  dto.RedisMetrics:
+    properties:
+      response_time:
+        type: string
+      status:
+        type: string
+    type: object
+  dto.RestoreBackupRequest:
+    properties:
+      confirmed:
+        example: true
+        type: boolean
+      reason:
+        example: Data corruption incident
+        type: string
+    required:
+    - confirmed
+    - reason
+    type: object
+  dto.SessionsMetrics:
+    properties:
+      active:
+        type: integer
+    type: object
+  dto.SettingsUpdateResponse:
+    properties:
+      message:
+        example: Settings updated successfully
+        type: string
+      updatedAt:
+        example: "2026-05-26T10:30:00Z"
+        type: string
+      updatedBy:
+        example: admin
+        type: string
+    type: object
+  dto.StockAdjustmentRequest:
+    properties:
+      branchId:
+        description: 'AC1: Branch location required'
+        minimum: 1
+        type: integer
+      newStockQty:
+        description: 'AC2: New quantity (not increment)'
+        minimum: 0
+        type: integer
+      productId:
+        description: 'AC1: Product selection required'
+        minimum: 1
+        type: integer
+      reason:
+        description: 'AC3: Reason required'
+        minLength: 1
+        type: string
+      reasonNotes:
+        description: 'AC3: Optional details for "Other" reason'
+        type: string
+    required:
+    - branchId
+    - newStockQty
+    - productId
+    - reason
+    type: object
+  dto.SystemSettingsRequest:
+    properties:
+      address:
+        example: 123 Main St, Jakarta, Indonesia
+        type: string
+      businessName:
+        example: Simpo Pharmacy
+        minLength: 1
+        type: string
+      email:
+        example: admin@simpo.pharmacy
+        type: string
+      logoUrl:
+        example: https://example.com/logo.png
+        type: string
+      phone:
+        example: +62-21-1234-5678
+        type: string
+    required:
+    - businessName
+    - email
+    type: object
+  dto.SystemSettingsResponse:
+    properties:
+      address:
+        example: 123 Main St, Jakarta, Indonesia
+        type: string
+      businessName:
+        example: Simpo Pharmacy
+        type: string
+      email:
+        example: admin@simpo.pharmacy
+        type: string
+      logoUrl:
+        example: https://example.com/logo.png
+        type: string
+      phone:
+        example: +62-21-1234-5678
+        type: string
+      updatedAt:
+        example: "2026-05-26T10:30:00Z"
+        type: string
+      updatedBy:
+        example: 1
+        type: integer
+    type: object
+  dto.UserInfo:
+    properties:
+      branch_id:
+        type: integer
+      email:
+        example: admin@simpo.pharmacy
+        type: string
+      id:
+        example: 1
+        type: integer
+      role:
+        example: SYSTEM_ADMIN
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  errors.ErrorInfo:
+    properties:
+      code:
+        description: Additional fields for internal use
+        type: string
+      detail:
+        description: Human-readable explanation of this occurrence
+        type: string
+      details: {}
+      instance:
+        description: URI reference identifying this specific occurrence
+        type: string
+      path:
+        type: string
+      request_id:
+        type: string
+      retry_after:
+        type: integer
+      status:
+        description: HTTP status code (required by RFC 7807)
+        type: integer
+      timestamp:
+        type: string
+      title:
+        description: Short, human-readable summary
+        type: string
+      type:
+        description: RFC 7807 required fields
+        type: string
+    type: object
+  errors.Links:
+    properties:
+      first:
+        type: string
+      last:
+        type: string
+      next:
+        type: string
+      prev:
+        type: string
+      self:
+        type: string
+    type: object
+  errors.Meta:
+    properties:
+      links:
+        $ref: '#/definitions/errors.Links'
+      page:
+        type: integer
+      per_page:
+        type: integer
+      request_id:
+        type: string
+      timestamp:
+        type: string
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  errors.Response:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/errors.ErrorInfo'
+      meta:
+        $ref: '#/definitions/errors.Meta'
+      success:
+        type: boolean
+    type: object
+  handlers.CleanupRequest:
+    properties:
+      confirmed:
+        description: |-
+          Confirmed must be true to execute the cleanup (safety confirmation)
+          Example: true
+        example: true
+        type: boolean
+      create_backup:
+        description: |-
+          CreateBackup indicates whether to create a backup before cleanup
+          Example: true
+        example: true
+        type: boolean
+      reason:
+        description: |-
+          Reason is the reason for performing cleanup (minimum 10 characters, maximum 500)
+          Example: "Scheduled quarterly cleanup per compliance policy"
+          Code review fix: CRIT-015 - Add max length validation
+        example: Scheduled quarterly cleanup per compliance policy
+        maxLength: 500
+        minLength: 10
+        type: string
+    required:
+    - confirmed
+    - reason
+    type: object
+  handlers.CleanupResponse:
+    properties:
+      backup_file:
+        description: |-
+          BackupFile is the backup file created (if CreateBackup was true)
+          Example: "audit_backup_20260527.csv"
+        example: audit_backup_20260527.csv
+        type: string
+      deleted_count:
+        description: |-
+          DeletedCount is the number of audit log entries deleted
+          Example: 5000
+        example: 5000
+        type: integer
+      executed_at:
+        description: |-
+          ExecutedAt is the timestamp when cleanup was executed
+          Example: "2026-05-27T15:00:00Z"
+        example: "2026-05-27T15:00:00Z"
+        type: string
+      reason:
+        description: |-
+          Reason is the reason provided for the cleanup
+          Example: "Scheduled quarterly cleanup per compliance policy"
+        example: Scheduled quarterly cleanup per compliance policy
+        type: string
+    type: object
+  handlers.CreateBranchRequest:
+    properties:
+      email:
+        description: |-
+          Email is the branch email
+          Example: "jakarta@simpo.pharmacy"
+        example: jakarta@simpo.pharmacy
+        type: string
+      location:
+        description: |-
+          Location is the branch address
+          Example: "Jl. Sudirman No. 123, Jakarta Pusat"
+        example: Jl. Sudirman No. 123, Jakarta Pusat
+        type: string
+      name:
+        description: |-
+          Name is the branch name (unique, maximum 100 characters)
+          Example: "Jakarta Central"
+        example: Jakarta Central
+        maxLength: 100
+        type: string
+      phone:
+        description: |-
+          Phone is the branch phone number
+          Example: "+62-21-1234-5678"
+        example: +62-21-1234-5678
+        type: string
+    required:
+    - location
+    - name
+    type: object
+  handlers.CreateBranchResponse:
+    properties:
+      created_at:
+        description: |-
+          CreatedAt is the timestamp when branch was created
+          Example: "2026-05-27T12:00:00Z"
+        example: "2026-05-27T12:00:00Z"
+        type: string
+      email:
+        description: |-
+          Email is the branch email
+          Example: "jakarta@simpo.pharmacy"
+        example: jakarta@simpo.pharmacy
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the created branch
+          Example: 5
+        example: 5
+        type: integer
+      location:
+        description: |-
+          Location is the branch address
+          Example: "Jl. Sudirman No. 123, Jakarta Pusat"
+        example: Jl. Sudirman No. 123, Jakarta Pusat
+        type: string
+      name:
+        description: |-
+          Name is the branch name
+          Example: "Jakarta Central"
+        example: Jakarta Central
+        type: string
+      phone:
+        description: |-
+          Phone is the branch phone number
+          Example: "+62-21-1234-5678"
+        example: +62-21-1234-5678
+        type: string
+    type: object
+  handlers.DeactivateBranchRequest:
+    properties:
+      reason:
+        description: |-
+          Reason is the reason for deactivation (minimum 5 characters)
+          Examples: "Branch closed permanently", "Relocated to new address", "Temporary closure for renovation"
+        example: Branch closed permanently
+        minLength: 5
+        type: string
+    required:
+    - reason
+    type: object
+  handlers.DeactivateBranchResponse:
+    properties:
+      deactivated_at:
+        description: |-
+          DeactivatedAt is the timestamp when branch was deactivated
+          Example: "2026-05-27T14:00:00Z"
+        example: "2026-05-27T14:00:00Z"
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the deactivated branch
+          Example: 5
+        example: 5
+        type: integer
+      name:
+        description: |-
+          Name is the branch name
+          Example: "Jakarta Central"
+        example: Jakarta Central
+        type: string
+      reason:
+        description: |-
+          Reason is the reason for deactivation
+          Example: "Branch closed permanently"
+        example: Branch closed permanently
+        type: string
+    type: object
+  handlers.GetRetentionStatusResponse:
+    properties:
+      cutoff_date:
+        description: |-
+          CutoffDate is the date before which logs are eligible for cleanup
+          Example: "2021-05-27T00:00:00Z"
+        example: "2021-05-27T00:00:00Z"
+        type: string
+      eligible_for_cleanup:
+        description: EligibleForCleanup is the number of logs older than 5 years
+        example: 5000
+        type: integer
+      estimated_space_reclaimed:
+        description: |-
+          EstimatedSpaceReclaimed is the estimated disk space that would be reclaimed (in bytes)
+          Example: 52428800
+        example: 52428800
+        type: integer
+      total_logs:
+        description: TotalLogs is the total number of audit logs in the system
+        example: 150000
+        type: integer
+    type: object
+  handlers.UpdateBranchRequest:
+    properties:
+      email:
+        description: |-
+          Email is the new branch email
+          Example: "jakarta-central@simpo.pharmacy"
+        example: jakarta-central@simpo.pharmacy
+        type: string
+      location:
+        description: |-
+          Location is the new branch address
+          Example: "Jl. Sudirman No. 456, Jakarta Pusat"
+        example: Jl. Sudirman No. 456, Jakarta Pusat
+        type: string
+      name:
+        description: |-
+          Name is the new branch name
+          Example: "Jakarta Central Branch"
+        example: Jakarta Central Branch
+        maxLength: 100
+        type: string
+      phone:
+        description: |-
+          Phone is the new branch phone number
+          Example: "+62-21-9876-5432"
+        example: +62-21-9876-5432
+        type: string
+      reason:
+        description: |-
+          Reason is the reason for the update (minimum 5 characters, maximum 500)
+          Example: "Address correction, phone number updated"
+          Code review fix: CRIT-015 - Add max length validation
+        example: Address correction, phone number updated
+        maxLength: 500
+        minLength: 5
+        type: string
+    required:
+    - reason
+    type: object
+  handlers.UpdateBranchResponse:
+    properties:
+      changes:
+        description: |-
+          Changes is a summary of what was changed
+          Example: "Name: Jakarta Central → Jakarta Central Branch, Location updated"
+        example: 'Name: Jakarta Central → Jakarta Central Branch, Location updated'
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the branch
+          Example: 5
+        example: 5
+        type: integer
+      name:
+        description: |-
+          Name is the updated branch name
+          Example: "Jakarta Central Branch"
+        example: Jakarta Central Branch
+        type: string
+      updated_at:
+        description: |-
+          UpdatedAt is the timestamp when branch was updated
+          Example: "2026-05-27T12:30:00Z"
+        example: "2026-05-27T12:30:00Z"
+        type: string
+    type: object
+  health.CheckResult:
+    properties:
+      details: {}
+      message:
+        type: string
+      response_time:
+        type: string
+      status:
+        $ref: '#/definitions/health.CheckStatus'
+    type: object
+  health.CheckStatus:
+    enum:
+    - pass
+    - warn
+    - fail
+    type: string
+    x-enum-varnames:
+    - CheckPass
+    - CheckWarn
+    - CheckFail
+  health.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          $ref: '#/definitions/health.CheckResult'
+        description: Detailed check results
+        type: object
+      database:
+        description: '"connected" | "disconnected"'
+        type: string
+      environment:
+        description: 'Optional: not in AC2 spec'
+        type: string
+      redis:
+        description: '"connected" | "disconnected"'
+        type: string
+      status:
+        $ref: '#/definitions/health.HealthStatus'
+      timestamp:
+        type: string
+      uptime:
+        type: string
+      version:
+        type: string
+    type: object
+  health.HealthStatus:
+    enum:
+    - healthy
+    - degraded
+    - unhealthy
+    type: string
+    x-enum-varnames:
+    - StatusHealthy
+    - StatusDegraded
+    - StatusUnhealthy
+  models.Product:
+    properties:
+      branchId:
+        type: integer
+      category:
+        type: string
+      cost_price:
+        type: string
+      created_at:
+        type: string
+      createdBy:
+        type: integer
+      description:
+        type: string
+      expiryDate:
+        type: string
+      id:
+        type: integer
+      isExpired:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: string
+      reorderThreshold:
+        type: integer
+      sku:
+        type: string
+      stockQty:
+        type: integer
+      updated_at:
+        type: string
+      updatedBy:
+        type: integer
+      version:
+        type: integer
+    type: object
+  services.StockAdjustmentResult:
+    properties:
+      adjustedAt:
+        type: string
+      adjustedBy:
+        type: string
+      change:
+        format: int64
+        type: integer
+      name:
+        type: string
+      newStockQty:
+        format: int64
+        type: integer
+      oldStockQty:
+        format: int64
+        type: integer
+      productID:
+        type: integer
+      reason:
+        type: string
+      sku:
+        type: string
+    type: object
+  user.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/user.UserResponse'
+    type: object
+  user.CreateUserRequest:
+    properties:
+      branch_id:
+        description: |-
+          BranchID is the branch assignment (required for CASHIER role, optional for others)
+          Must reference an existing branch ID
+          Example: 1
+        example: 1
+        type: integer
+      email:
+        description: |-
+          Email is the user's email address (valid format, must be unique)
+          Example: "cashier@example.com"
+        example: cashier@example.com
+        type: string
+      password:
+        description: |-
+          Password is the user's password (minimum 8 characters, will be hashed with bcrypt)
+          Example: "SecurePass123!"
+        example: SecurePass123!
+        minLength: 8
+        type: string
+      role:
+        description: |-
+          Role is the user's role (must be one of: SYSTEM_ADMIN, OWNER, CASHIER)
+          Example: "CASHIER"
+          Enum: SYSTEM_ADMIN, OWNER, CASHIER
+        example: CASHIER
+        type: string
+      username:
+        description: |-
+          Username is the login username (minimum 3 characters, must be unique)
+          Example: "newcashier"
+        example: newcashier
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - role
+    - username
+    type: object
+  user.CreateUserResponse:
+    properties:
+      branch_id:
+        description: |-
+          BranchID is the branch assignment (null for SYSTEM_ADMIN and OWNER roles)
+          Example: 1
+        example: 1
+        type: integer
+      created_at:
+        description: |-
+          CreatedAt is the timestamp when the user was created (ISO 8601 format)
+          Example: "2026-05-11T22:00:00Z"
+        example: "2026-05-11T22:00:00Z"
+        type: string
+      email:
+        description: |-
+          Email is the user's email address
+          Example: "cashier@example.com"
+        example: cashier@example.com
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the created user
+          Example: 5
+        example: 5
+        type: integer
+      role:
+        description: |-
+          Role is the assigned user role
+          Example: "CASHIER"
+        example: CASHIER
+        type: string
+      status:
+        description: |-
+          Status is the user account status (always "ACTIVE" for newly created users)
+          Example: "ACTIVE"
+        example: ACTIVE
+        type: string
+      username:
+        description: |-
+          Username is the login username
+          Example: "newcashier"
+        example: newcashier
+        type: string
+    type: object
+  user.DeactivateUserRequest:
+    properties:
+      reason:
+        description: |-
+          Reason is the deactivation reason (minimum 5 characters)
+          Examples: "Staff resignation", "Termination", "Contract ended"
+        example: Staff resignation
+        minLength: 5
+        type: string
+    required:
+    - reason
+    type: object
+  user.DeactivateUserResponse:
+    properties:
+      deactivated_at:
+        description: |-
+          DeactivatedAt is the timestamp when the user was deactivated
+          Example: "2026-05-12T11:45:00Z"
+        example: "2026-05-12T11:45:00Z"
+        type: string
+      deactivated_by:
+        description: |-
+          DeactivatedBy is the admin user ID who performed deactivation
+          Example: 1
+        example: 1
+        type: integer
+      deactivation_reason:
+        description: |-
+          DeactivationReason is the reason for deactivation
+          Example: "Staff resignation"
+        example: Staff resignation
+        type: string
+      email:
+        description: |-
+          Email is the user's email address
+          Example: "formerstaff@simpo.pharmacy"
+        example: formerstaff@simpo.pharmacy
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the deactivated user
+          Example: 10
+        example: 10
+        type: integer
+      status:
+        description: |-
+          Status is the user account status (will be "INACTIVE" after deactivation)
+          Example: "INACTIVE"
+        example: INACTIVE
+        type: string
+      username:
+        description: |-
+          Username is the login username
+          Example: "formerstaff"
+        example: formerstaff
+        type: string
+    type: object
+  user.GrantPermissionRequest:
+    properties:
+      permission:
+        description: |-
+          Permission is the permission to grant
+          Examples: "MANAGE_USERS", "MANAGE_INVENTORY", "VIEW_REPORTS"
+        example: MANAGE_USERS
+        minLength: 3
+        type: string
+      reason:
+        description: |-
+          Reason is the reason for granting permission (minimum 5 characters)
+          Example: "Additional responsibilities for new project"
+        example: Additional responsibilities for new project
+        minLength: 5
+        type: string
+    required:
+    - permission
+    - reason
+    type: object
+  user.GrantPermissionResponse:
+    properties:
+      granted_at:
+        description: |-
+          GrantedAt is the timestamp when permission was granted
+          Example: "2026-05-27T12:00:00Z"
+        example: "2026-05-27T12:00:00Z"
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the user
+          Example: 10
+        example: 10
+        type: integer
+      permission:
+        description: |-
+          Permission is the granted permission
+          Example: "MANAGE_USERS"
+        example: MANAGE_USERS
+        type: string
+      username:
+        description: |-
+          Username is the login username
+          Example: "staffuser"
+        example: staffuser
+        type: string
+    type: object
+  user.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  user.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  user.RevokePermissionRequest:
+    properties:
+      permission:
+        description: |-
+          Permission is the permission to revoke
+          Examples: "MANAGE_USERS", "MANAGE_INVENTORY", "VIEW_REPORTS"
+        example: MANAGE_USERS
+        minLength: 3
+        type: string
+      reason:
+        description: |-
+          Reason is the reason for revoking permission (minimum 5 characters)
+          Example: "Project completed, no longer needs access"
+        example: Project completed, no longer needs access
+        minLength: 5
+        type: string
+    required:
+    - permission
+    - reason
+    type: object
+  user.RevokePermissionResponse:
+    properties:
+      id:
+        description: |-
+          ID is the unique identifier for the user
+          Example: 10
+        example: 10
+        type: integer
+      permission:
+        description: |-
+          Permission is the revoked permission
+          Example: "MANAGE_USERS"
+        example: MANAGE_USERS
+        type: string
+      revoked_at:
+        description: |-
+          RevokedAt is the timestamp when permission was revoked
+          Example: "2026-05-27T12:00:00Z"
+        example: "2026-05-27T12:00:00Z"
+        type: string
+      username:
+        description: |-
+          Username is the login username
+          Example: "staffuser"
+        example: staffuser
+        type: string
+    type: object
+  user.StaffRegistrationRequest:
+    properties:
+      email:
+        description: Email is the user's email address (valid format, must be unique)
+        example: newstaff@simpo.pharmacy
+        type: string
+      full_name:
+        description: FullName is the user's full name
+        example: New Staff Member
+        minLength: 2
+        type: string
+      password:
+        description: Password is the user's password (minimum 8 characters, will be
+          hashed with bcrypt)
+        example: SecurePass123!
+        minLength: 8
+        type: string
+      username:
+        description: Username is the login username (minimum 3 characters, must be
+          unique)
+        example: newstaff
+        minLength: 3
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - username
+    type: object
+  user.StaffRegistrationResponse:
+    properties:
+      created_at:
+        description: CreatedAt is the timestamp when the user was created
+        example: "2026-05-12T00:00:00Z"
+        type: string
+      email:
+        description: Email is the user's email address
+        example: newstaff@simpo.pharmacy
+        type: string
+      id:
+        description: ID is the unique identifier for the created user
+        example: 10
+        type: integer
+      role:
+        description: Role is the assigned user role
+        example: CASHIER
+        type: string
+      status:
+        description: Status is the user account status (PENDING for self-registered
+          users)
+        example: PENDING
+        type: string
+      username:
+        description: Username is the login username
+        example: newstaff
+        type: string
+      verification_sent:
+        description: VerificationSent indicates whether email verification was sent
+        example: true
+        type: boolean
+    type: object
+  user.UpdateRoleRequest:
+    properties:
+      reason:
+        description: |-
+          Reason is the reason for role change (minimum 5 characters)
+          Examples: "Promoted to owner", "Role change due to reorganization", "Demoted for policy violation"
+        example: Promoted to owner position
+        minLength: 5
+        type: string
+      role:
+        description: |-
+          Role is the new role to assign (must be one of: SYSTEM_ADMIN, OWNER, CASHIER)
+          Example: "OWNER"
+          Enum: SYSTEM_ADMIN, OWNER, CASHIER
+        example: OWNER
+        type: string
+    required:
+    - reason
+    - role
+    type: object
+  user.UpdateRoleResponse:
+    properties:
+      id:
+        description: |-
+          ID is the unique identifier for the user
+          Example: 10
+        example: 10
+        type: integer
+      new_role:
+        description: |-
+          NewRole is the new role after change
+          Example: "OWNER"
+        example: OWNER
+        type: string
+      old_role:
+        description: |-
+          OldRole is the previous role before change
+          Example: "CASHIER"
+        example: CASHIER
+        type: string
+      updated_at:
+        description: |-
+          UpdatedAt is the timestamp when role was changed
+          Example: "2026-05-27T12:00:00Z"
+        example: "2026-05-27T12:00:00Z"
+        type: string
+      username:
+        description: |-
+          Username is the login username
+          Example: "staffuser"
+        example: staffuser
+        type: string
+    type: object
+  user.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      role:
+        description: 'Story 6.4: Added Role field for role updates'
+        enum:
+        - SYSTEM_ADMIN
+        - OWNER
+        - CASHIER
+        type: string
+    type: object
+  user.UserListResponse:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/user.UserResponse'
+        type: array
+    type: object
+  user.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  user.VerifyEmailRequest:
+    properties:
+      token:
+        description: Token is the email verification token
+        example: uuid-token-here
+        type: string
+    required:
+    - token
+    type: object
+  whitelist.AddWhitelistEntryRequest:
+    properties:
+      default_role:
+        description: |-
+          DefaultRole is the default role assigned to users registering with this domain
+          Required: true
+          Enum: SYSTEM_ADMIN, OWNER, CASHIER
+          Example: "CASHIER"
+        enum:
+        - SYSTEM_ADMIN
+        - OWNER
+        - CASHIER
+        example: CASHIER
+        type: string
+      description:
+        description: |-
+          Description is an optional description of the whitelist entry
+          Required: false
+          Example: "Simpo Pharmacy staff domain"
+        example: Simpo Pharmacy staff domain
+        type: string
+      domain:
+        description: |-
+          Domain is the email domain to whitelist (e.g., "simpo.pharmacy")
+          Required: true
+          Example: "simpo.pharmacy"
+        example: simpo.pharmacy
+        type: string
+    required:
+    - default_role
+    - domain
+    type: object
+  whitelist.UpdateWhitelistEntryRequest:
+    properties:
+      default_role:
+        description: |-
+          DefaultRole is the default role assigned to users registering with this domain
+          Required: false (updates only provided field)
+          Enum: SYSTEM_ADMIN, OWNER, CASHIER
+          Example: "OWNER"
+        enum:
+        - SYSTEM_ADMIN
+        - OWNER
+        - CASHIER
+        example: OWNER
+        type: string
+      description:
+        description: |-
+          Description is an optional description of the whitelist entry
+          Required: false
+          Example: "Updated description"
+        example: Updated description
+        type: string
+    type: object
+  whitelist.WhitelistEntryResponse:
+    properties:
+      created_at:
+        description: |-
+          CreatedAt is the timestamp when the entry was created
+          Example: "2026-05-12T00:00:00Z"
+        example: "2026-05-12T00:00:00Z"
+        type: string
+      default_role:
+        description: |-
+          DefaultRole is the default role for this domain
+          Example: "CASHIER"
+        example: CASHIER
+        type: string
+      description:
+        description: |-
+          Description is the description of the whitelist entry
+          Example: "Simpo Pharmacy staff domain"
+        example: Simpo Pharmacy staff domain
+        type: string
+      domain:
+        description: |-
+          Domain is the whitelisted email domain
+          Example: "simpo.pharmacy"
+        example: simpo.pharmacy
+        type: string
+      id:
+        description: |-
+          ID is the unique identifier for the whitelist entry
+          Example: 1
+        example: 1
+        type: integer
+      updated_at:
+        description: |-
+          UpdatedAt is the timestamp when the entry was last updated
+          Example: "2026-05-12T00:00:00Z"
+        example: "2026-05-12T00:00:00Z"
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@simpo.com
+    name: API Support
+  description: API for simpo pharmacy management system supporting POS, inventory,
+    reporting, and multi-branch operations.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://simpo.com/terms
+  title: simpo Pharmacy Management System API
+  version: "1.0"
+paths:
+  /api/v1/admin/audit/retention/cleanup:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Deletes audit logs older than 5 years with optional backup (Story 6.4, AC6)
+        CRITICAL: This operation permanently deletes audit logs. Use with caution.
+      parameters:
+      - description: Cleanup request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CleanupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cleanup executed successfully
+          schema:
+            $ref: '#/definitions/handlers.CleanupResponse'
+        "400":
+          description: Invalid request or not confirmed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Execute audit log retention cleanup
+      tags:
+      - Audit Log Management
+  /api/v1/admin/audit/retention/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns information about audit logs eligible for cleanup (Story
+        6.4, AC6)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Retention status retrieved
+          schema:
+            $ref: '#/definitions/handlers.GetRetentionStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get audit log retention status
+      tags:
+      - Audit Log Management
+  /api/v1/admin/backups:
+    get:
+      consumes:
+      - application/json
+      description: Returns list of all available backups with metadata (Story 6.3,
+        AC5)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Backups retrieved successfully
+          schema:
+            $ref: '#/definitions/dto.BackupListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all backups
+      tags:
+      - Admin Backups
+    post:
+      consumes:
+      - application/json
+      description: Manually triggers a database backup operation (Story 6.3, AC5)
+      parameters:
+      - description: Backup request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBackupRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Backup started
+          schema:
+            $ref: '#/definitions/dto.CreateBackupResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Backup already in progress
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trigger manual backup
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/{filename}:
+    delete:
+      consumes:
+      - application/json
+      description: Manually deletes the specified backup file (Story 6.3, Task 4)
+      parameters:
+      - description: Backup filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      - description: Delete confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DeleteBackupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Backup deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Backup not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete backup file
+      tags:
+      - Admin Backups
+    get:
+      consumes:
+      - application/json
+      description: Downloads the specified backup file (Story 6.3, AC5)
+      parameters:
+      - description: Backup filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Backup file
+          schema:
+            type: file
+        "400":
+          description: Invalid filename
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Backup not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download backup file
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/{filename}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restores database from the specified backup file (Story 6.3, AC6)
+      parameters:
+      - description: Backup filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      - description: Restore confirmation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RestoreBackupRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Restore started
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Backup not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restore from backup
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/{filename}/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validates the specified backup file for restoration (Story 6.3,
+        AC6)
+      parameters:
+      - description: Backup filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Backup is valid
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid filename
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate backup file
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/cleanup:
+    post:
+      consumes:
+      - application/json
+      description: Manually triggers cleanup of backups older than retention period
+        (Story 6.3, AC3)
+      parameters:
+      - description: "30"
+        in: query
+        name: retention_days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cleanup completed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cleanup old backups
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/config:
+    get:
+      consumes:
+      - application/json
+      description: Returns current backup configuration (Story 6.3, AC8)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Backup configuration
+          schema:
+            $ref: '#/definitions/dto.BackupConfig'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get backup configuration
+      tags:
+      - Admin Backups
+    put:
+      consumes:
+      - application/json
+      description: Updates backup configuration settings (Story 6.3, AC8)
+      parameters:
+      - description: Backup configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BackupConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration updated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update backup configuration
+      tags:
+      - Admin Backups
+  /api/v1/admin/backups/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns current backup job status and statistics (Story 6.3, AC4)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Backup status retrieved
+          schema:
+            $ref: '#/definitions/dto.BackupJobStatus'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get backup status
+      tags:
+      - Admin Backups
+  /api/v1/admin/branches:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new pharmacy branch with audit logging (Story 6.4, AC1,
+        AC2)
+      parameters:
+      - description: Branch creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Branch created successfully
+          schema:
+            $ref: '#/definitions/handlers.CreateBranchResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - OWNER/ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Branch name already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create new branch
+      tags:
+      - Branch Management
+  /api/v1/admin/branches/{branch_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deactivates a pharmacy branch with audit logging (Story 6.4, AC1,
+        AC2)
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: Deactivation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DeactivateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch deactivated successfully
+          schema:
+            $ref: '#/definitions/handlers.DeactivateBranchResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - OWNER only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Branch not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Deactivate branch
+      tags:
+      - Branch Management
+    put:
+      consumes:
+      - application/json
+      description: Updates a branch's information with audit logging (Story 6.4, AC1,
+        AC2)
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: integer
+      - description: Branch update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch updated successfully
+          schema:
+            $ref: '#/definitions/handlers.UpdateBranchResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - OWNER/ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Branch not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update branch information
+      tags:
+      - Branch Management
+  /api/v1/admin/health/alerts:
+    get:
+      consumes:
+      - application/json
+      description: Returns current health alerts grouped by severity (Story 6.2, Task
+        3)
+      parameters:
+      - description: none
+        in: query
+        name: severity
+        type: string
+      - description: "100"
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alerts retrieved successfully
+          schema:
+            $ref: '#/definitions/dto.AlertResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get active health alerts
+      tags:
+      - Admin Health
+  /api/v1/admin/health/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Returns system health metrics for admin dashboard (Story 6.2, AC1-7)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Health metrics retrieved successfully
+          schema:
+            $ref: '#/definitions/dto.EnhancedHealthDashboardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get comprehensive health dashboard metrics
+      tags:
+      - Admin Health
+  /api/v1/admin/health/metrics:
+    get:
+      consumes:
+      - application/json
+      description: Returns historical health metrics data (Story 6.2, Task 3 - optional)
+      parameters:
+      - description: none
+        in: query
+        name: start_time
+        type: string
+      - description: none
+        in: query
+        name: end_time
+        type: string
+      - description: none
+        in: query
+        name: metric_type
+        type: string
+      - description: "100"
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Historical metrics retrieved
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get historical health metrics
+      tags:
+      - Admin Health
+  /api/v1/admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of all users with optional filtering (requires
+        admin role)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (max 100)
+        in: query
+        name: per_page
+        type: integer
+      - description: Filter by role (user or admin)
+        in: query
+        name: role
+        type: string
+      - description: Search by name or email
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field (created_at, updated_at, name, email)
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: Sort order (asc or desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with paginated user list
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Admin access required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to list users
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List all users (Admin only)
+      tags:
+      - admin
+  /api/v1/admin/users/{user_id}/permissions:
+    delete:
+      consumes:
+      - application/json
+      description: |-
+        Revokes a specific permission from a user with audit logging (Story 6.4, AC1, AC2)
+        Note: Current implementation uses RBAC with pre-defined roles. This endpoint
+        is provided for future PBAC (Permission-Based Access Control) enhancement.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Permission revoke request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.RevokePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Permission revoked successfully
+          schema:
+            $ref: '#/definitions/user.RevokePermissionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "501":
+          description: Not Implemented - RBAC system in use
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke permission from user
+      tags:
+      - User Management
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Grants a specific permission to a user with audit logging (Story 6.4, AC1, AC2)
+        Note: Current implementation uses RBAC with pre-defined roles. This endpoint
+        is provided for future PBAC (Permission-Based Access Control) enhancement.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Permission grant request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.GrantPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Permission granted successfully
+          schema:
+            $ref: '#/definitions/user.GrantPermissionResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "501":
+          description: Not Implemented - RBAC system in use
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grant permission to user
+      tags:
+      - User Management
+  /api/v1/admin/users/{user_id}/role:
+    put:
+      consumes:
+      - application/json
+      description: Updates a user's role with audit logging (Story 6.4, AC1, AC2)
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Role update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role updated successfully
+          schema:
+            $ref: '#/definitions/user.UpdateRoleResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user role
+      tags:
+      - User Management
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password, returns access and refresh
+        tokens
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data and tokens
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.AuthResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Invalid email or password
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to authenticate user or generate token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Login user
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate current JWT token (Story 1.8, AC5)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged out
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  type: object
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to logout
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Logout user
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the currently authenticated user's information with roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with current user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to get user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange refresh token for new access and refresh tokens with automatic
+        rotation
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with new token pair
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenPairResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Token reuse detected - all tokens revoked
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to refresh token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with name, email and password, returns access
+        and refresh tokens
+      parameters:
+      - description: Registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data and tokens
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.AuthResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Email already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to register user or generate token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /api/v1/auth/register-staff:
+    post:
+      consumes:
+      - application/json
+      description: Self-registration for staff with whitelisted email domains (Public
+        endpoint)
+      parameters:
+      - description: Staff self-registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.StaffRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered with PENDING status
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.StaffRegistrationResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error or duplicate username/email
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Email domain not whitelisted
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Register a new staff member via self-registration
+      tags:
+      - auth
+  /api/v1/auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify email verification token and activate user account (Public
+        endpoint)
+      parameters:
+      - description: Email verification request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.VerifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account activated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid or expired verification token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Verify email and activate account
+      tags:
+      - auth
+  /api/v1/health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application is running and its dependencies (Story
+        9.1 - API versioned endpoint)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System is healthy - all critical dependencies connected
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: System is unhealthy - critical dependency disconnected
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: API health check endpoint
+      tags:
+      - Health
+  /api/v1/products:
+    get:
+      consumes:
+      - application/json
+      description: Get products with search, filters, and pagination. Owners can filter
+        by branch/category. Cashiers see only their branch.
+      parameters:
+      - description: Search by name or SKU
+        in: query
+        name: search
+        type: string
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Filter by branch (Owner only)
+        in: query
+        name: branch_id
+        type: integer
+      - description: Filter for low stock items
+        in: query
+        name: low_stock
+        type: boolean
+      - description: Filter for expired items
+        in: query
+        name: expired
+        type: boolean
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 1000)
+        in: query
+        name: limit
+        type: integer
+      - description: Field to sort by
+        enum:
+        - id
+        - name
+        - sku
+        - price
+        - stock_qty
+        - category
+        - created_at
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with product list
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ProductListResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error - invalid input parameters
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - authentication required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: List products
+      tags:
+      - products
+  /api/v1/products/expiring:
+    get:
+      description: Retrieves products expiring within specified days threshold (7,
+        14, or 30). Supports optional branch_id filtering for Owners, Cashiers see
+        their assigned branch only.
+      parameters:
+      - description: 'Days threshold (default: 30, max: 365)'
+        in: query
+        name: days
+        type: integer
+      - description: Filter by branch ID (Owner only, defaults to user's branch)
+        in: query
+        name: branch_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with expiring products list
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.ProductListItem'
+                  type: array
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error - invalid input parameters
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - authentication required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Get products expiring soon
+      tags:
+      - products
+  /api/v1/products/low-stock:
+    get:
+      description: Retrieves products where current stock is below reorder threshold.
+        Supports optional branch_id filtering for Owners, Cashiers see their assigned
+        branch only.
+      parameters:
+      - description: Filter by branch ID (Owner only, defaults to user's branch)
+        in: query
+        name: branch_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with low stock products list
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.ProductListItem'
+                  type: array
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - authentication required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Get products with low stock
+      tags:
+      - products
+  /api/v1/products/sku/{sku}:
+    get:
+      description: Retrieves a product by SKU. Used for barcode scanning in POS. Returns
+        error if product is expired.
+      parameters:
+      - description: Product SKU (barcode)
+        in: path
+        name: sku
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product found
+          schema:
+            properties:
+              product:
+                $ref: '#/definitions/models.Product'
+            type: object
+        "400":
+          description: Product expired (RFC 7807)
+          schema:
+            properties:
+              detail:
+                type: string
+              status:
+                type: integer
+              title:
+                type: string
+              type:
+                type: string
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            properties:
+              detail:
+                type: string
+              status:
+                type: integer
+              title:
+                type: string
+              type:
+                type: string
+            type: object
+      summary: Get product by SKU (barcode scan)
+      tags:
+      - products
+  /api/v1/products/stock/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Adjust stock quantity with reason logging for inventory corrections.
+        Admin/Owner only.
+      parameters:
+      - description: Stock adjustment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StockAdjustmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with adjustment details
+          schema:
+            $ref: '#/definitions/services.StockAdjustmentResult'
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Manually adjust product stock quantity
+      tags:
+      - products
+  /api/v1/products/stock/subscribe:
+    get:
+      description: WebSocket endpoint for receiving real-time stock updates. JWT token
+        required via query parameter.
+      parameters:
+      - description: JWT authentication token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Comma-separated branch IDs to filter (Owner only, defaults to
+          user's branch)
+        in: query
+        name: branches
+        type: string
+      responses: {}
+      summary: Subscribe to real-time stock updates
+      tags:
+      - products
+  /api/v1/settings:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all pharmacy system settings (business name, address,
+        phone, email). Requires System Admin role.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with system settings
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SystemSettingsResponse'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - authentication required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions (System Admin only)
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get system settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Update pharmacy system settings (business name, address, phone,
+        email). Requires System Admin role. Changes are logged to audit trail.
+      parameters:
+      - description: Settings update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SystemSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with update confirmation
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SettingsUpdateResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error - invalid input
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - authentication required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions (System Admin only)
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update system settings
+      tags:
+      - settings
+  /api/v1/settings/public:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve public pharmacy settings (business name, address, phone,
+        email) for receipts and reports. No authentication required.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with public settings
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PublicSettingsResponse'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Get public settings
+      tags:
+      - settings
+  /api/v1/users:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with role assignment. Only users with SYSTEM_ADMIN
+        role can access this endpoint.
+      parameters:
+      - description: User creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.CreateUserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid request or validation error (missing fields, invalid
+            format, invalid role, missing branch_id for CASHIER)
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized - user not authenticated
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions (SYSTEM_ADMIN role required)
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Conflict - username or email already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user (Admin only)
+      tags:
+      - admin
+  /api/v1/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by ID (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to delete user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get a user by their ID (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to get user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update user information (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with updated user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid user ID or Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Email already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to update user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - users
+  /api/v1/users/{id}/deactivate:
+    put:
+      consumes:
+      - application/json
+      description: Deactivate a user account (SYSTEM_ADMIN only). Requires reason
+        field.
+      parameters:
+      - description: User ID to deactivate
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Deactivation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.DeactivateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deactivated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.DeactivateUserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Cannot deactivate own account or invalid reason
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - insufficient permissions
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Deactivate user account
+      tags:
+      - admin
+  /api/v1/whitelist:
+    get:
+      description: Retrieve all email domains in the whitelist (SYSTEM_ADMIN only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of whitelist entries
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/whitelist.WhitelistEntryResponse'
+                  type: array
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List all whitelisted domains
+      tags:
+      - whitelist
+    post:
+      consumes:
+      - application/json
+      description: Add a new email domain to the whitelist for staff self-registration
+        (SYSTEM_ADMIN only)
+      parameters:
+      - description: Add whitelist entry request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/whitelist.AddWhitelistEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Whitelist entry created
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/whitelist.WhitelistEntryResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Domain already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Add email domain to whitelist
+      tags:
+      - whitelist
+  /api/v1/whitelist/{id}:
+    delete:
+      description: Remove a domain from the whitelist (SYSTEM_ADMIN only)
+      parameters:
+      - description: Whitelist entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Whitelist entry deleted
+        "400":
+          description: Invalid ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: Whitelist entry not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Delete whitelist entry
+      tags:
+      - whitelist
+    get:
+      description: Retrieve a specific whitelist entry by ID (SYSTEM_ADMIN only)
+      parameters:
+      - description: Whitelist entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Whitelist entry
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/whitelist.WhitelistEntryResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: Whitelist entry not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get whitelist entry by ID
+      tags:
+      - whitelist
+    put:
+      consumes:
+      - application/json
+      description: Update a whitelist entry's default role and/or description (SYSTEM_ADMIN
+        only)
+      parameters:
+      - description: Whitelist entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update whitelist entry request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/whitelist.UpdateWhitelistEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated whitelist entry
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/whitelist.WhitelistEntryResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden - SYSTEM_ADMIN only
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: Whitelist entry not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update whitelist entry
+      tags:
+      - whitelist
+  /health/db:
+    get:
+      consumes:
+      - application/json
+      description: Check if the database connection is healthy (Story 2.4)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Database is healthy
+          schema:
+            $ref: '#/definitions/health.CheckResult'
+        "503":
+          description: Database is unhealthy
+          schema:
+            $ref: '#/definitions/health.CheckResult'
+      summary: Database health check
+      tags:
+      - Health
+  /health/live:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application is alive (not deadlocked)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: Liveness probe
+      tags:
+      - Health
+  /health/ready:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application and its dependencies are ready to serve
+        traffic
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is ready
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+        "503":
+          description: Service is not ready
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: Readiness probe
+      tags:
+      - Health
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

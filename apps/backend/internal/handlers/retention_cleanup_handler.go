@@ -13,8 +13,8 @@ import (
 // RetentionCleanupHandler handles audit log retention cleanup operations
 // Story 6.4, Task 6: 5-Year Retention Policy for Badan POM Compliance
 type RetentionCleanupHandler struct {
-	auditRepo    repositories.AuditRepository
-	auditService services.AuditService
+	auditRepo     repositories.AuditRepository
+	auditService  services.AuditService
 	backupService services.BackupService
 }
 
@@ -26,8 +26,8 @@ func NewRetentionCleanupHandler(
 	backupService services.BackupService,
 ) *RetentionCleanupHandler {
 	return &RetentionCleanupHandler{
-		auditRepo:    auditRepo,
-		auditService: auditService,
+		auditRepo:     auditRepo,
+		auditService:  auditService,
 		backupService: backupService,
 	}
 }
@@ -87,17 +87,18 @@ type CleanupResponse struct {
 }
 
 // GetRetentionStatus godoc
-// @Summary      Get audit log retention status
-// @Description  Returns information about audit logs eligible for cleanup (Story 6.4, AC6)
-// @Tags         Audit Log Management
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  handlers.GetRetentionStatusResponse  "Retention status retrieved"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - SYSTEM_ADMIN only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/audit/retention/status [get]
+//
+//	@Summary		Get audit log retention status
+//	@Description	Returns information about audit logs eligible for cleanup (Story 6.4, AC6)
+//	@Tags			Audit Log Management
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	handlers.GetRetentionStatusResponse	"Retention status retrieved"
+//	@Failure		401	{object}	map[string]string					"Unauthorized"
+//	@Failure		403	{object}	map[string]string					"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		500	{object}	map[string]string					"Internal server error"
+//	@Router			/api/v1/admin/audit/retention/status [get]
 func (h *RetentionCleanupHandler) GetRetentionStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -132,9 +133,9 @@ func (h *RetentionCleanupHandler) GetRetentionStatus(c *gin.Context) {
 	estimatedSpace := eligibleForCleanup * 500
 
 	response := GetRetentionStatusResponse{
-		TotalLogs:              totalLogs,
-		EligibleForCleanup:     eligibleForCleanup,
-		CutoffDate:             cutoffDate.Format(time.RFC3339),
+		TotalLogs:               totalLogs,
+		EligibleForCleanup:      eligibleForCleanup,
+		CutoffDate:              cutoffDate.Format(time.RFC3339),
 		EstimatedSpaceReclaimed: estimatedSpace,
 	}
 
@@ -142,20 +143,21 @@ func (h *RetentionCleanupHandler) GetRetentionStatus(c *gin.Context) {
 }
 
 // ExecuteCleanup godoc
-// @Summary      Execute audit log retention cleanup
-// @Description  Deletes audit logs older than 5 years with optional backup (Story 6.4, AC6)
-// @Description  CRITICAL: This operation permanently deletes audit logs. Use with caution.
-// @Tags         Audit Log Management
-// @Accept       json
-// @Produce      json
-// @Param        request body handlers.CleanupRequest true "Cleanup request"
-// @Security     BearerAuth
-// @Success      200  {object}  handlers.CleanupResponse  "Cleanup executed successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request or not confirmed"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - SYSTEM_ADMIN only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/audit/retention/cleanup [post]
+//
+//	@Summary		Execute audit log retention cleanup
+//	@Description	Deletes audit logs older than 5 years with optional backup (Story 6.4, AC6)
+//	@Description	CRITICAL: This operation permanently deletes audit logs. Use with caution.
+//	@Tags			Audit Log Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	handlers.CleanupRequest	true	"Cleanup request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	handlers.CleanupResponse	"Cleanup executed successfully"
+//	@Failure		400	{object}	map[string]string			"Invalid request or not confirmed"
+//	@Failure		401	{object}	map[string]string			"Unauthorized"
+//	@Failure		403	{object}	map[string]string			"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		500	{object}	map[string]string			"Internal server error"
+//	@Router			/api/v1/admin/audit/retention/cleanup [post]
 func (h *RetentionCleanupHandler) ExecuteCleanup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -217,7 +219,7 @@ func (h *RetentionCleanupHandler) ExecuteCleanup(c *gin.Context) {
 
 // retentionAdminUserContext holds validated admin user context information
 type retentionAdminUserContext struct {
-	adminID      uint
+	adminID       uint
 	adminUsername string
 }
 
@@ -262,7 +264,7 @@ func (h *RetentionCleanupHandler) extractUserContext(c *gin.Context) (retentionA
 	}
 
 	return retentionAdminUserContext{
-		adminID:      adminID,
+		adminID:       adminID,
 		adminUsername: adminUsername,
 	}, true
 }

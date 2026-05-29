@@ -43,10 +43,10 @@ type CreateBackupRequest struct {
 // CreateBackupResponse represents the response when initiating a backup
 // Story 6.3, AC5: Returns 202 Accepted for async operation
 type CreateBackupResponse struct {
-	Status       string `json:"status" example:"started"`
-	Filename     string `json:"filename" example:"simpo_20260527_143000.dump"`
+	Status        string `json:"status" example:"started"`
+	Filename      string `json:"filename" example:"simpo_20260527_143000.dump"`
 	EstimatedTime string `json:"estimated_time" example:"2-5 min"`
-	Message      string `json:"message,omitempty" example:"Backup operation started"`
+	Message       string `json:"message,omitempty" example:"Backup operation started"`
 }
 
 // RestoreBackupRequest represents a request to restore from a backup
@@ -59,9 +59,9 @@ type RestoreBackupRequest struct {
 // RestoreBackupResponse represents the response when initiating a restore
 // Story 6.3, AC6: Returns 202 Accepted for async operation
 type RestoreBackupResponse struct {
-	Status    string `json:"status" example:"started"`
-	Filename  string `json:"filename" example:"simpo_20260527_020000.dump"`
-	Message   string `json:"message" example:"Restore operation started. This may take several minutes."`
+	Status   string `json:"status" example:"started"`
+	Filename string `json:"filename" example:"simpo_20260527_020000.dump"`
+	Message  string `json:"message" example:"Restore operation started. This may take several minutes."`
 }
 
 // BackupConfig represents backup configuration settings
@@ -75,12 +75,12 @@ type BackupConfig struct {
 
 // BackupJobStatus represents the current status of the backup job
 type BackupJobStatus struct {
-	IsRunning      bool      `json:"is_running"`
-	CurrentBackup  string    `json:"current_backup,omitempty"`
-	LastBackup     time.Time `json:"last_backup,omitempty"`
-	LastStatus     BackupStatus `json:"last_status"`
-	NextBackup     time.Time `json:"next_backup,omitempty"`
-	SuccessRate    float64   `json:"success_rate"` // Percentage
+	IsRunning     bool         `json:"is_running"`
+	CurrentBackup string       `json:"current_backup,omitempty"`
+	LastBackup    time.Time    `json:"last_backup,omitempty"`
+	LastStatus    BackupStatus `json:"last_status"`
+	NextBackup    time.Time    `json:"next_backup,omitempty"`
+	SuccessRate   float64      `json:"success_rate"` // Percentage
 }
 
 // BackupValidationError represents backup validation errors

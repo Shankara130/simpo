@@ -14,9 +14,9 @@ import (
 // BackupConfig represents backup configuration
 // Story 6.3, AC8: Configurable backup schedule and retention
 type BackupConfig struct {
-	Schedule      string `mapstructure:"schedule" yaml:"schedule"`           // Cron expression (default: "0 2 * * *")
+	Schedule      string `mapstructure:"schedule" yaml:"schedule"`             // Cron expression (default: "0 2 * * *")
 	RetentionDays int    `mapstructure:"retention_days" yaml:"retention_days"` // Retention period in days (default: 30)
-	StoragePath   string `mapstructure:"storage_path" yaml:"storage_path"`   // Backup storage path (default: "/backups")
+	StoragePath   string `mapstructure:"storage_path" yaml:"storage_path"`     // Backup storage path (default: "/backups")
 	Enabled       bool   `mapstructure:"enabled" yaml:"enabled"`               // Enable/disable automated backups (default: true)
 }
 
@@ -30,7 +30,7 @@ type Config struct {
 	Migrations MigrationsConfig `mapstructure:"migrations" yaml:"migrations"`
 	Health     HealthConfig     `mapstructure:"health" yaml:"health"`
 	Redis      RedisConfig      `mapstructure:"redis" yaml:"redis"`
-	Backup     BackupConfig      `mapstructure:"backup" yaml:"backup"`
+	Backup     BackupConfig     `mapstructure:"backup" yaml:"backup"`
 }
 
 type AppConfig struct {
@@ -114,8 +114,8 @@ func LoadConfig(configPath string) (*Config, error) {
 	v.AutomaticEnv()
 
 	// Story 6.2: Set default values for health alert thresholds
-	v.SetDefault("health.error_rate_max", 0.1)  // 0.1% threshold
-	v.SetDefault("health.disk_free_min", 20.0)  // 20% free threshold
+	v.SetDefault("health.error_rate_max", 0.1) // 0.1% threshold
+	v.SetDefault("health.disk_free_min", 20.0) // 20% free threshold
 
 	bindEnvVariables(v)
 

@@ -158,13 +158,13 @@ func (s *service) GenerateToken(userID uint, email string, name string) (string,
 	tokenID := uuid.New().String()
 
 	claims := jwt.MapClaims{
-		"sub":       fmt.Sprintf("%d", userID),
-		"email":     email,
-		"name":      name,
-		"roles":     roles,
-		"token_id":  tokenID, // Story 1.8: JWT ID for tracking individual tokens
-		"exp":       expirationTime.Unix(),
-		"iat":       now.Unix(),
+		"sub":      fmt.Sprintf("%d", userID),
+		"email":    email,
+		"name":     name,
+		"roles":    roles,
+		"token_id": tokenID, // Story 1.8: JWT ID for tracking individual tokens
+		"exp":      expirationTime.Unix(),
+		"iat":      now.Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

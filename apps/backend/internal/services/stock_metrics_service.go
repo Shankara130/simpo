@@ -28,14 +28,14 @@ type StockMetricsService struct {
 	publishHistoryMu     sync.Mutex
 
 	// Event delivery metrics (Task 16.3)
-	eventsDelivered    atomic.Int64
+	eventsDelivered       atomic.Int64
 	eventsDeliveredFailed atomic.Int64
-	deliveryLatencies   []time.Duration
-	deliveryLatenciesMu sync.Mutex
+	deliveryLatencies     []time.Duration
+	deliveryLatenciesMu   sync.Mutex
 
 	// Stock reconciliation accuracy (Task 16.5)
-	reconciliationChecks atomic.Int64
-	reconciliationMatches atomic.Int64
+	reconciliationChecks     atomic.Int64
+	reconciliationMatches    atomic.Int64
 	reconciliationMismatches atomic.Int64
 
 	// Failure rate tracking (Task 16.4)
@@ -44,11 +44,11 @@ type StockMetricsService struct {
 	failureWindowFailed atomic.Int64
 
 	// Alerting
-	alertThreshold    float64 // 5% failure rate threshold (Task 16.4)
-	alertCallback     func(string)
-	alertCallbackMu   sync.RWMutex
-	lastAlertTime     time.Time
-	alertCooldown     time.Duration
+	alertThreshold  float64 // 5% failure rate threshold (Task 16.4)
+	alertCallback   func(string)
+	alertCallbackMu sync.RWMutex
+	lastAlertTime   time.Time
+	alertCooldown   time.Duration
 }
 
 // NewStockMetricsService creates a new metrics service
@@ -56,10 +56,10 @@ func NewStockMetricsService(logger *slog.Logger) *StockMetricsService {
 	return &StockMetricsService{
 		logger:              logger,
 		connectionsByBranch: make(map[uint]int64),
-		publishHistory:      make([]time.Time, 0, 60), // Keep last 60 publishes
+		publishHistory:      make([]time.Time, 0, 60),       // Keep last 60 publishes
 		deliveryLatencies:   make([]time.Duration, 0, 1000), // Keep last 1000 latencies
 		failureWindowStart:  time.Now(),
-		alertThreshold:      0.05, // 5%
+		alertThreshold:      0.05,            // 5%
 		alertCooldown:       5 * time.Minute, // Alert at most every 5 minutes
 	}
 }

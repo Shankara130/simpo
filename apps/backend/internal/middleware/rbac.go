@@ -17,7 +17,8 @@ import (
 // access based on the user's role.
 //
 // Usage:
-//   router.Use(RBACMiddleware())
+//
+//	router.Use(RBACMiddleware())
 //
 // The middleware must be used AFTER JWTAuthMiddleware to ensure user context
 // is available. Middleware order: CORS → Rate Limit → Auth → RBAC → Handler

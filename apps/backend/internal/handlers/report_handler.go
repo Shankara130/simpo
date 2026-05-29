@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -85,7 +85,7 @@ func validateAndParseDate(dateStr string) (time.Time, error) {
 	// Sanitize input - trim whitespace and remove any null characters
 	// Code review fix: CRITICAL-010 - Input sanitization to prevent injection
 	sanitized := strings.TrimSpace(strings.ReplaceAll(dateStr, "\x00", ""))
-	
+
 	// Parse date
 	parsedDate, err := time.Parse("2006-01-02", sanitized)
 	if err != nil {
@@ -145,9 +145,9 @@ func validateBreakdownBy(breakdownBy string) error {
 		return nil // Empty is allowed, will use default
 	}
 	allowedValues := map[string]bool{
-		"category":        true,
-		"branch":          true,
-		"payment_method":  true,
+		"category":       true,
+		"branch":         true,
+		"payment_method": true,
 	}
 	if !allowedValues[breakdownBy] {
 		return &services.InvalidInputError{
@@ -243,7 +243,7 @@ func (h *ReportHandler) GetDailySalesReport(c *gin.Context) {
 			return
 		}
 		bid := uint(branchIDUint)
-			// Code review fix: HIGH-006 - Validate range to prevent integer overflow
+		// Code review fix: HIGH-006 - Validate range to prevent integer overflow
 		branchID = &bid
 	}
 
@@ -360,7 +360,6 @@ func (h *ReportHandler) GetProfitLossReport(c *gin.Context) {
 		return
 	}
 
-
 	// Code review fix: HIGH-002 - Validate date range (start_date <= end_date)
 	if err := validateDateRange(parsedStartDate, parsedEndDate); err != nil {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
@@ -390,7 +389,7 @@ func (h *ReportHandler) GetProfitLossReport(c *gin.Context) {
 	if branchIDStr != "" {
 		// Parse branch_id from string to uint
 		branchIDUint, err := strconv.ParseUint(branchIDStr, 10, 32)
-			// Code review fix: HIGH-006 - Validate range to prevent integer overflow
+		// Code review fix: HIGH-006 - Validate range to prevent integer overflow
 		if err != nil {
 			c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
 				Type:     "https://api.simpo.com/errors/validation-failed",
@@ -706,7 +705,6 @@ func (h *ReportHandler) ExportProfitLossReport(c *gin.Context) {
 		return
 	}
 
-
 	// Code review fix: HIGH-002 - Validate date range (start_date <= end_date)
 	if err := validateDateRange(parsedStartDate, parsedEndDate); err != nil {
 		c.JSON(http.StatusBadRequest, middleware.RFC7807Error{
@@ -752,7 +750,7 @@ func (h *ReportHandler) ExportProfitLossReport(c *gin.Context) {
 	branchIDStr := c.Query("branch_id")
 	if branchIDStr != "" {
 		branchIDUint, err := strconv.ParseUint(branchIDStr, 10, 32)
-			// Code review fix: HIGH-006 - Validate range to prevent integer overflow
+		// Code review fix: HIGH-006 - Validate range to prevent integer overflow
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, middleware.RFC7807Error{

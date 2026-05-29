@@ -37,17 +37,18 @@ func NewAdminHealthHandler(
 }
 
 // GetDashboard godoc
-// @Summary      Get comprehensive health dashboard metrics
-// @Description  Returns system health metrics for admin dashboard (Story 6.2, AC1-7)
-// @Tags         Admin Health
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  dto.EnhancedHealthDashboardResponse  "Health metrics retrieved successfully"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/health/dashboard [get]
+//
+//	@Summary		Get comprehensive health dashboard metrics
+//	@Description	Returns system health metrics for admin dashboard (Story 6.2, AC1-7)
+//	@Tags			Admin Health
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.EnhancedHealthDashboardResponse	"Health metrics retrieved successfully"
+//	@Failure		401	{object}	map[string]string					"Unauthorized"
+//	@Failure		403	{object}	map[string]string					"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string					"Internal server error"
+//	@Router			/api/v1/admin/health/dashboard [get]
 func (h *AdminHealthHandler) GetDashboard(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -95,19 +96,20 @@ func (h *AdminHealthHandler) GetDashboard(c *gin.Context) {
 }
 
 // GetAlerts godoc
-// @Summary      Get active health alerts
-// @Description  Returns current health alerts grouped by severity (Story 6.2, Task 3)
-// @Tags         Admin Health
-// @Accept       json
-// @Produce      json
-// @Param        severity query string false "none" "Filter by severity: critical, warning, info"
-// @Param        limit query int false "100" "Maximum number of alerts to return"
-// @Security     BearerAuth
-// @Success      200  {object}  dto.AlertResponse  "Alerts retrieved successfully"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/health/alerts [get]
+//
+//	@Summary		Get active health alerts
+//	@Description	Returns current health alerts grouped by severity (Story 6.2, Task 3)
+//	@Tags			Admin Health
+//	@Accept			json
+//	@Produce		json
+//	@Param			severity	query	string	false	"none"	"Filter by severity: critical, warning, info"
+//	@Param			limit		query	int		false	"100"	"Maximum number of alerts to return"
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.AlertResponse	"Alerts retrieved successfully"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/health/alerts [get]
 func (h *AdminHealthHandler) GetAlerts(c *gin.Context) {
 	// Parse query parameters
 	severity := c.Query("severity")
@@ -149,21 +151,22 @@ func (h *AdminHealthHandler) GetAlerts(c *gin.Context) {
 }
 
 // GetMetrics godoc
-// @Summary      Get historical health metrics
-// @Description  Returns historical health metrics data (Story 6.2, Task 3 - optional)
-// @Tags         Admin Health
-// @Accept       json
-// @Produce      json
-// @Param        start_time query string false "none" "Start time (RFC3339 format)"
-// @Param        end_time query string false "none" "End time (RFC3339 format)"
-// @Param        metric_type query string false "none" "Metric type: uptime, errors, response_time, disk"
-// @Param        limit query int false "100" "Maximum number of data points to return"
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]interface{}  "Historical metrics retrieved"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/health/metrics [get]
+//
+//	@Summary		Get historical health metrics
+//	@Description	Returns historical health metrics data (Story 6.2, Task 3 - optional)
+//	@Tags			Admin Health
+//	@Accept			json
+//	@Produce		json
+//	@Param			start_time	query	string	false	"none"	"Start time (RFC3339 format)"
+//	@Param			end_time	query	string	false	"none"	"End time (RFC3339 format)"
+//	@Param			metric_type	query	string	false	"none"	"Metric type: uptime, errors, response_time, disk"
+//	@Param			limit		query	int		false	"100"	"Maximum number of data points to return"
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]interface{}	"Historical metrics retrieved"
+//	@Failure		401	{object}	map[string]string		"Unauthorized"
+//	@Failure		403	{object}	map[string]string		"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/api/v1/admin/health/metrics [get]
 func (h *AdminHealthHandler) GetMetrics(c *gin.Context) {
 	// Parse query parameters
 	var req dto.MetricsRequest

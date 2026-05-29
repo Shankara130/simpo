@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/auth"
-	apiErrors "github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
+	appErrors "github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/middleware"
 )
 
@@ -371,19 +371,19 @@ func TestHandler_DeactivateUser(t *testing.T) {
 			// Handle errors manually for testing (simulating error handling middleware)
 			if len(c.Errors) > 0 {
 				err := c.Errors.Last()
-				if apiErr, ok := err.Err.(*apiErrors.APIError); ok {
-					c.JSON(apiErr.Status, apiErrors.Response{
+				if apiErr, ok := err.Err.(*appErrors.APIError); ok {
+					c.JSON(apiErr.Status, appErrors.Response{
 						Success: false,
-						Error: &apiErrors.ErrorInfo{
+						Error: &appErrors.ErrorInfo{
 							Title:  apiErr.Message,
 							Status: apiErr.Status,
 							Code:   apiErr.Code,
 						},
 					})
 				} else {
-					c.JSON(http.StatusInternalServerError, apiErrors.Response{
+					c.JSON(http.StatusInternalServerError, appErrors.Response{
 						Success: false,
-						Error: &apiErrors.ErrorInfo{
+						Error: &appErrors.ErrorInfo{
 							Title:  err.Error(),
 							Status: http.StatusInternalServerError,
 						},

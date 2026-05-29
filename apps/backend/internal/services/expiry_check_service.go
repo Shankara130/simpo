@@ -6,9 +6,10 @@ import (
 	"math"
 	"time"
 
+	"log/slog"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"log/slog"
 
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/models"
@@ -18,7 +19,7 @@ import (
 // ExpiryCheckService checks for products approaching expiry
 // Story 4.5, AC1, AC2, AC3: Scheduled job to generate expiry alerts
 type ExpiryCheckService struct {
-	productRepo repositories.ProductRepository
+	productRepo  repositories.ProductRepository
 	alertService AlertService
 	redisClient  *redis.Client
 	logger       *slog.Logger

@@ -278,7 +278,7 @@ func (s *productService) ManualAdjustStock(ctx context.Context, req *StockAdjust
 
 	// Validate reason against allowed values (Story 4.3, AC3)
 	validReasons := map[string]bool{
-		"Damage":         true,
+		"Damage":          true,
 		"Expiration":      true,
 		"DeliveryReceipt": true,
 		"PhysicalCount":   true,
@@ -353,11 +353,11 @@ func (s *productService) ManualAdjustStock(ctx context.Context, req *StockAdjust
 			"sku", product.SKU,
 			"new_stock", req.NewStockQty,
 			"threshold", product.ReorderThreshold,
-				"product_name", product.Name,
-				"branch_id", product.BranchID,
-				"adjustment_reason", req.Reason,
-				"adjusted_by", adminUsername,
-			)
+			"product_name", product.Name,
+			"branch_id", product.BranchID,
+			"adjustment_reason", req.Reason,
+			"adjusted_by", adminUsername,
+		)
 
 		// Story 4.3, Task 5.2: Stock update event is already published via UpdateStock above
 		// The StockUpdatedEvent includes old/new stock values, allowing listeners to detect low stock
@@ -371,14 +371,14 @@ func (s *productService) ManualAdjustStock(ctx context.Context, req *StockAdjust
 	// Prepare result (Story 4.3, AC7)
 	result := &StockAdjustmentResult{
 		ProductID:   product.ID,
-		SKU:          product.SKU,
-		Name:         product.Name,
-		OldStockQty:  oldStock,
-		NewStockQty:  req.NewStockQty,
-		Change:       changeDelta,
-		Reason:       req.Reason,
-		AdjustedBy:   adminUsername,
-		AdjustedAt:   time.Now(),
+		SKU:         product.SKU,
+		Name:        product.Name,
+		OldStockQty: oldStock,
+		NewStockQty: req.NewStockQty,
+		Change:      changeDelta,
+		Reason:      req.Reason,
+		AdjustedBy:  adminUsername,
+		AdjustedAt:  time.Now(),
 	}
 
 	return result, nil

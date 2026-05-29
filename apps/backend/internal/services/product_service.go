@@ -20,15 +20,15 @@ type StockAdjustmentRequest struct {
 // StockAdjustmentResult represents the result of a successful stock adjustment
 // Story 4.3, AC7: Success confirmation with old/new/changed values
 type StockAdjustmentResult struct {
-	ProductID  uint
-	SKU        string
-	Name       string
+	ProductID   uint
+	SKU         string
+	Name        string
 	OldStockQty int64
 	NewStockQty int64
-	Change     int64
-	Reason     string
-	AdjustedBy string
-	AdjustedAt time.Time
+	Change      int64
+	Reason      string
+	AdjustedBy  string
+	AdjustedAt  time.Time
 }
 
 // ProductService defines the interface for product business operations

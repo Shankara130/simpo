@@ -125,10 +125,10 @@ func (r *userRepository) Deactivate(ctx context.Context, id uint, reason string,
 	result := r.db.WithContext(ctx).Model(&user.User{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"status":               user.UserStatusInactive,
-			"deactivated_at":       &now,
-			"deactivated_by":       &deactivatedBy,
-			"deactivation_reason":  reason,
+			"status":              user.UserStatusInactive,
+			"deactivated_at":      &now,
+			"deactivated_by":      &deactivatedBy,
+			"deactivation_reason": reason,
 		})
 
 	if result.Error != nil {

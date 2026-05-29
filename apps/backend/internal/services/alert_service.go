@@ -37,24 +37,24 @@ type AlertService interface {
 
 // LowStockAlert represents a low stock alert
 type LowStockAlert struct {
-	ProductID       uint
-	ProductName     string
-	SKU             string
-	CurrentStock    int64
+	ProductID        uint
+	ProductName      string
+	SKU              string
+	CurrentStock     int64
 	ReorderThreshold int
-	BranchID        uint
-	BranchName      string
-	Severity        string // HIGH, MEDIUM, LOW
+	BranchID         uint
+	BranchName       string
+	Severity         string // HIGH, MEDIUM, LOW
 }
 
 // ExpiryAlert represents an expiry alert
 type ExpiryAlert struct {
-	ProductID    uint
-	ProductName  string
-	SKU          string
-	ExpiryDate   time.Time
+	ProductID       uint
+	ProductName     string
+	SKU             string
+	ExpiryDate      time.Time
 	DaysUntilExpiry int
-	BranchID     uint
-	BranchName   string
-	Severity     string // CRITICAL (7 days), WARNING (14 days), INFO (30 days)
+	BranchID        uint
+	BranchName      string
+	Severity        string // CRITICAL (7 days), WARNING (14 days), INFO (30 days)
 }

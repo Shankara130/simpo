@@ -39,8 +39,7 @@ Thumbs.db
 *.log
 build-errors.log
 
-# Swagger docs (generated)
-api/docs/docs.go
-api/docs/swagger.json
-api/docs/swagger.yaml
+# Swagger docs (generated - only docs.go is gitignored)
+# docs/swagger.yaml and docs/swagger.json are committed to version control
+docs/docs.go
 

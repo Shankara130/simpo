@@ -25,7 +25,7 @@ type transactionService struct {
 	productService      ProductService // Story 4.6: For expired product validation
 	auditService        AuditService
 	stockEventService   StockEventService
-	alertService        AlertService // Story 4.4: For low stock notifications
+	alertService        AlertService  // Story 4.4: For low stock notifications
 	systemService       SystemService // Story 6.1: For business settings in receipts
 }
 
@@ -173,38 +173,36 @@ func (s *transactionService) ProcessSale(ctx context.Context, sale *SaleRequest,
 		}
 	}
 
-
-
-		// Story 4.6, Task 3.2-3.3: Validate products are not expired before allowing sale
-		// This prevents expired medications from being sold and ensures regulatory compliance
-		// Story 4.6, Task 5: Log blocked sale attempts for audit compliance
-		for _, item := range aggregatedItems {
-			if err := s.productService.ValidateProductForSale(ctx, item.ProductID); err != nil {
-				// Story 4.6, Task 5.1-5.4: Log blocked sale attempt for audit trail
-				// Get product details for audit logging
-				if product, fetchErr := s.productRepo.GetByID(ctx, item.ProductID); fetchErr == nil {
-					expiryDateStr := "N/A"
-					if product.ExpiryDate != nil {
-						expiryDateStr = product.ExpiryDate.Format("2006-01-02")
-					}
-					// Get cashier name for audit trail (use transaction number as fallback)
-					cashierName := fmt.Sprintf("Cashier #%d", cashierID)
-					// Log blocked sale attempt asynchronously (don't block transaction)
-					// Use request context with timeout to prevent goroutine leaks
-					ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-					go func() {
-						defer cancel()
-						_ = s.auditService.LogBlockedSaleAttempt(ctx, cashierID, cashierName,
-							product.ID, product.SKU, product.Name, expiryDateStr, "Product expired and cannot be sold", "") // Story 5.4, Task 4.5: Empty IP (service layer has no HTTP context)
-					}()
+	// Story 4.6, Task 3.2-3.3: Validate products are not expired before allowing sale
+	// This prevents expired medications from being sold and ensures regulatory compliance
+	// Story 4.6, Task 5: Log blocked sale attempts for audit compliance
+	for _, item := range aggregatedItems {
+		if err := s.productService.ValidateProductForSale(ctx, item.ProductID); err != nil {
+			// Story 4.6, Task 5.1-5.4: Log blocked sale attempt for audit trail
+			// Get product details for audit logging
+			if product, fetchErr := s.productRepo.GetByID(ctx, item.ProductID); fetchErr == nil {
+				expiryDateStr := "N/A"
+				if product.ExpiryDate != nil {
+					expiryDateStr = product.ExpiryDate.Format("2006-01-02")
 				}
-				// Return the domain error from ValidateProductForSale
-				// This could be ErrProductExpired or ProductNotFoundError
-				return nil, err
+				// Get cashier name for audit trail (use transaction number as fallback)
+				cashierName := fmt.Sprintf("Cashier #%d", cashierID)
+				// Log blocked sale attempt asynchronously (don't block transaction)
+				// Use request context with timeout to prevent goroutine leaks
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				go func() {
+					defer cancel()
+					_ = s.auditService.LogBlockedSaleAttempt(ctx, cashierID, cashierName,
+						product.ID, product.SKU, product.Name, expiryDateStr, "Product expired and cannot be sold", "") // Story 5.4, Task 4.5: Empty IP (service layer has no HTTP context)
+				}()
 			}
+			// Return the domain error from ValidateProductForSale
+			// This could be ErrProductExpired or ProductNotFoundError
+			return nil, err
 		}
+	}
 
-		// Calculate total
+	// Calculate total
 	total, err := s.CalculateTotal(aggregatedItems)
 	if err != nil {
 		return nil, err

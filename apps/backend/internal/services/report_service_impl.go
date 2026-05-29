@@ -231,14 +231,14 @@ func (s *reportService) GenerateDailySales(ctx context.Context, branchID uint, s
 
 	// Build report
 	report := &SalesReport{
-		BranchID:              branchID,
-		BranchName:            "", // Would need branch repo to get name
-		StartDate:             startDate,
-		EndDate:               endDate,
-		TotalSales:            summary.TotalAmount,
-		TotalTransactions:     summary.TotalTransactions,
+		BranchID:                branchID,
+		BranchName:              "", // Would need branch repo to get name
+		StartDate:               startDate,
+		EndDate:                 endDate,
+		TotalSales:              summary.TotalAmount,
+		TotalTransactions:       summary.TotalTransactions,
 		AverageTransactionValue: "0.00", // Simplified for MVP
-		PaymentMethods:        []PaymentMethodBreakdown{},
+		PaymentMethods:          []PaymentMethodBreakdown{},
 	}
 
 	// Convert payment method summaries
@@ -286,12 +286,12 @@ func (s *reportService) GenerateProfitLoss(ctx context.Context, branchID uint, s
 		StartDate:       startDate,
 		EndDate:         endDate,
 		Revenue:         summary.TotalAmount,
-		CostOfGoodsSold: "0.00", // Simplified for MVP
+		CostOfGoodsSold: "0.00",              // Simplified for MVP
 		GrossProfit:     summary.TotalAmount, // Simplified
-		GrossMargin:     100.0, // Simplified
-		Expenses:        "0.00", // Simplified
+		GrossMargin:     100.0,               // Simplified
+		Expenses:        "0.00",              // Simplified
 		NetProfit:       summary.TotalAmount, // Simplified
-		NetMargin:       100.0, // Simplified
+		NetMargin:       100.0,               // Simplified
 	}
 
 	return report, nil

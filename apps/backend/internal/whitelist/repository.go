@@ -58,8 +58,8 @@ func (r *repository) Create(ctx context.Context, entry *WhitelistEntry) error {
 		// PostgreSQL: duplicate key value violates unique constraint
 		errMsg := result.Error.Error()
 		if strings.Contains(errMsg, "UNIQUE constraint failed") ||
-		   strings.Contains(errMsg, "duplicate key") ||
-		   errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			strings.Contains(errMsg, "duplicate key") ||
+			errors.Is(result.Error, gorm.ErrDuplicatedKey) {
 			return ErrDomainAlreadyExists
 		}
 		return result.Error

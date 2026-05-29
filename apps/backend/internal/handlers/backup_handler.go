@@ -33,7 +33,7 @@ func (h *BackupHandler) GetBackupService() any {
 // userContext holds validated user context information
 // Story 6.4, CRIT-002: Extract and validate user context safely
 type userContext struct {
-	adminID     uint
+	adminID       uint
 	adminUsername string
 }
 
@@ -81,26 +81,27 @@ func (h *BackupHandler) extractUserContext(c *gin.Context) (userContext, bool) {
 	}
 
 	return userContext{
-		adminID:     adminID,
+		adminID:       adminID,
 		adminUsername: adminUsername,
 	}, true
 }
 
 // CreateBackup godoc
-// @Summary      Trigger manual backup
-// @Description  Manually triggers a database backup operation (Story 6.3, AC5)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        request body dto.CreateBackupRequest true "Backup request"
-// @Security     BearerAuth
-// @Success      202  {object}  dto.CreateBackupResponse  "Backup started"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      409  {object}  map[string]string  "Backup already in progress"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups [post]
+//
+//	@Summary		Trigger manual backup
+//	@Description	Manually triggers a database backup operation (Story 6.3, AC5)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	dto.CreateBackupRequest	true	"Backup request"
+//	@Security		BearerAuth
+//	@Success		202	{object}	dto.CreateBackupResponse	"Backup started"
+//	@Failure		400	{object}	map[string]string			"Invalid request"
+//	@Failure		401	{object}	map[string]string			"Unauthorized"
+//	@Failure		403	{object}	map[string]string			"Forbidden - Admin only"
+//	@Failure		409	{object}	map[string]string			"Backup already in progress"
+//	@Failure		500	{object}	map[string]string			"Internal server error"
+//	@Router			/api/v1/admin/backups [post]
 func (h *BackupHandler) CreateBackup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -150,17 +151,18 @@ func (h *BackupHandler) CreateBackup(c *gin.Context) {
 }
 
 // ListBackups godoc
-// @Summary      List all backups
-// @Description  Returns list of all available backups with metadata (Story 6.3, AC5)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  dto.BackupListResponse  "Backups retrieved successfully"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups [get]
+//
+//	@Summary		List all backups
+//	@Description	Returns list of all available backups with metadata (Story 6.3, AC5)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.BackupListResponse	"Backups retrieved successfully"
+//	@Failure		401	{object}	map[string]string		"Unauthorized"
+//	@Failure		403	{object}	map[string]string		"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/api/v1/admin/backups [get]
 func (h *BackupHandler) ListBackups(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -174,20 +176,21 @@ func (h *BackupHandler) ListBackups(c *gin.Context) {
 }
 
 // DownloadBackup godoc
-// @Summary      Download backup file
-// @Description  Downloads the specified backup file (Story 6.3, AC5)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      application/octet-stream
-// @Param        filename path string true "Backup filename"
-// @Security     BearerAuth
-// @Success      200  {file}  file  "Backup file"
-// @Failure      400  {object}  map[string]string  "Invalid filename"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      404  {object}  map[string]string  "Backup not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/{filename} [get]
+//
+//	@Summary		Download backup file
+//	@Description	Downloads the specified backup file (Story 6.3, AC5)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		application/octet-stream
+//	@Param			filename	path	string	true	"Backup filename"
+//	@Security		BearerAuth
+//	@Success		200	{file}		file				"Backup file"
+//	@Failure		400	{object}	map[string]string	"Invalid filename"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		404	{object}	map[string]string	"Backup not found"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/{filename} [get]
 func (h *BackupHandler) DownloadBackup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -224,21 +227,22 @@ func (h *BackupHandler) DownloadBackup(c *gin.Context) {
 }
 
 // RestoreBackup godoc
-// @Summary      Restore from backup
-// @Description  Restores database from the specified backup file (Story 6.3, AC6)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        filename path string true "Backup filename"
-// @Param        request body dto.RestoreBackupRequest true "Restore confirmation"
-// @Security     BearerAuth
-// @Success      202  {object}  map[string]string  "Restore started"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      404  {object}  map[string]string  "Backup not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/{filename}/restore [post]
+//
+//	@Summary		Restore from backup
+//	@Description	Restores database from the specified backup file (Story 6.3, AC6)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			filename	path	string						true	"Backup filename"
+//	@Param			request		body	dto.RestoreBackupRequest	true	"Restore confirmation"
+//	@Security		BearerAuth
+//	@Success		202	{object}	map[string]string	"Restore started"
+//	@Failure		400	{object}	map[string]string	"Invalid request"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		404	{object}	map[string]string	"Backup not found"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/{filename}/restore [post]
 func (h *BackupHandler) RestoreBackup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -308,21 +312,22 @@ func (h *BackupHandler) RestoreBackup(c *gin.Context) {
 }
 
 // DeleteBackup godoc
-// @Summary      Delete backup file
-// @Description  Manually deletes the specified backup file (Story 6.3, Task 4)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        filename path string true "Backup filename"
-// @Param        request body dto.DeleteBackupRequest true "Delete confirmation"
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]string  "Backup deleted"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      404  {object}  map[string]string  "Backup not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/{filename} [delete]
+//
+//	@Summary		Delete backup file
+//	@Description	Manually deletes the specified backup file (Story 6.3, Task 4)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			filename	path	string					true	"Backup filename"
+//	@Param			request		body	dto.DeleteBackupRequest	true	"Delete confirmation"
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]string	"Backup deleted"
+//	@Failure		400	{object}	map[string]string	"Invalid request"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		404	{object}	map[string]string	"Backup not found"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/{filename} [delete]
 func (h *BackupHandler) DeleteBackup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -385,17 +390,18 @@ func (h *BackupHandler) DeleteBackup(c *gin.Context) {
 }
 
 // GetBackupStatus godoc
-// @Summary      Get backup status
-// @Description  Returns current backup job status and statistics (Story 6.3, AC4)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  dto.BackupJobStatus  "Backup status retrieved"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/status [get]
+//
+//	@Summary		Get backup status
+//	@Description	Returns current backup job status and statistics (Story 6.3, AC4)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.BackupJobStatus	"Backup status retrieved"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/status [get]
 func (h *BackupHandler) GetBackupStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -409,17 +415,18 @@ func (h *BackupHandler) GetBackupStatus(c *gin.Context) {
 }
 
 // GetBackupConfig godoc
-// @Summary      Get backup configuration
-// @Description  Returns current backup configuration (Story 6.3, AC8)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  dto.BackupConfig  "Backup configuration"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/config [get]
+//
+//	@Summary		Get backup configuration
+//	@Description	Returns current backup configuration (Story 6.3, AC8)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.BackupConfig	"Backup configuration"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/config [get]
 func (h *BackupHandler) GetBackupConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -433,19 +440,20 @@ func (h *BackupHandler) GetBackupConfig(c *gin.Context) {
 }
 
 // UpdateBackupConfig godoc
-// @Summary      Update backup configuration
-// @Description  Updates backup configuration settings (Story 6.3, AC8)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        request body dto.BackupConfig true "Backup configuration"
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]string  "Configuration updated"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/config [put]
+//
+//	@Summary		Update backup configuration
+//	@Description	Updates backup configuration settings (Story 6.3, AC8)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	dto.BackupConfig	true	"Backup configuration"
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]string	"Configuration updated"
+//	@Failure		400	{object}	map[string]string	"Invalid request"
+//	@Failure		401	{object}	map[string]string	"Unauthorized"
+//	@Failure		403	{object}	map[string]string	"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/admin/backups/config [put]
 func (h *BackupHandler) UpdateBackupConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -484,19 +492,20 @@ func (h *BackupHandler) UpdateBackupConfig(c *gin.Context) {
 }
 
 // ValidateBackup godoc
-// @Summary      Validate backup file
-// @Description  Validates the specified backup file for restoration (Story 6.3, AC6)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        filename path string true "Backup filename"
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]interface{}  "Backup is valid"
-// @Failure      400  {object}  map[string]string  "Invalid filename"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/{filename}/validate [get]
+//
+//	@Summary		Validate backup file
+//	@Description	Validates the specified backup file for restoration (Story 6.3, AC6)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			filename	path	string	true	"Backup filename"
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]interface{}	"Backup is valid"
+//	@Failure		400	{object}	map[string]string		"Invalid filename"
+//	@Failure		401	{object}	map[string]string		"Unauthorized"
+//	@Failure		403	{object}	map[string]string		"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/api/v1/admin/backups/{filename}/validate [get]
 func (h *BackupHandler) ValidateBackup(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -528,18 +537,19 @@ func (h *BackupHandler) ValidateBackup(c *gin.Context) {
 }
 
 // CleanupOldBackups godoc
-// @Summary      Cleanup old backups
-// @Description  Manually triggers cleanup of backups older than retention period (Story 6.3, AC3)
-// @Tags         Admin Backups
-// @Accept       json
-// @Produce      json
-// @Param        retention_days query int false "30" "Retention period in days"
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]interface{}  "Cleanup completed"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - Admin only"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/backups/cleanup [post]
+//
+//	@Summary		Cleanup old backups
+//	@Description	Manually triggers cleanup of backups older than retention period (Story 6.3, AC3)
+//	@Tags			Admin Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			retention_days	query	int	false	"30"	"Retention period in days"
+//	@Security		BearerAuth
+//	@Success		200	{object}	map[string]interface{}	"Cleanup completed"
+//	@Failure		401	{object}	map[string]string		"Unauthorized"
+//	@Failure		403	{object}	map[string]string		"Forbidden - Admin only"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/api/v1/admin/backups/cleanup [post]
 func (h *BackupHandler) CleanupOldBackups(c *gin.Context) {
 	ctx := c.Request.Context()
 

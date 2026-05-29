@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	apiErrors "github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/dto"
+	apiErrors "github.com/vahiiiid/go-rest-api-boilerplate/internal/errors"
 	"github.com/vahiiiid/go-rest-api-boilerplate/internal/services"
 )
 
@@ -30,18 +30,19 @@ func NewAuthHandler(authService services.AuthInterface) AuthHandler {
 }
 
 // Login handles user login via username and password (Story 1.5, AC1, AC4, AC7)
-// @Summary Login user
-// @Description Authenticate user with username and password, returns JWT token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body dto.LoginRequest true "Login request with username and password" SchemaExample({"username":"admin","password":"SecurePassword123!"})
-// @Success 200 {object} errors.Response{success=bool,data=dto.LoginResponse} "Success response with access token and user info"
-// @Failure 400 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Validation error - missing or invalid input"
-// @Failure 401 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Invalid credentials"
-// @Failure 403 {object} errors.Response{success=bool,error=errors.ErrorInfo} "User account inactive"
-// @Failure 500 {object} errors.Response{success=bool,error=errors.ErrorInfo} "Server error"
-// @Router /api/v1/auth/login [post]
+//
+//	@Summary		Login user
+//	@Description	Authenticate user with username and password, returns JWT token
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dto.LoginRequest										true	"Login request with username and password"	SchemaExample({"username":"admin","password":"SecurePassword123!"})
+//	@Success		200		{object}	errors.Response{success=bool,data=dto.LoginResponse}	"Success response with access token and user info"
+//	@Failure		400		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Validation error - missing or invalid input"
+//	@Failure		401		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Invalid credentials"
+//	@Failure		403		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"User account inactive"
+//	@Failure		500		{object}	errors.Response{success=bool,error=errors.ErrorInfo}	"Server error"
+//	@Router			/api/v1/auth/login [post]
 func (h *authHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

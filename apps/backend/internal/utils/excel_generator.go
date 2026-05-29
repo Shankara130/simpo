@@ -24,7 +24,6 @@ func NewExcelGenerator(companyName, companyAddress, companyPhone string) *ExcelG
 	}
 }
 
-
 // GenerateDailySalesExcel generates an Excel file for daily sales summary report
 // Story 5.3, Task 3.3-3.10, AC3: Multi-sheet workbook with formatting
 func (g *ExcelGenerator) GenerateDailySalesExcel(reportData interface{}) ([]byte, error) {

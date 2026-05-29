@@ -44,20 +44,20 @@ type LoginResult struct {
 
 // JWTClaims represents JWT token claims (Story 1.5, AC2)
 type JWTClaims struct {
-	UserID    uint   `json:"user_id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	BranchID  *uint  `json:"branch_id,omitempty"`
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	BranchID *uint  `json:"branch_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
 // AuthService provides authentication functionality (Story 1.5, Task 2)
 type AuthService struct {
-	jwtSecret       string
-	accessTokenTTL  time.Duration
-	userRepo        UserFinder
-	auditService    AuditService // Story 1.5, AC7: audit logging
+	jwtSecret      string
+	accessTokenTTL time.Duration
+	userRepo       UserFinder
+	auditService   AuditService // Story 1.5, AC7: audit logging
 }
 
 // NewAuthService creates a new authentication service (Story 1.5, Task 2)
@@ -236,7 +236,7 @@ func (s *AuthService) generateToken(u *user.User) (string, error) {
 		Role:     u.Role,
 		BranchID: u.BranchID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        tokenID,          // Story 1.8: JWT ID for tracking individual tokens
+			ID:        tokenID, // Story 1.8: JWT ID for tracking individual tokens
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(now),
 			Issuer:    "simpo-api",

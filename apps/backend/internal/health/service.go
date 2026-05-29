@@ -14,11 +14,11 @@ type Service interface {
 }
 
 type service struct {
-	checkers       []Checker
-	dbChecker      Checker // Story 2.4: Cached reference for O(1) lookup
-	startTime      time.Time
-	version        string
-	environment    string
+	checkers    []Checker
+	dbChecker   Checker // Story 2.4: Cached reference for O(1) lookup
+	startTime   time.Time
+	version     string
+	environment string
 }
 
 func NewService(checkers []Checker, version, environment string) Service {

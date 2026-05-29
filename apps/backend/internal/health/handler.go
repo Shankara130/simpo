@@ -19,15 +19,16 @@ func NewHandler(service Service) *Handler {
 }
 
 // Health godoc
-// @Summary      API health check endpoint
-// @Description  Check if the application is running and its dependencies (Story 9.1 - API versioned endpoint)
-// @Tags         Health
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  HealthResponse  "System is healthy - all critical dependencies connected"
-// @Failure      503  {object}  HealthResponse  "System is unhealthy - critical dependency disconnected"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/health [get]
+//
+//	@Summary		API health check endpoint
+//	@Description	Check if the application is running and its dependencies (Story 9.1 - API versioned endpoint)
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	HealthResponse		"System is healthy - all critical dependencies connected"
+//	@Failure		503	{object}	HealthResponse		"System is unhealthy - critical dependency disconnected"
+//	@Failure		500	{object}	map[string]string	"Internal server error"
+//	@Router			/api/v1/health [get]
 func (h *Handler) Health(c *gin.Context) {
 	ctx := c.Request.Context()
 	response := h.service.GetHealth(ctx)
@@ -50,13 +51,14 @@ func (h *Handler) Health(c *gin.Context) {
 }
 
 // Live godoc
-// @Summary      Liveness probe
-// @Description  Check if the application is alive (not deadlocked)
-// @Tags         Health
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  HealthResponse
-// @Router       /health/live [get]
+//
+//	@Summary		Liveness probe
+//	@Description	Check if the application is alive (not deadlocked)
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	HealthResponse
+//	@Router			/health/live [get]
 func (h *Handler) Live(c *gin.Context) {
 	ctx := c.Request.Context()
 	response := h.service.GetLiveness(ctx)
@@ -64,14 +66,15 @@ func (h *Handler) Live(c *gin.Context) {
 }
 
 // Ready godoc
-// @Summary      Readiness probe
-// @Description  Check if the application and its dependencies are ready to serve traffic
-// @Tags         Health
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  HealthResponse  "Service is ready"
-// @Success      503  {object}  HealthResponse  "Service is not ready"
-// @Router       /health/ready [get]
+//
+//	@Summary		Readiness probe
+//	@Description	Check if the application and its dependencies are ready to serve traffic
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	HealthResponse	"Service is ready"
+//	@Success		503	{object}	HealthResponse	"Service is not ready"
+//	@Router			/health/ready [get]
 func (h *Handler) Ready(c *gin.Context) {
 	ctx := c.Request.Context()
 	response := h.service.GetReadiness(ctx)
@@ -85,14 +88,15 @@ func (h *Handler) Ready(c *gin.Context) {
 }
 
 // Database godoc
-// @Summary      Database health check
-// @Description  Check if the database connection is healthy (Story 2.4)
-// @Tags         Health
-// @Accept       json
-// @Produce      json
-// @Success      200  {object}  CheckResult  "Database is healthy"
-// @Success      503  {object}  CheckResult  "Database is unhealthy"
-// @Router       /health/db [get]
+//
+//	@Summary		Database health check
+//	@Description	Check if the database connection is healthy (Story 2.4)
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	CheckResult	"Database is healthy"
+//	@Success		503	{object}	CheckResult	"Database is unhealthy"
+//	@Router			/health/db [get]
 func (h *Handler) Database(c *gin.Context) {
 	ctx := c.Request.Context()
 	response := h.service.GetDatabaseHealth(ctx)

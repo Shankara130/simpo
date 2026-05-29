@@ -78,7 +78,7 @@ func (r *reportRepository) GetDailySalesSummary(ctx context.Context, date string
 		// Task 2.2: Query total sales and transaction count
 		// Story 5.1, AC1: Total sales amount and total number of transactions
 		var totalSales struct {
-			TotalAmount        string
+			TotalAmount       string
 			TotalTransactions int64
 		}
 
@@ -179,9 +179,9 @@ func (r *reportRepository) GetDailySalesSummary(ctx context.Context, date string
 		// Task 2.5: Query hourly sales with EXTRACT(HOUR FROM created_at) GROUP BY
 		// Story 5.1, AC1: Sales by hour (for operational insights)
 		type HourlyResult struct {
-			Hour            int
+			Hour             int
 			TransactionCount int64
-			TotalAmount     string
+			TotalAmount      string
 		}
 
 		hourlyQuery := tx.Table("transactions").
@@ -202,9 +202,9 @@ func (r *reportRepository) GetDailySalesSummary(ctx context.Context, date string
 		summary.HourlySales = make([]dto.HourlySales, len(hourlyResults))
 		for i, hr := range hourlyResults {
 			summary.HourlySales[i] = dto.HourlySales{
-				Hour:            int(hr.Hour),
+				Hour:             int(hr.Hour),
 				TransactionCount: int(hr.TransactionCount),
-				TotalAmount:     hr.TotalAmount,
+				TotalAmount:      hr.TotalAmount,
 			}
 		}
 
@@ -245,11 +245,11 @@ func (r *reportRepository) GetProfitLossSummary(ctx context.Context, startDate, 
 
 	// Initialize DTO with basic info
 	summary := &dto.ProfitLossSummaryDTO{
-		PeriodStart:      startDate,
-		PeriodEnd:        endDate,
-		BranchID:         branchID,
-		BreakdownBy:      breakdownBy,
-		GeneratedAt:      time.Now(),
+		PeriodStart: startDate,
+		PeriodEnd:   endDate,
+		BranchID:    branchID,
+		BreakdownBy: breakdownBy,
+		GeneratedAt: time.Now(),
 	}
 
 	// Code review fix: Wrap all queries in transaction with RepeatableRead isolation

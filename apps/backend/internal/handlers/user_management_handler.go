@@ -13,7 +13,7 @@ import (
 // UserManagementHandler handles user role and permission management operations
 // Story 6.4, Task 4: User Management Audit Integration
 type UserManagementHandler struct {
-	userService user.Service
+	userService  user.Service
 	auditService services.AuditService
 }
 
@@ -27,21 +27,22 @@ func NewUserManagementHandler(userService user.Service, auditService services.Au
 }
 
 // UpdateRole godoc
-// @Summary      Update user role
-// @Description  Updates a user's role with audit logging (Story 6.4, AC1, AC2)
-// @Tags         User Management
-// @Accept       json
-// @Produce      json
-// @Param        user_id path int true "User ID"
-// @Param        request body user.UpdateRoleRequest true "Role update request"
-// @Security     BearerAuth
-// @Success      200  {object}  user.UpdateRoleResponse  "Role updated successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - SYSTEM_ADMIN only"
-// @Failure      404  {object}  map[string]string  "User not found"
-// @Failure      500  {object}  map[string]string  "Internal server error"
-// @Router       /api/v1/admin/users/{user_id}/role [put]
+//
+//	@Summary		Update user role
+//	@Description	Updates a user's role with audit logging (Story 6.4, AC1, AC2)
+//	@Tags			User Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			user_id	path	int						true	"User ID"
+//	@Param			request	body	user.UpdateRoleRequest	true	"Role update request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	user.UpdateRoleResponse	"Role updated successfully"
+//	@Failure		400	{object}	map[string]string		"Invalid request"
+//	@Failure		401	{object}	map[string]string		"Unauthorized"
+//	@Failure		403	{object}	map[string]string		"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404	{object}	map[string]string		"User not found"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/api/v1/admin/users/{user_id}/role [put]
 func (h *UserManagementHandler) UpdateRole(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -119,23 +120,24 @@ func (h *UserManagementHandler) UpdateRole(c *gin.Context) {
 }
 
 // GrantPermission godoc
-// @Summary      Grant permission to user
-// @Description  Grants a specific permission to a user with audit logging (Story 6.4, AC1, AC2)
-// @Description  Note: Current implementation uses RBAC with pre-defined roles. This endpoint
-// @Description  is provided for future PBAC (Permission-Based Access Control) enhancement.
-// @Tags         User Management
-// @Accept       json
-// @Produce      json
-// @Param        user_id path int true "User ID"
-// @Param        request body user.GrantPermissionRequest true "Permission grant request"
-// @Security     BearerAuth
-// @Success      200  {object}  user.GrantPermissionResponse  "Permission granted successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - SYSTEM_ADMIN only"
-// @Failure      404  {object}  map[string]string  "User not found"
-// @Failure      501  {object}  map[string]string  "Not Implemented - RBAC system in use"
-// @Router       /api/v1/admin/users/{user_id}/permissions [post]
+//
+//	@Summary		Grant permission to user
+//	@Description	Grants a specific permission to a user with audit logging (Story 6.4, AC1, AC2)
+//	@Description	Note: Current implementation uses RBAC with pre-defined roles. This endpoint
+//	@Description	is provided for future PBAC (Permission-Based Access Control) enhancement.
+//	@Tags			User Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			user_id	path	int							true	"User ID"
+//	@Param			request	body	user.GrantPermissionRequest	true	"Permission grant request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	user.GrantPermissionResponse	"Permission granted successfully"
+//	@Failure		400	{object}	map[string]string				"Invalid request"
+//	@Failure		401	{object}	map[string]string				"Unauthorized"
+//	@Failure		403	{object}	map[string]string				"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404	{object}	map[string]string				"User not found"
+//	@Failure		501	{object}	map[string]string				"Not Implemented - RBAC system in use"
+//	@Router			/api/v1/admin/users/{user_id}/permissions [post]
 func (h *UserManagementHandler) GrantPermission(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -182,8 +184,8 @@ func (h *UserManagementHandler) GrantPermission(c *gin.Context) {
 	)
 
 	response := user.GrantPermissionResponse{
-		ID:        targetUser.ID,
-		Username:  targetUser.Username,
+		ID:         targetUser.ID,
+		Username:   targetUser.Username,
 		Permission: req.Permission,
 		GrantedAt:  time.Now().Format(time.RFC3339),
 	}
@@ -192,23 +194,24 @@ func (h *UserManagementHandler) GrantPermission(c *gin.Context) {
 }
 
 // RevokePermission godoc
-// @Summary      Revoke permission from user
-// @Description  Revokes a specific permission from a user with audit logging (Story 6.4, AC1, AC2)
-// @Description  Note: Current implementation uses RBAC with pre-defined roles. This endpoint
-// @Description  is provided for future PBAC (Permission-Based Access Control) enhancement.
-// @Tags         User Management
-// @Accept       json
-// @Produce      json
-// @Param        user_id path int true "User ID"
-// @Param        request body user.RevokePermissionRequest true "Permission revoke request"
-// @Security     BearerAuth
-// @Success      200  {object}  user.RevokePermissionResponse  "Permission revoked successfully"
-// @Failure      400  {object}  map[string]string  "Invalid request"
-// @Failure      401  {object}  map[string]string  "Unauthorized"
-// @Failure      403  {object}  map[string]string  "Forbidden - SYSTEM_ADMIN only"
-// @Failure      404  {object}  map[string]string  "User not found"
-// @Failure      501  {object}  map[string]string  "Not Implemented - RBAC system in use"
-// @Router       /api/v1/admin/users/{user_id}/permissions [delete]
+//
+//	@Summary		Revoke permission from user
+//	@Description	Revokes a specific permission from a user with audit logging (Story 6.4, AC1, AC2)
+//	@Description	Note: Current implementation uses RBAC with pre-defined roles. This endpoint
+//	@Description	is provided for future PBAC (Permission-Based Access Control) enhancement.
+//	@Tags			User Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			user_id	path	int								true	"User ID"
+//	@Param			request	body	user.RevokePermissionRequest	true	"Permission revoke request"
+//	@Security		BearerAuth
+//	@Success		200	{object}	user.RevokePermissionResponse	"Permission revoked successfully"
+//	@Failure		400	{object}	map[string]string				"Invalid request"
+//	@Failure		401	{object}	map[string]string				"Unauthorized"
+//	@Failure		403	{object}	map[string]string				"Forbidden - SYSTEM_ADMIN only"
+//	@Failure		404	{object}	map[string]string				"User not found"
+//	@Failure		501	{object}	map[string]string				"Not Implemented - RBAC system in use"
+//	@Router			/api/v1/admin/users/{user_id}/permissions [delete]
 func (h *UserManagementHandler) RevokePermission(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -255,8 +258,8 @@ func (h *UserManagementHandler) RevokePermission(c *gin.Context) {
 	)
 
 	response := user.RevokePermissionResponse{
-		ID:        targetUser.ID,
-		Username:  targetUser.Username,
+		ID:         targetUser.ID,
+		Username:   targetUser.Username,
 		Permission: req.Permission,
 		RevokedAt:  time.Now().Format(time.RFC3339),
 	}
@@ -267,7 +270,7 @@ func (h *UserManagementHandler) RevokePermission(c *gin.Context) {
 // adminUserContext holds validated admin user context information
 // Story 6.4, CRIT-002: Extract and validate user context safely
 type adminUserContext struct {
-	adminID      uint
+	adminID       uint
 	adminUsername string
 }
 
@@ -313,7 +316,7 @@ func (h *UserManagementHandler) extractUserContext(c *gin.Context) (adminUserCon
 	}
 
 	return adminUserContext{
-		adminID:      adminID,
+		adminID:       adminID,
 		adminUsername: adminUsername,
 	}, true
 }

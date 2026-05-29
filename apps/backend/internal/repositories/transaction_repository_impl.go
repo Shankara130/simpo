@@ -283,9 +283,9 @@ func (r *transactionRepository) GetDailySummary(ctx context.Context, branchID ui
 	err := r.db.WithContext(ctx).Model(&models.Transaction{}).
 		Where("branch_id = ? AND created_at >= ? AND created_at < ? AND status = ?",
 			branchID, startOfDay, endOfDay, models.StatusCompleted).
-		Select("COUNT(*) as count, COALESCE(SUM(total), 0) as total_amount, "+
-			"COALESCE(SUM(subtotal), 0) as subtotal_amount, "+
-			"COALESCE(SUM(tax), 0) as tax_amount, "+
+		Select("COUNT(*) as count, COALESCE(SUM(total), 0) as total_amount, " +
+			"COALESCE(SUM(subtotal), 0) as subtotal_amount, " +
+			"COALESCE(SUM(tax), 0) as tax_amount, " +
 			"COALESCE(SUM(discount), 0) as discount_amount").
 		Scan(&result).Error
 	if err != nil {
@@ -322,9 +322,9 @@ func (r *transactionRepository) GetMonthlySummary(ctx context.Context, branchID 
 	err := r.db.WithContext(ctx).Model(&models.Transaction{}).
 		Where("branch_id = ? AND created_at >= ? AND created_at <= ? AND status = ?",
 			branchID, startOfMonth, endOfMonth, models.StatusCompleted).
-		Select("COUNT(*) as count, COALESCE(SUM(total), 0) as total_amount, "+
-			"COALESCE(SUM(subtotal), 0) as subtotal_amount, "+
-			"COALESCE(SUM(tax), 0) as tax_amount, "+
+		Select("COUNT(*) as count, COALESCE(SUM(total), 0) as total_amount, " +
+			"COALESCE(SUM(subtotal), 0) as subtotal_amount, " +
+			"COALESCE(SUM(tax), 0) as tax_amount, " +
 			"COALESCE(SUM(discount), 0) as discount_amount").
 		Scan(&result).Error
 	if err != nil {

@@ -139,7 +139,7 @@ type UpdateUserRequest struct {
 	Name  string `json:"name" binding:"omitempty,min=2,max=100"`
 	Email string `json:"email" binding:"omitempty,email"`
 	// Story 6.4: Added Role field for role updates
-	Role  string `json:"role" binding:"omitempty,oneof=SYSTEM_ADMIN OWNER CASHIER"`
+	Role string `json:"role" binding:"omitempty,oneof=SYSTEM_ADMIN OWNER CASHIER"`
 }
 
 // UserResponse represents user response (without sensitive fields)
