@@ -421,6 +421,50 @@ class OfflineStorageService {
   }
 
   /**
+   * Mark transaction as synced and delete atomically
+   * Performs both operations in a single SQLite transaction to prevent inconsistent state
+   * CRITICAL-007 fix: Prevents data loss if app crashes between mark and delete
+   */
+  async markAndDeleteTransaction(transactionId: number): Promise<void> {
+    await this.ensureInitialized();
+
+    if (!this.db) {
+      throw new OfflineStorageError('Database not initialized');
+    }
+
+    try {
+      const timestamp = this.getCurrentTimestamp();
+
+      // Begin transaction for atomic operation
+      await this.db.execAsync('BEGIN;');
+
+      // Mark as synced
+      await this.db.runAsync(
+        `UPDATE ${TABLE_TRANSACTIONS} SET status = ?, updated_at = ? WHERE id = ?;`,
+        ['synced', timestamp, transactionId]
+      );
+
+      // Delete transaction
+      await this.db.runAsync(
+        `DELETE FROM ${TABLE_TRANSACTIONS} WHERE id = ?;`,
+        [transactionId]
+      );
+
+      // Commit transaction
+      await this.db.execAsync('COMMIT;');
+    } catch (error) {
+      // Rollback on error
+      try {
+        await this.db.execAsync('ROLLBACK;');
+      } catch (rollbackError) {
+        // Rollback failure is non-critical
+        console.warn('[OfflineStorage] Failed to rollback transaction:', rollbackError);
+      }
+      throw new OfflineStorageError('Failed to mark and delete transaction', error);
+    }
+  }
+
+  /**
    * Close database connection
    */
   async close(): Promise<void> {
