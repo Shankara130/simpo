@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,6 +112,16 @@ func (m *mockAuditService) LogMaintenanceModeEnabled(ctx context.Context, adminI
 }
 
 func (m *mockAuditService) LogMaintenanceModeDisabled(ctx context.Context, adminID uint, adminUsername string, reason string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) LogConflictResolution(ctx context.Context, eventType string, transactionID string, originalError string, resolutionType string, resolvedBy string, resolvedAt time.Time, conflictDetails string, ipAddress string) error {
+	return nil
+}
+
+func (m *mockAuditService) ResetMetrics() {}
+
+func (m *mockAuditService) Shutdown(ctx context.Context) error {
 	return nil
 }
 

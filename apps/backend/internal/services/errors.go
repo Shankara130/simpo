@@ -128,3 +128,23 @@ func (e *ServiceError) Error() string {
 func (e *ServiceError) Unwrap() error {
 	return e.Err
 }
+
+// DuplicateInvoiceError represents an error when invoice number already exists
+// Story 10.2: Invoice number must be unique across all invoices
+type DuplicateInvoiceError struct {
+	InvoiceNumber string
+}
+
+func (e *DuplicateInvoiceError) Error() string {
+	return fmt.Sprintf("purchase invoice with number '%s' already exists", e.InvoiceNumber)
+}
+
+// InvoiceNotFoundError represents an error when purchase invoice is not found
+// Story 10.2: Invoice lookup by ID returns this error
+type InvoiceNotFoundError struct {
+	ID uint
+}
+
+func (e *InvoiceNotFoundError) Error() string {
+	return fmt.Sprintf("purchase invoice with ID %d not found", e.ID)
+}

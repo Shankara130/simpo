@@ -195,12 +195,12 @@ func TestLogBackupDeleted(t *testing.T) {
 	}
 }
 
-// TestBackupmodels.AuditActionConstants verifies that backup audit action constants are defined
+// TestBackupAuditActionConstants verifies that backup audit action constants are defined
 // Story 6.4, Task 3.8: Test backup audit action constants
-func TestBackupmodels.AuditActionConstants(t *testing.T) {
+func TestBackupAuditActionConstants(t *testing.T) {
 	tests := []struct {
 		name    string
-		action  AuditAction
+		action  models.AuditAction
 		wantVal string
 	}{
 		{
@@ -413,12 +413,12 @@ func TestLogPermissionRevoked(t *testing.T) {
 	}
 }
 
-// TestRolePermissionmodels.AuditActionConstants verifies that role/permission audit action constants are defined
+// TestRolePermissionAuditActionConstants verifies that role/permission audit action constants are defined
 // Story 6.4, Task 4.6: Test role/permission audit action constants
-func TestRolePermissionmodels.AuditActionConstants(t *testing.T) {
+func TestRolePermissionAuditActionConstants(t *testing.T) {
 	tests := []struct {
 		name    string
-		action  AuditAction
+		action  models.AuditAction
 		wantVal string
 	}{
 		{
@@ -599,12 +599,12 @@ func TestLogBranchDeactivated(t *testing.T) {
 	}
 }
 
-// TestBranchmodels.AuditActionConstants verifies that branch audit action constants are defined
+// TestBranchAuditActionConstants verifies that branch audit action constants are defined
 // Story 6.4, Task 5.8: Test branch audit action constants
-func TestBranchmodels.AuditActionConstants(t *testing.T) {
+func TestBranchAuditActionConstants(t *testing.T) {
 	tests := []struct {
 		name    string
-		action  AuditAction
+		action  models.AuditAction
 		wantVal string
 	}{
 		{
@@ -810,12 +810,12 @@ func TestLogMaintenanceModeDisabled(t *testing.T) {
 	}
 }
 
-// TestSystemOperationmodels.AuditActionConstants verifies that system operation audit action constants are defined
+// TestSystemOperationAuditActionConstants verifies that system operation audit action constants are defined
 // Story 6.4, Task 6.8: Test system operation audit action constants
-func TestSystemOperationmodels.AuditActionConstants(t *testing.T) {
+func TestSystemOperationAuditActionConstants(t *testing.T) {
 	tests := []struct {
 		name    string
-		action  AuditAction
+		action  models.AuditAction
 		wantVal string
 	}{
 		{

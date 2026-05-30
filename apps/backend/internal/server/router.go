@@ -26,7 +26,8 @@ import (
 // Story 6.1: Added systemSettingsHandler parameter
 // Story 6.3: Added backupHandler parameter
 // Story 10.1: Added supplierHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.2: Added purchaseInvoiceHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -364,5 +365,24 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 		}
 	}
 
+			// Story 10.2: Purchase invoice management endpoints - require authentication and RBAC
+			// Only Admin can manage purchase invoices (CRUD), Owner and Admin can view
+			if purchaseInvoiceHandler != nil {
+				purchaseInvoicesGroup := v1.Group("/purchase-invoices")
+				purchaseInvoicesGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.2, AC1: Create purchase invoice - Admin only
+					purchaseInvoicesGroup.POST("", purchaseInvoiceHandler.CreatePurchaseInvoice)
+					// Story 10.2, AC3: Get purchase invoice by ID - Admin and Owner
+					purchaseInvoicesGroup.GET("/:id", purchaseInvoiceHandler.GetPurchaseInvoice)
+					// Story 10.2, AC2: List purchase invoices - Admin and Owner
+					purchaseInvoicesGroup.GET("", purchaseInvoiceHandler.ListPurchaseInvoices)
+					// Story 10.2: Update purchase invoice - Admin only
+					purchaseInvoicesGroup.PUT("/:id", purchaseInvoiceHandler.UpdatePurchaseInvoice)
+					// Story 10.2: Delete purchase invoice - Admin only
+					purchaseInvoicesGroup.DELETE("/:id", purchaseInvoiceHandler.DeletePurchaseInvoice)
+				}
+			}
+		
 	return router
 }

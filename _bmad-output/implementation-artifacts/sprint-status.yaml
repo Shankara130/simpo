@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-30 # Story 10-1 DONE: Supplier master data management complete - all 15 code review patches applied, including race condition fixes, Unicode normalization, optimistic locking, audit logging, and deleted_by field
+last_updated: 2026-05-30 # Story 10-2 completed: All action items from code review implemented - DN-001 (line items in transaction), DN-002 (supplier contact fields), DN-004 (branch info), DN-005 (orphaned items docs), DN-007 (duplicate product aggregation), DN-008 (date format consistency)
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -132,7 +132,7 @@ development_status:
   # Epic 10: Supplier & Purchase Management
   epic-10: in-progress
   10-1-implement-supplier-master-data-management: done
-  10-2-implement-purchase-invoice-recording: backlog
+  10-2-implement-purchase-invoice-recording: done
   10-3-implement-goods-receipt-processing: backlog
   10-4-implement-supplier-payment-tracking: backlog
   10-5-implement-supplier-product-catalog: backlog

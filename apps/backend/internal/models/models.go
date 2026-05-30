@@ -7,6 +7,8 @@ package models
 // - Transaction: Sales transactions
 // - TransactionItem: Line items within transactions
 // - Supplier: Supplier master data for purchase management
+// - PurchaseInvoice: Purchase invoices from suppliers
+// - PurchaseInvoiceItem: Line items within purchase invoices
 
 // All models follow these conventions:
 // - JSON serialization uses camelCase

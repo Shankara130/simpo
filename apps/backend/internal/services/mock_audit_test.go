@@ -265,6 +265,11 @@ func (m *MockAuditService) LogMaintenanceModeDisabled(ctx context.Context, admin
 	return nil
 }
 
+// ResetMetrics resets all audit service metrics to zero
+func (m *MockAuditService) ResetMetrics() {
+	m.LogCount = 0
+}
+
 // Shutdown gracefully shuts down the audit service (Story 6.4, CRIT-001)
 func (m *MockAuditService) Shutdown(ctx context.Context) error {
 	return nil
