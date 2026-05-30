@@ -34,6 +34,11 @@ type PurchaseInvoiceRepository interface {
 	// List retrieves purchase invoices with optional filtering and pagination
 	// Returns slice of invoices, total count, and error
 	List(ctx context.Context, filter *PurchaseInvoiceFilter) ([]*models.PurchaseInvoice, int64, error)
+
+	// UpdatePaymentStatus updates the payment status of a purchase invoice based on total payments
+	// Story 10.4: Calculate and update payment status (unpaid/partial/fully paid) based on payments
+	// Returns error if invoice not found or update fails
+	UpdatePaymentStatus(ctx context.Context, invoiceID uint) error
 }
 
 // PurchaseInvoiceFilter defines filtering options for purchase invoice listing

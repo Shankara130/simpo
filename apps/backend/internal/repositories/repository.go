@@ -11,11 +11,13 @@ type Repository struct {
 	Supplier            SupplierRepository
 	PurchaseInvoice     PurchaseInvoiceRepository
 	GoodsReceipt        GoodsReceiptRepository
+	SupplierPayment     SupplierPaymentRepository
 }
 
 // NewRepositories creates a new repository container with all repositories
 // AC5: Factory function for dependency injection
 // Story 10.3: Added goodsReceiptRepo parameter
+// Story 10.4: Added supplierPaymentRepo parameter
 func NewRepositories(
 	branchRepo BranchRepository,
 	productRepo ProductRepository,
@@ -25,6 +27,7 @@ func NewRepositories(
 	supplierRepo SupplierRepository,
 	purchaseInvoiceRepo PurchaseInvoiceRepository,
 	goodsReceiptRepo GoodsReceiptRepository,
+	supplierPaymentRepo SupplierPaymentRepository,
 ) *Repository {
 	return &Repository{
 		Branch:              branchRepo,
@@ -35,6 +38,7 @@ func NewRepositories(
 		Supplier:            supplierRepo,
 		PurchaseInvoice:     purchaseInvoiceRepo,
 		GoodsReceipt:        goodsReceiptRepo,
+		SupplierPayment:     supplierPaymentRepo,
 	}
 }
 

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-09
-last_updated: 2026-05-31 # Story 10-3 completed with all code review patches applied
+last_updated: 2026-05-31 # Story 10-4 created and ready for dev
 project: simpo
 project_key: NOKEY
 tracking_system: file-system
@@ -134,7 +134,7 @@ development_status:
   10-1-implement-supplier-master-data-management: done
   10-2-implement-purchase-invoice-recording: done
   10-3-implement-goods-receipt-processing: done
-  10-4-implement-supplier-payment-tracking: backlog
+  10-4-implement-supplier-payment-tracking: in-progress
   10-5-implement-supplier-product-catalog: backlog
   10-6-implement-supplier-aging-reports: backlog
   10-7-implement-supplier-transaction-audit-trail: backlog

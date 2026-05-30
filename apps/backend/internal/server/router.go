@@ -28,7 +28,8 @@ import (
 // Story 10.1: Added supplierHandler parameter
 // Story 10.2: Added purchaseInvoiceHandler parameter
 // Story 10.3: Added goodsReceiptHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.4: Added supplierPaymentHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -66,21 +67,21 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			cfg.Cors.AllowedHeaders = []string{"Authorization", "Content-Type"}
 		}
 
-	// Validate MaxAge to prevent integer overflow
-	// MaxAge should be between 0 and 9223372036 seconds (~292 years)
-	maxAge := cfg.Cors.MaxAge
-	if maxAge < 0 || maxAge > 9223372036 {
-		maxAge = 86400 // Default to 24 hours if invalid
-	}
+		// Validate MaxAge to prevent integer overflow
+		// MaxAge should be between 0 and 9223372036 seconds (~292 years)
+		maxAge := cfg.Cors.MaxAge
+		if maxAge < 0 || maxAge > 9223372036 {
+			maxAge = 86400 // Default to 24 hours if invalid
+		}
 
-	corsConfig := cors.Config{
-		AllowOrigins:     cfg.Cors.AllowedOrigins,   // Specific origins from config (not wildcard)
-		AllowMethods:     cfg.Cors.AllowedMethods,   // GET, POST, PUT, DELETE, OPTIONS
-		AllowHeaders:     cfg.Cors.AllowedHeaders,   // Authorization, Content-Type, X-Requested-With
-		AllowCredentials: cfg.Cors.AllowCredentials, // Support cookies and auth headers
-		MaxAge:           time.Duration(maxAge) * time.Second, // Pre-flight cache (24h default)
-		ExposeHeaders:    []string{"Content-Length"},
-	}
+		corsConfig := cors.Config{
+			AllowOrigins:     cfg.Cors.AllowedOrigins,   // Specific origins from config (not wildcard)
+			AllowMethods:     cfg.Cors.AllowedMethods,   // GET, POST, PUT, DELETE, OPTIONS
+			AllowHeaders:     cfg.Cors.AllowedHeaders,   // Authorization, Content-Type, X-Requested-With
+			AllowCredentials: cfg.Cors.AllowCredentials, // Support cookies and auth headers
+			MaxAge:           time.Duration(maxAge) * time.Second, // Pre-flight cache (24h default)
+			ExposeHeaders:    []string{"Content-Length"},
+		}
 		router.Use(cors.New(corsConfig))
 	}
 
@@ -364,41 +365,67 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				suppliersGroup.DELETE("/:id", supplierHandler.DeactivateSupplier)
 			}
 		}
+
+		// Story 10.2: Purchase invoice management endpoints - require authentication and RBAC
+		// Only Admin can manage purchase invoices (CRUD), Owner and Admin can view
+		if purchaseInvoiceHandler != nil {
+			purchaseInvoicesGroup := v1.Group("/purchase-invoices")
+			purchaseInvoicesGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.2, AC1: Create purchase invoice - Admin only
+				purchaseInvoicesGroup.POST("", purchaseInvoiceHandler.CreatePurchaseInvoice)
+				// Story 10.2, AC3: Get purchase invoice by ID - Admin and Owner
+				purchaseInvoicesGroup.GET("/:id", purchaseInvoiceHandler.GetPurchaseInvoice)
+				// Story 10.2, AC2: List purchase invoices - Admin and Owner
+				purchaseInvoicesGroup.GET("", purchaseInvoiceHandler.ListPurchaseInvoices)
+				// Story 10.2: Update purchase invoice - Admin only
+				purchaseInvoicesGroup.PUT("/:id", purchaseInvoiceHandler.UpdatePurchaseInvoice)
+				// Story 10.2: Delete purchase invoice - Admin only
+				purchaseInvoicesGroup.DELETE("/:id", purchaseInvoiceHandler.DeletePurchaseInvoice)
+			}
+		}
+
+		// Story 10.3: Goods receipt management endpoints - require authentication and RBAC
+		// Only Admin and Owner can process goods receipts
+		if goodsReceiptHandler != nil {
+			goodsReceiptsGroup := v1.Group("/goods-receipts")
+			goodsReceiptsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.3, AC1: Process goods receipt - Admin and Owner
+				goodsReceiptsGroup.POST("/process", goodsReceiptHandler.ProcessGoodsReceipt)
+				// Story 10.3: Get goods receipt by ID - Admin and Owner
+				goodsReceiptsGroup.GET("/:id", goodsReceiptHandler.GetGoodsReceipt)
+				// Story 10.3: List goods receipts - Admin and Owner
+				goodsReceiptsGroup.GET("", goodsReceiptHandler.ListGoodsReceipts)
+			}
+		}
+
+		// Story 10.4: Supplier payment management endpoints - require authentication and RBAC
+		// Only Admin and Owner can record and view payments
+		if supplierPaymentHandler != nil {
+			supplierPaymentsGroup := v1.Group("/supplier-payments")
+			supplierPaymentsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.4, AC1: Record payment - Admin and Owner
+				supplierPaymentsGroup.POST("", supplierPaymentHandler.RecordPayment)
+				// Story 10.4: Get payment by ID - Admin and Owner
+				supplierPaymentsGroup.GET("/:id", supplierPaymentHandler.GetSupplierPayment)
+				// Story 10.4: List payments - Admin and Owner
+				supplierPaymentsGroup.GET("", supplierPaymentHandler.ListSupplierPayments)
+			}
+		}
+
+		// Story 10.4, AC2: Supplier payment history endpoints - require authentication and RBAC
+		// Only Admin and Owner can view payment history by supplier
+		if supplierPaymentHandler != nil {
+			supplierHistoryGroup := v1.Group("/suppliers/:id")
+			supplierHistoryGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.4, AC2: Get payment history by supplier - Admin and Owner
+				supplierHistoryGroup.GET("/payment-history", supplierPaymentHandler.GetPaymentHistoryBySupplier)
+			}
+		}
 	}
 
-			// Story 10.2: Purchase invoice management endpoints - require authentication and RBAC
-			// Only Admin can manage purchase invoices (CRUD), Owner and Admin can view
-			if purchaseInvoiceHandler != nil {
-				purchaseInvoicesGroup := v1.Group("/purchase-invoices")
-				purchaseInvoicesGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
-				{
-					// Story 10.2, AC1: Create purchase invoice - Admin only
-					purchaseInvoicesGroup.POST("", purchaseInvoiceHandler.CreatePurchaseInvoice)
-					// Story 10.2, AC3: Get purchase invoice by ID - Admin and Owner
-					purchaseInvoicesGroup.GET("/:id", purchaseInvoiceHandler.GetPurchaseInvoice)
-					// Story 10.2, AC2: List purchase invoices - Admin and Owner
-					purchaseInvoicesGroup.GET("", purchaseInvoiceHandler.ListPurchaseInvoices)
-					// Story 10.2: Update purchase invoice - Admin only
-					purchaseInvoicesGroup.PUT("/:id", purchaseInvoiceHandler.UpdatePurchaseInvoice)
-					// Story 10.2: Delete purchase invoice - Admin only
-					purchaseInvoicesGroup.DELETE("/:id", purchaseInvoiceHandler.DeletePurchaseInvoice)
-				}
-			}
-
-			// Story 10.3: Goods receipt management endpoints - require authentication and RBAC
-			// Only Admin and Owner can process goods receipts
-			if goodsReceiptHandler != nil {
-				goodsReceiptsGroup := v1.Group("/goods-receipts")
-				goodsReceiptsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
-				{
-					// Story 10.3, AC1: Process goods receipt - Admin and Owner
-					goodsReceiptsGroup.POST("/process", goodsReceiptHandler.ProcessGoodsReceipt)
-					// Story 10.3: Get goods receipt by ID - Admin and Owner
-					goodsReceiptsGroup.GET("/:id", goodsReceiptHandler.GetGoodsReceipt)
-					// Story 10.3: List goods receipts - Admin and Owner
-					goodsReceiptsGroup.GET("", goodsReceiptHandler.ListGoodsReceipts)
-				}
-			}
-
-		return router
+	return router
 }

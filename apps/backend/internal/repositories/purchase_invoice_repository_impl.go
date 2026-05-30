@@ -407,3 +407,51 @@ func (r *purchaseInvoiceRepository) CreateLineItems(ctx context.Context, invoice
 
 	return nil
 }
+
+// UpdatePaymentStatus updates the payment status of a purchase invoice based on total payments
+// Story 10.4, AC1: Calculate and update payment status (unpaid/partial/fully paid) based on payments
+func (r *purchaseInvoiceRepository) UpdatePaymentStatus(ctx context.Context, invoiceID uint) error {
+	if invoiceID == 0 {
+		return ErrInvalidInput
+	}
+
+	// Get the invoice first to check if it exists
+	var invoice models.PurchaseInvoice
+	if err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", invoiceID).First(&invoice).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("purchase invoice not found")
+		}
+		return fmt.Errorf("failed to get purchase invoice: %w", err)
+	}
+
+	// Calculate total paid amount using a subquery
+	var totalPaid float64
+	err := r.db.WithContext(ctx).Table("supplier_payments").
+		Where("purchase_invoice_id = ?", invoiceID).
+		Select("COALESCE(SUM(payment_amount), 0)").
+		Scan(&totalPaid).Error
+
+	if err != nil {
+		return fmt.Errorf("failed to calculate total paid: %w", err)
+	}
+
+	// Determine payment status based on total paid (Story 10.4 logic)
+	var newStatus string
+	if totalPaid == 0 {
+		newStatus = "unpaid"
+	} else if totalPaid < invoice.TotalAmount {
+		newStatus = "partial"
+	} else {
+		newStatus = "paid" // totalPaid >= invoice.TotalAmount
+	}
+
+	// Update payment status
+	if err := r.db.WithContext(ctx).
+		Model(&models.PurchaseInvoice{}).
+		Where("id = ?", invoiceID).
+		Update("payment_status", newStatus).Error; err != nil {
+		return fmt.Errorf("failed to update payment status: %w", err)
+	}
+
+	return nil
+}

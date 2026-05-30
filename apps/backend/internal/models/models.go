@@ -10,6 +10,7 @@ package models
 // - PurchaseInvoice: Purchase invoices from suppliers
 // - PurchaseInvoiceItem: Line items within purchase invoices
 // - GoodsReceipt: Goods receipts from suppliers (Story 10.3)
+// - SupplierPayment: Payments to suppliers for purchase invoices (Story 10.4)
 
 // All models follow these conventions:
 // - JSON serialization uses camelCase
