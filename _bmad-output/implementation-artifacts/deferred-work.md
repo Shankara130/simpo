@@ -355,3 +355,37 @@ This file tracks work items that were identified during reviews but deferred to 
   Issue: 30-second timeout hardcoded in multiple locations as `30000`
   Why deferred: Code quality issue that should be addressed consistently across codebase
   Recommendation: Extract to named constant (e.g., `SYNC_REQUEST_TIMEOUT_MS = 30000`) in future code quality improvement
+
+## Deferred from: code review of 9-4-implement-cors-middleware-for-cross-origin-requests (2026-05-30)
+
+### Architecture & Configuration
+
+- **Production domain hardcoded in config files**
+  File: config.yaml:56, .env.example:91
+  Issue: Production domain `https://admin.simpo.com` is hardcoded in base configuration files
+  Why deferred: Architecture decision - production domain naming and configuration management approach
+  Recommendation: Address when implementing dedicated configuration management story or multi-tenant architecture
+
+### Security & Middleware
+
+- **No explicit OPTIONS bypass visible**
+  File: router.go:48-58
+  Issue: AC3 requires OPTIONS requests bypass authentication, but no explicit exemption visible in code
+  Why deferred: gin-contrib/cors library handles OPTIONS requests internally; middleware order ensures CORS runs before auth
+  Recommendation: Current implementation correct - library handles pre-flight OPTIONS without authentication
+
+### Monitoring & Observability
+
+- **No CORS rejection logging for security monitoring**
+  File: router.go:48-58
+  Issue: No logging when origins are rejected by CORS middleware - security events not visible
+  Why deferred: Monitoring enhancement - not blocking for MVP but important for security operations
+  Recommendation: Add CORS rejection logging (rejected origin, timestamp, requesting IP) in future security monitoring story
+
+### Documentation & Compliance
+
+- **Missing validation of origin vs credentials combination**
+  File: configuration loading
+  Issue: No validation prevents wildcard "*" origins when AllowCredentials is true (forbidden by CORS spec)
+  Why deferred: Spec enhancement - browser behavior constraint not documented
+  Recommendation: Document browser requirement that wildcard origins cannot be used with credentials

@@ -43,10 +43,40 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 	router.Use(errors.ErrorHandler())
 	router.Use(gin.Recovery())
 
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "Authorization")
-	router.Use(cors.New(corsConfig))
+	// Story 9.4: Secure CORS configuration with environment-based origin validation
+	// SECURITY FIX: Replaced insecure AllowAllOrigins=true with specific allowed origins
+	if cfg.Cors.Enabled {
+		// Validate CORS configuration to prevent runtime panics
+		if len(cfg.Cors.AllowedOrigins) == 0 {
+			// Use safe defaults if no origins configured
+			cfg.Cors.AllowedOrigins = []string{"http://localhost:3000"}
+		}
+		if len(cfg.Cors.AllowedMethods) == 0 {
+			// Use safe defaults if no methods configured
+			cfg.Cors.AllowedMethods = []string{"GET", "POST", "OPTIONS"}
+		}
+		if len(cfg.Cors.AllowedHeaders) == 0 {
+			// Use safe defaults if no headers configured
+			cfg.Cors.AllowedHeaders = []string{"Authorization", "Content-Type"}
+		}
+
+	// Validate MaxAge to prevent integer overflow
+	// MaxAge should be between 0 and 9223372036 seconds (~292 years)
+	maxAge := cfg.Cors.MaxAge
+	if maxAge < 0 || maxAge > 9223372036 {
+		maxAge = 86400 // Default to 24 hours if invalid
+	}
+
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.Cors.AllowedOrigins,   // Specific origins from config (not wildcard)
+		AllowMethods:     cfg.Cors.AllowedMethods,   // GET, POST, PUT, DELETE, OPTIONS
+		AllowHeaders:     cfg.Cors.AllowedHeaders,   // Authorization, Content-Type, X-Requested-With
+		AllowCredentials: cfg.Cors.AllowCredentials, // Support cookies and auth headers
+		MaxAge:           time.Duration(maxAge) * time.Second, // Pre-flight cache (24h default)
+		ExposeHeaders:    []string{"Content-Length"},
+	}
+		router.Use(cors.New(corsConfig))
+	}
 
 	var checkers []health.Checker
 	if cfg.Health.DatabaseCheckEnabled {

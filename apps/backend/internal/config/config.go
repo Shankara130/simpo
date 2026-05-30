@@ -20,6 +20,17 @@ type BackupConfig struct {
 	Enabled       bool   `mapstructure:"enabled" yaml:"enabled"`               // Enable/disable automated backups (default: true)
 }
 
+// CorsConfig represents CORS configuration
+// Story 9.4: Environment-based CORS configuration for cross-origin requests
+type CorsConfig struct {
+	Enabled         bool     `mapstructure:"enabled" yaml:"enabled"`                     // Enable/disable CORS middleware
+	AllowedOrigins   []string `mapstructure:"allowed_origins" yaml:"allowed_origins"`   // List of allowed origins (not wildcard for security)
+	AllowCredentials bool     `mapstructure:"allow_credentials" yaml:"allow_credentials"` // Allow credentials (cookies, auth headers)
+	AllowedMethods   []string `mapstructure:"allowed_methods" yaml:"allowed_methods"`     // Allowed HTTP methods
+	AllowedHeaders   []string `mapstructure:"allowed_headers" yaml:"allowed_headers"`     // Allowed request headers
+	MaxAge           int      `mapstructure:"max_age" yaml:"max_age"`                     // Pre-flight cache duration in seconds
+}
+
 type Config struct {
 	App        AppConfig        `mapstructure:"app" yaml:"app"`
 	Database   DatabaseConfig   `mapstructure:"database" yaml:"database"`
@@ -31,6 +42,7 @@ type Config struct {
 	Health     HealthConfig     `mapstructure:"health" yaml:"health"`
 	Redis      RedisConfig      `mapstructure:"redis" yaml:"redis"`
 	Backup     BackupConfig     `mapstructure:"backup" yaml:"backup"`
+	Cors       CorsConfig       `mapstructure:"cors" yaml:"cors"`
 }
 
 type AppConfig struct {
@@ -116,6 +128,14 @@ func LoadConfig(configPath string) (*Config, error) {
 	// Story 6.2: Set default values for health alert thresholds
 	v.SetDefault("health.error_rate_max", 0.1) // 0.1% threshold
 	v.SetDefault("health.disk_free_min", 20.0) // 20% free threshold
+	// Story 9.4: Set default values for CORS configuration
+	v.SetDefault("cors.enabled", true)
+	v.SetDefault("cors.allow_credentials", true)
+	v.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
+	v.SetDefault("cors.allowed_headers", []string{"Authorization", "Content-Type", "X-Requested-With"})
+	v.SetDefault("cors.max_age", 86400) // 24 hours
+	// SECURITY: No default origins - require explicit configuration to prevent production exposure
+	v.SetDefault("cors.allowed_origins", []string{}) // Empty by default - must be explicitly configured
 
 	bindEnvVariables(v)
 
@@ -155,6 +175,20 @@ func LoadConfig(configPath string) (*Config, error) {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Story 9.4: Validate CORS configuration to prevent security issues
+	// Reject wildcard origins when credentials are enabled (forbidden by CORS spec)
+	if cfg.Cors.Enabled && cfg.Cors.AllowCredentials {
+		for _, origin := range cfg.Cors.AllowedOrigins {
+			if origin == "*" {
+				return nil, fmt.Errorf("CORS security violation: wildcard origin '*' is not allowed when AllowCredentials is true")
+			}
+			// Validate origin format (must include protocol)
+			if !strings.HasPrefix(origin, "http://") && !strings.HasPrefix(origin, "https://") {
+				return nil, fmt.Errorf("CORS security violation: origin '%s' must include http:// or https:// protocol", origin)
+			}
+		}
 	}
 
 	if cfg.App.Environment == "" {
@@ -201,6 +235,12 @@ func bindEnvVariables(v *viper.Viper) {
 		"ratelimit.enabled":             "RATELIMIT_ENABLED",
 		"ratelimit.requests":            "RATELIMIT_REQUESTS",
 		"ratelimit.window":              "RATELIMIT_WINDOW",
+		"cors.enabled":                  "CORS_ENABLED",
+		"cors.allowed_origins":         "CORS_ALLOWED_ORIGINS",
+		"cors.allow_credentials":        "CORS_ALLOW_CREDENTIALS",
+		"cors.allowed_methods":          "CORS_ALLOWED_METHODS",
+		"cors.allowed_headers":          "CORS_ALLOWED_HEADERS",
+		"cors.max_age":                  "CORS_MAX_AGE",
 		"migrations.directory":          "MIGRATIONS_DIRECTORY",
 		"migrations.timeout":            "MIGRATIONS_TIMEOUT",
 		"migrations.locktimeout":        "MIGRATIONS_LOCKTIMEOUT",
@@ -265,5 +305,6 @@ func (c *Config) LogSafeConfig(logger *slog.Logger) {
 	logger.Info("Server", "Port", c.Server.Port, "ReadTimeout", c.Server.ReadTimeout, "WriteTimeout", c.Server.WriteTimeout, "IdleTimeout", c.Server.IdleTimeout, "ShutdownTimeout", c.Server.ShutdownTimeout, "MaxHeaderBytes", c.Server.MaxHeaderBytes)
 	logger.Info("Logging", "Level", c.Logging.Level)
 	logger.Info("RateLimit", "Enabled", c.Ratelimit.Enabled, "Requests", c.Ratelimit.Requests, "Window", c.Ratelimit.Window)
+	logger.Info("CORS", "Enabled", c.Cors.Enabled, "AllowedOrigins", "<redacted>", "AllowCredentials", c.Cors.AllowCredentials, "MaxAge", c.Cors.MaxAge)
 	logger.Info("Migrations", "Directory", c.Migrations.Directory, "Timeout", c.Migrations.Timeout, "LockTimeout", c.Migrations.LockTimeout)
 }

@@ -48,6 +48,25 @@ ratelimit:
   requests: 100                     # Override with RATELIMIT_REQUESTS
   window: "1m"                      # Override with RATELIMIT_WINDOW
 
+cors:
+  enabled: true                     # Override with CORS_ENABLED (Story 9.4)
+  allowed_origins:                  # Override with CORS_ALLOWED_ORIGINS
+    - "http://localhost:3000"       # Web admin dashboard (development)
+    - "http://localhost:19006"      # Expo mobile app (development)
+    - "https://admin.simpo.com"     # Production web dashboard
+  allow_credentials: true           # Override with CORS_ALLOW_CREDENTIALS
+  allowed_methods:                  # Override with CORS_ALLOWED_METHODS
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:                  # Override with CORS_ALLOWED_HEADERS
+    - "Authorization"
+    - "Content-Type"
+    - "X-Requested-With"
+  max_age: 86400                    # Override with CORS_MAX_AGE (24 hours in seconds)
+
 migrations:
   directory: "./migrations"         # Override with MIGRATIONS_DIRECTORY
   timeout: 600                      # Override with MIGRATIONS_TIMEOUT (seconds)
