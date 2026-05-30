@@ -86,7 +86,11 @@ type ServerConfig struct {
 }
 
 type LoggingConfig struct {
-	Level string `mapstructure:"level" yaml:"level"`
+	Level         string   `mapstructure:"level" yaml:"level"`
+	RedactEnabled bool     `mapstructure:"redact_enabled" yaml:"redact_enabled"`
+	IncludeCaller bool     `mapstructure:"include_caller" yaml:"include_caller"`
+	BusinessEvents bool     `mapstructure:"business_events" yaml:"business_events"`
+	RedactPatterns []string `mapstructure:"redact_patterns" yaml:"redact_patterns"`
 }
 
 type RateLimitConfig struct {
@@ -136,6 +140,13 @@ func LoadConfig(configPath string) (*Config, error) {
 	v.SetDefault("cors.max_age", 86400) // 24 hours
 	// SECURITY: No default origins - require explicit configuration to prevent production exposure
 	v.SetDefault("cors.allowed_origins", []string{}) // Empty by default - must be explicitly configured
+
+	// Logging defaults - Story 9.5: Enhanced structured logging
+	v.SetDefault("logging.level", "info")               // Default to info level
+	v.SetDefault("logging.redact_enabled", true)       // Enable sensitive data redaction by default
+	v.SetDefault("logging.include_caller", false)     // Disable caller info by default (performance)
+	v.SetDefault("logging.business_events", true)    // Enable business event logging by default
+	v.SetDefault("logging.redact_patterns", []string{"password", "token", "secret", "authorization", "cookie"}) // Default redaction patterns
 
 	bindEnvVariables(v)
 
@@ -232,6 +243,10 @@ func bindEnvVariables(v *viper.Viper) {
 		"server.shutdowntimeout":        "SERVER_SHUTDOWNTIMEOUT",
 		"server.maxheaderbytes":         "SERVER_MAXHEADERBYTES",
 		"logging.level":                 "LOGGING_LEVEL",
+		"logging.redact_enabled":       "LOGGING_REDACT_ENABLED",
+		"logging.include_caller":       "LOGGING_INCLUDE_CALLER",
+		"logging.business_events":      "LOGGING_BUSINESS_EVENTS",
+		"logging.redact_patterns":      "LOGGING_REDACT_PATTERNS",
 		"ratelimit.enabled":             "RATELIMIT_ENABLED",
 		"ratelimit.requests":            "RATELIMIT_REQUESTS",
 		"ratelimit.window":              "RATELIMIT_WINDOW",

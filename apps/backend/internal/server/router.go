@@ -38,6 +38,9 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 	loggerConfig := middleware.NewLoggerConfig(
 		cfg.Logging.GetLogLevel(),
 		skipPaths,
+		cfg.Logging.IncludeCaller,
+		cfg.Logging.RedactEnabled,
+		cfg.Logging.RedactPatterns,
 	)
 	router.Use(middleware.Logger(loggerConfig))
 	router.Use(errors.ErrorHandler())

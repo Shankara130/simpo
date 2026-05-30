@@ -42,6 +42,15 @@ server:
 
 logging:
   level: "info"                     # Override with LOGGING_LEVEL (debug|info|warn|error)
+  redact_enabled: true               # Override with LOGGING_REDACT_ENABLED
+  include_caller: false               # Override with LOGGING_INCLUDE_CALLER (adds file:line to logs)
+  business_events: true              # Override with LOGGING_BUSINESS_EVENTS (enables audit trail logging)
+  redact_patterns:                  # Override with LOGGING_REDACT_PATTERNS (comma-separated)
+    - "password"
+    - "token"
+    - "secret"
+    - "authorization"
+    - "cookie"
 
 ratelimit:
   enabled: true                     # Override with RATELIMIT_ENABLED

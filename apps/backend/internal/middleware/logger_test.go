@@ -401,7 +401,7 @@ func TestNewLoggerConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := NewLoggerConfig(tt.logLevel, tt.skipPaths)
+			config := NewLoggerConfig(tt.logLevel, tt.skipPaths, false, true, []string{"password", "token"})
 			tt.validate(t, config)
 
 			// Test that the config can be used in middleware
