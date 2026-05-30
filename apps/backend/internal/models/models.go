@@ -6,6 +6,7 @@ package models
 // - Product: Inventory items with stock and pricing
 // - Transaction: Sales transactions
 // - TransactionItem: Line items within transactions
+// - Supplier: Supplier master data for purchase management
 
 // All models follow these conventions:
 // - JSON serialization uses camelCase

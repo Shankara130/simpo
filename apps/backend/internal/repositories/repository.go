@@ -8,6 +8,7 @@ type Repository struct {
 	Transaction     TransactionRepository
 	TransactionItem TransactionItemRepository
 	User            UserRepository
+	Supplier        SupplierRepository
 }
 
 // NewRepositories creates a new repository container with all repositories
@@ -18,6 +19,7 @@ func NewRepositories(
 	transactionRepo TransactionRepository,
 	transactionItemRepo TransactionItemRepository,
 	userRepo UserRepository,
+	supplierRepo SupplierRepository,
 ) *Repository {
 	return &Repository{
 		Branch:          branchRepo,
@@ -25,6 +27,7 @@ func NewRepositories(
 		Transaction:     transactionRepo,
 		TransactionItem: transactionItemRepo,
 		User:            userRepo,
+		Supplier:        supplierRepo,
 	}
 }
 

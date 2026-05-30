@@ -230,7 +230,12 @@ func run() error {
 	backupService := services.NewBackupService(cfg, auditService) // Story 6.4: Pass audit service for backup audit logging
 	backupHandler := handlers.NewBackupHandler(backupService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, redisClient)
+	// Story 10.1: Create supplier service and handler
+	supplierRepo := repositories.NewSupplierRepository(database)
+	supplierService := services.NewSupplierService(supplierRepo, auditService)
+	supplierHandler := handlers.NewSupplierHandler(supplierService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

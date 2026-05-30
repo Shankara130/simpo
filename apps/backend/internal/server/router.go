@@ -25,7 +25,8 @@ import (
 // SetupRouter creates and configures the Gin router
 // Story 6.1: Added systemSettingsHandler parameter
 // Story 6.3: Added backupHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.1: Added supplierHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -340,6 +341,25 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 					// Story 5.4, Task 7: Manual retention cleanup (SystemAdmin only)
 					auditGroup.POST("/cleanup", auditHandler.CleanupAuditLogs)
 				}
+			}
+		}
+
+		// Story 10.1: Supplier management endpoints - require authentication and RBAC
+		// Only Admin can manage suppliers (CRUD), Owner and Admin can view
+		if supplierHandler != nil {
+			suppliersGroup := v1.Group("/suppliers")
+			suppliersGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.1, AC1: Create supplier - Admin only
+				suppliersGroup.POST("", supplierHandler.CreateSupplier)
+				// Story 10.1, AC1: Get supplier by ID - Admin and Owner
+				suppliersGroup.GET("/:id", supplierHandler.GetSupplier)
+				// Story 10.1, AC2: List suppliers - Admin and Owner
+				suppliersGroup.GET("", supplierHandler.ListSuppliers)
+				// Story 10.1, AC2: Update supplier - Admin only
+				suppliersGroup.PUT("/:id", supplierHandler.UpdateSupplier)
+				// Story 10.1, AC3: Deactivate supplier - Admin only
+				suppliersGroup.DELETE("/:id", supplierHandler.DeactivateSupplier)
 			}
 		}
 	}
