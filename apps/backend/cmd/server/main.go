@@ -240,7 +240,12 @@ func run() error {
 	purchaseInvoiceService := services.NewPurchaseInvoiceService(purchaseInvoiceRepo, supplierRepo, productRepo, auditService)
 	purchaseInvoiceHandler := handlers.NewPurchaseInvoiceHandler(purchaseInvoiceService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, redisClient)
+	// Story 10.3: Create goods receipt service and handler
+	goodsReceiptRepo := repositories.NewGoodsReceiptRepository(database)
+	goodsReceiptService := services.NewGoodsReceiptService(database, goodsReceiptRepo, purchaseInvoiceRepo, productRepo, auditService, alertService, stockEventService)
+	goodsReceiptHandler := handlers.NewGoodsReceiptHandler(goodsReceiptService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

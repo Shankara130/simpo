@@ -27,7 +27,8 @@ import (
 // Story 6.3: Added backupHandler parameter
 // Story 10.1: Added supplierHandler parameter
 // Story 10.2: Added purchaseInvoiceHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.3: Added goodsReceiptHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -383,6 +384,21 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 					purchaseInvoicesGroup.DELETE("/:id", purchaseInvoiceHandler.DeletePurchaseInvoice)
 				}
 			}
-		
-	return router
+
+			// Story 10.3: Goods receipt management endpoints - require authentication and RBAC
+			// Only Admin and Owner can process goods receipts
+			if goodsReceiptHandler != nil {
+				goodsReceiptsGroup := v1.Group("/goods-receipts")
+				goodsReceiptsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.3, AC1: Process goods receipt - Admin and Owner
+					goodsReceiptsGroup.POST("/process", goodsReceiptHandler.ProcessGoodsReceipt)
+					// Story 10.3: Get goods receipt by ID - Admin and Owner
+					goodsReceiptsGroup.GET("/:id", goodsReceiptHandler.GetGoodsReceipt)
+					// Story 10.3: List goods receipts - Admin and Owner
+					goodsReceiptsGroup.GET("", goodsReceiptHandler.ListGoodsReceipts)
+				}
+			}
+
+		return router
 }

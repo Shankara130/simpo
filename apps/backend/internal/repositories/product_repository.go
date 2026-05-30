@@ -27,6 +27,14 @@ type ProductRepository interface {
 	// UpdateStock updates the stock quantity for a product
 	UpdateStock(ctx context.Context, id uint, quantity int64) error
 
+	// UpdateStockQty updates the stock quantity for a product with optimistic locking
+	// Story 10.3: Update stock quantity with version validation to prevent concurrent modification conflicts
+	UpdateStockQty(ctx context.Context, productID uint, quantity int64) error
+
+	// UpdateCostPrice updates the cost price for a product with optimistic locking
+	// Story 10.3: Update cost price with version validation to prevent concurrent modification conflicts
+	UpdateCostPrice(ctx context.Context, productID uint, costPrice string) error
+
 	// Delete removes a product from the database (soft delete)
 	Delete(ctx context.Context, id uint) error
 

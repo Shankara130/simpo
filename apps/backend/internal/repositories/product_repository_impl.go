@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,6 +99,94 @@ func (r *productRepository) UpdateStock(ctx context.Context, id uint, delta int6
 	if err != nil {
 		return fmt.Errorf("failed to update product stock: %w", err)
 	}
+	return nil
+}
+
+// UpdateStockQty updates the stock quantity for a product with optimistic locking
+// Story 10.3: Update stock quantity with version validation to prevent concurrent modification conflicts
+// This method sets the absolute stock quantity (not a delta) and validates version field
+// Code review fix: HIGH-001 - Added proper optimistic locking with version field check
+func (r *productRepository) UpdateStockQty(ctx context.Context, productID uint, quantity int64) error {
+	if productID == 0 {
+		return fmt.Errorf("product ID is required")
+	}
+	if quantity < 0 {
+		return fmt.Errorf("stock quantity cannot be negative")
+	}
+
+	// Get current product to check version
+	var product models.Product
+	err := r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", productID).First(&product).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("product not found or deleted")
+		}
+		return fmt.Errorf("failed to get product for version check: %w", err)
+	}
+
+	// Use optimistic locking with version field
+	// Code review fix: HIGH-001 - Check version in WHERE clause to prevent lost updates
+	result := r.db.WithContext(ctx).Model(&models.Product{}).
+		Where("id = ? AND version = ? AND deleted_at IS NULL", productID, product.Version).
+		Updates(map[string]interface{}{
+			"stock_qty": quantity,
+			"version":   product.Version + 1,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update product stock quantity: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("product not found, deleted, or modified by another transaction (version mismatch)")
+	}
+
+	return nil
+}
+
+// UpdateCostPrice updates the cost price for a product with optimistic locking
+// Story 10.3: Update cost price with version validation to prevent concurrent modification conflicts
+// Cost price is stored as string (decimal format) for precision
+// Code review fix: HIGH-004 - Added proper decimal format validation
+func (r *productRepository) UpdateCostPrice(ctx context.Context, productID uint, costPrice string) error {
+	if productID == 0 {
+		return fmt.Errorf("product ID is required")
+	}
+	if costPrice == "" {
+		return fmt.Errorf("cost price is required")
+	}
+
+	// Code review fix: HIGH-004 - Validate cost price is a valid decimal number
+	// Parse to float to validate format
+	_, err := strconv.ParseFloat(costPrice, 64)
+	if err != nil {
+		return fmt.Errorf("cost price must be a valid decimal number: %w", err)
+	}
+
+	// Get current product to check version
+	var product models.Product
+	err = r.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", productID).First(&product).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("product not found or deleted")
+		}
+		return fmt.Errorf("failed to get product for version check: %w", err)
+	}
+
+	// Use optimistic locking with version field
+	result := r.db.WithContext(ctx).Model(&models.Product{}).
+		Where("id = ? AND version = ? AND deleted_at IS NULL", productID, product.Version).
+		Updates(map[string]interface{}{
+			"cost_price": costPrice,
+			"version":    product.Version + 1,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update product cost price: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("product not found, deleted, or modified by another transaction (version mismatch)")
+	}
+
 	return nil
 }
 

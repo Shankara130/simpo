@@ -387,5 +387,24 @@ This file tracks work items that were identified during reviews but deferred to 
 - **Missing validation of origin vs credentials combination**
   File: configuration loading
   Issue: No validation prevents wildcard "*" origins when AllowCredentials is true (forbidden by CORS spec)
-  Why deferred: Spec enhancement - browser behavior constraint not documented
+  Why deferred: Spec enhancement - browser behavior constraint not documented in requirements
+  Recommendation: Document CORS spec constraints in architecture decisions and add validation
+
+## Deferred from: code review of 10-3-implement-goods-receipt-processing (2026-05-31)
+
+### Code Quality & Standards
+
+- **fmt.Printf used instead of proper logger**
+  Story: 10-3-implement-goods-receipt-processing
+  File: goods_receipt_service_impl.go:2304
+  Issue: Using `fmt.Printf("Warning: Product %d not found, skipping stock update\n")` for logging in service layer is inappropriate
+  Why deferred: Pre-existing pattern in codebase - proper logging standardization requires broader architectural decision
+  Recommendation: Implement structured logging standard across all services in future infrastructure story
+
+- **Missing timeout for long-running operations**
+  Story: 10-3-implement-goods-receipt-processing
+  File: goods_receipt_service_impl.go:ProcessGoodsReceipt
+  Issue: No timeout handling for stock update operations - could cause hung requests if database is slow
+  Why deferred: System-wide concern not specific to this story - needs global timeout strategy and context propagation
+  Recommendation: Implement request timeout strategy at middleware or service layer in future performance story
   Recommendation: Document browser requirement that wildcard origins cannot be used with credentials

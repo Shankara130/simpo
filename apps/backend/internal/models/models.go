@@ -9,6 +9,7 @@ package models
 // - Supplier: Supplier master data for purchase management
 // - PurchaseInvoice: Purchase invoices from suppliers
 // - PurchaseInvoiceItem: Line items within purchase invoices
+// - GoodsReceipt: Goods receipts from suppliers (Story 10.3)
 
 // All models follow these conventions:
 // - JSON serialization uses camelCase

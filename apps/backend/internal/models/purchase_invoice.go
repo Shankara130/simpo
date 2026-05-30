@@ -33,6 +33,16 @@ type PurchaseInvoice struct {
 	// Example: "unpaid"
 	PaymentStatus string `gorm:"column:payment_status;type:varchar(20);not null;default:'unpaid'" json:"paymentStatus" example:"unpaid"`
 
+	// ReceiptStatus indicates goods receipt status: pending, received, partial
+	// Story 10.3: Track whether goods have been received for this invoice
+	// Example: "pending"
+	ReceiptStatus string `gorm:"column:receipt_status;type:varchar(20);not null;default:'pending'" json:"receiptStatus" example:"pending"`
+
+	// GoodsReceiptID is the foreign key to goods_receipts table when invoice has been received
+	// Story 10.3: Link to goods receipt record when goods are received
+	// Example: 1
+	GoodsReceiptID *uint `gorm:"column:goods_receipt_id" json:"goodsReceiptId,omitempty" example:"1"`
+
 	// Notes are optional notes about the invoice
 	// Example: "Emergency order for antibiotic stock"
 	Notes string `gorm:"type:text" json:"notes,omitempty" example:"Emergency order for antibiotic stock"`
