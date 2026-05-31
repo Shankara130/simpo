@@ -260,7 +260,11 @@ func run() error {
 	// Story 10.5: Create supplier product catalog handler
 	supplierProductCatalogHandler := handlers.NewSupplierProductCatalogHandler(supplierProductCatalogService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, supplierProductCatalogHandler, redisClient)
+	// Story 10.6: Create supplier aging report handler
+	supplierAgingReportService := services.NewSupplierAgingReportService(purchaseInvoiceRepo, supplierPaymentRepo, supplierRepo, auditService)
+	supplierAgingReportHandler := handlers.NewSupplierAgingReportHandler(supplierAgingReportService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, supplierProductCatalogHandler, supplierAgingReportHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

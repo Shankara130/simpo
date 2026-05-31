@@ -30,7 +30,8 @@ import (
 // Story 10.3: Added goodsReceiptHandler parameter
 // Story 10.4: Added supplierPaymentHandler parameter
 // Story 10.5: Added supplierProductCatalogHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, supplierProductCatalogHandler *handlers.SupplierProductCatalogHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.6: Added supplierAgingReportHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, supplierProductCatalogHandler *handlers.SupplierProductCatalogHandler, supplierAgingReportHandler *handlers.SupplierAgingReportHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -464,6 +465,22 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 			}
 		}
 
+
+
+		// Story 10.6: Supplier aging report endpoints - require authentication and RBAC
+		// Only Owner can generate and export aging reports (critical financial data)
+		if supplierAgingReportHandler != nil {
+			reportsGroup := v1.Group("/reports")
+			reportsGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+			{
+				// Story 10.6, AC1: Generate aging report - Owner only
+				reportsGroup.POST("/supplier-aging", supplierAgingReportHandler.GenerateAgingReport)
+				// Story 10.6, AC1: Export aging report as PDF - Owner only
+				reportsGroup.POST("/supplier-aging/export/pdf", supplierAgingReportHandler.ExportAgingReportPDF)
+				// Story 10.6, AC1: Export aging report as Excel - Owner only
+				reportsGroup.POST("/supplier-aging/export/excel", supplierAgingReportHandler.ExportAgingReportExcel)
+			}
+		}
 
 	return router
 }
