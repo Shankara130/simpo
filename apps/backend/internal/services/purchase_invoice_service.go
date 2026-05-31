@@ -28,6 +28,10 @@ type PurchaseInvoiceService interface {
 	// DeletePurchaseInvoice deletes (soft deletes) a purchase invoice with audit logging
 	// Story 10.2: Soft deletes invoice and logs deletion
 	DeletePurchaseInvoice(ctx context.Context, id uint, deletedBy uint, ipAddress string) error
+
+	// GetSuggestedPrice retrieves the suggested purchase price from supplier catalog
+	// Story 10.5, AC1: Returns catalog price for supplier-product combination, or error if not found
+	GetSuggestedPrice(ctx context.Context, supplierID uint, productID uint, branchID uint) (float64, error)
 }
 
 // PurchaseInvoiceListFilter defines filtering options for purchase invoice listing

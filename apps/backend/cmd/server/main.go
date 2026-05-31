@@ -235,9 +235,16 @@ func run() error {
 	supplierService := services.NewSupplierService(supplierRepo, auditService)
 	supplierHandler := handlers.NewSupplierHandler(supplierService)
 
+	// Story 10.5: Create branch repository and supplier product catalog service early
+	// These are needed by purchase invoice service for catalog price integration
+	branchRepo := repositories.NewBranchRepository(database)
+	supplierProductCatalogRepo := repositories.NewSupplierProductCatalogRepository(database)
+	supplierProductCatalogService := services.NewSupplierProductCatalogService(supplierProductCatalogRepo, supplierRepo, productRepo, branchRepo, auditService)
+
 	// Story 10.2: Create purchase invoice service and handler
+	// Story 10.5, Task 9: Now receives supplierProductCatalogService for catalog price integration
 	purchaseInvoiceRepo := repositories.NewPurchaseInvoiceRepository(database)
-	purchaseInvoiceService := services.NewPurchaseInvoiceService(purchaseInvoiceRepo, supplierRepo, productRepo, auditService)
+	purchaseInvoiceService := services.NewPurchaseInvoiceService(purchaseInvoiceRepo, supplierRepo, productRepo, auditService, supplierProductCatalogService)
 	purchaseInvoiceHandler := handlers.NewPurchaseInvoiceHandler(purchaseInvoiceService)
 
 	// Story 10.3: Create goods receipt service and handler
@@ -250,7 +257,10 @@ func run() error {
 	supplierPaymentService := services.NewSupplierPaymentService(database, supplierPaymentRepo, purchaseInvoiceRepo, supplierRepo, auditService)
 	supplierPaymentHandler := handlers.NewSupplierPaymentHandler(supplierPaymentService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, redisClient)
+	// Story 10.5: Create supplier product catalog handler
+	supplierProductCatalogHandler := handlers.NewSupplierProductCatalogHandler(supplierProductCatalogService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, supplierProductCatalogHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

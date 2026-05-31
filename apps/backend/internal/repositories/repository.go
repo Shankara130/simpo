@@ -3,21 +3,23 @@ package repositories
 // Repository is the main repository container
 // AC5: Dependency injection pattern - all repositories accessible through this container
 type Repository struct {
-	Branch              BranchRepository
-	Product             ProductRepository
-	Transaction         TransactionRepository
-	TransactionItem     TransactionItemRepository
-	User                UserRepository
-	Supplier            SupplierRepository
-	PurchaseInvoice     PurchaseInvoiceRepository
-	GoodsReceipt        GoodsReceiptRepository
-	SupplierPayment     SupplierPaymentRepository
+	Branch                   BranchRepository
+	Product                  ProductRepository
+	Transaction              TransactionRepository
+	TransactionItem          TransactionItemRepository
+	User                     UserRepository
+	Supplier                 SupplierRepository
+	PurchaseInvoice          PurchaseInvoiceRepository
+	GoodsReceipt             GoodsReceiptRepository
+	SupplierPayment          SupplierPaymentRepository
+	SupplierProductCatalog   SupplierProductCatalogRepository
 }
 
 // NewRepositories creates a new repository container with all repositories
 // AC5: Factory function for dependency injection
 // Story 10.3: Added goodsReceiptRepo parameter
 // Story 10.4: Added supplierPaymentRepo parameter
+// Story 10.5: Added supplierProductCatalogRepo parameter
 func NewRepositories(
 	branchRepo BranchRepository,
 	productRepo ProductRepository,
@@ -28,17 +30,19 @@ func NewRepositories(
 	purchaseInvoiceRepo PurchaseInvoiceRepository,
 	goodsReceiptRepo GoodsReceiptRepository,
 	supplierPaymentRepo SupplierPaymentRepository,
+	supplierProductCatalogRepo SupplierProductCatalogRepository,
 ) *Repository {
 	return &Repository{
-		Branch:              branchRepo,
-		Product:             productRepo,
-		Transaction:         transactionRepo,
-		TransactionItem:     transactionItemRepo,
-		User:                userRepo,
-		Supplier:            supplierRepo,
-		PurchaseInvoice:     purchaseInvoiceRepo,
-		GoodsReceipt:        goodsReceiptRepo,
-		SupplierPayment:     supplierPaymentRepo,
+		Branch:                   branchRepo,
+		Product:                  productRepo,
+		Transaction:              transactionRepo,
+		TransactionItem:          transactionItemRepo,
+		User:                     userRepo,
+		Supplier:                  supplierRepo,
+		PurchaseInvoice:          purchaseInvoiceRepo,
+		GoodsReceipt:             goodsReceiptRepo,
+		SupplierPayment:          supplierPaymentRepo,
+		SupplierProductCatalog:   supplierProductCatalogRepo,
 	}
 }
 

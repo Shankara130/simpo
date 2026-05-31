@@ -90,6 +90,12 @@ func (m *MockPurchaseInvoiceService) DeletePurchaseInvoice(ctx context.Context, 
 	return nil
 }
 
+// GetSuggestedPrice retrieves suggested price from supplier catalog
+// Story 10.5, AC1: Mock implementation for testing
+func (m *MockPurchaseInvoiceService) GetSuggestedPrice(ctx context.Context, supplierID uint, productID uint, branchID uint) (float64, error) {
+	return 0, fmt.Errorf("catalog price not found")
+}
+
 // TestPurchaseInvoiceHandler_CreatePurchaseInvoice_Success tests successful purchase invoice creation
 // Story 10.2, AC1: Admin/Owner can create purchase invoices with items
 func TestPurchaseInvoiceHandler_CreatePurchaseInvoice_Success(t *testing.T) {

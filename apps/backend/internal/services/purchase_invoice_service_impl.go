@@ -14,26 +14,31 @@ import (
 
 // purchaseInvoiceServiceImpl implements PurchaseInvoiceService interface
 // Story 10.2: Service layer with business logic and audit logging
+// Story 10.5: Added supplierProductCatalogService for catalog price integration
 type purchaseInvoiceServiceImpl struct {
-	purchaseInvoiceRepo repositories.PurchaseInvoiceRepository
-	supplierRepo          repositories.SupplierRepository
-	productRepo           repositories.ProductRepository
-	auditService           AuditService
+	purchaseInvoiceRepo        repositories.PurchaseInvoiceRepository
+	supplierRepo               repositories.SupplierRepository
+	productRepo                repositories.ProductRepository
+	auditService               AuditService
+	supplierProductCatalogService SupplierProductCatalogService
 }
 
 // NewPurchaseInvoiceService creates a new purchase invoice service
 // Story 10.2: Factory function with dependency injection
+// Story 10.5: Added supplierProductCatalogService parameter for catalog price integration
 func NewPurchaseInvoiceService(
 	purchaseInvoiceRepo repositories.PurchaseInvoiceRepository,
 	supplierRepo repositories.SupplierRepository,
 	productRepo repositories.ProductRepository,
 	auditService AuditService,
+	supplierProductCatalogService SupplierProductCatalogService,
 ) PurchaseInvoiceService {
 	return &purchaseInvoiceServiceImpl{
-		purchaseInvoiceRepo: purchaseInvoiceRepo,
-		supplierRepo:          supplierRepo,
-		productRepo:           productRepo,
-		auditService:           auditService,
+		purchaseInvoiceRepo:           purchaseInvoiceRepo,
+		supplierRepo:                  supplierRepo,
+		productRepo:                   productRepo,
+		auditService:                   auditService,
+		supplierProductCatalogService:  supplierProductCatalogService,
 	}
 }
 
@@ -457,4 +462,46 @@ func (s *purchaseInvoiceServiceImpl) DeletePurchaseInvoice(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// GetSuggestedPrice retrieves the suggested purchase price from supplier catalog
+// Story 10.5, AC1: Returns catalog price for supplier-product combination, or error if not found
+func (s *purchaseInvoiceServiceImpl) GetSuggestedPrice(ctx context.Context, supplierID uint, productID uint, branchID uint) (float64, error) {
+	// Validate inputs
+	if supplierID == 0 {
+		return 0, fmt.Errorf("supplier ID is required")
+	}
+	if productID == 0 {
+		return 0, fmt.Errorf("product ID is required")
+	}
+	if branchID == 0 {
+		return 0, fmt.Errorf("branch ID is required")
+	}
+
+	// Check if supplier product catalog service is available
+	if s.supplierProductCatalogService == nil {
+		return 0, fmt.Errorf("supplier catalog service not available")
+	}
+
+	// Get current price from catalog
+	filter := &SupplierProductCatalogListFilter{
+		SupplierID:  &supplierID,
+		ProductID:   &productID,
+		BranchID:    &branchID,
+		Page:        1,
+		Limit:       1,
+		SortBy:      "price_effective_from",
+		SortOrder:   "desc",
+	}
+
+	catalogs, _, err := s.supplierProductCatalogService.ListProductCatalogs(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("catalog price not found for supplier-product combination: %w", err)
+	}
+
+	if len(catalogs) == 0 {
+		return 0, fmt.Errorf("no catalog price found for this supplier-product combination")
+	}
+
+	return catalogs[0].PurchasePrice, nil
 }

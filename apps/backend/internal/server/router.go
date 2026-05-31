@@ -29,7 +29,8 @@ import (
 // Story 10.2: Added purchaseInvoiceHandler parameter
 // Story 10.3: Added goodsReceiptHandler parameter
 // Story 10.4: Added supplierPaymentHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.5: Added supplierProductCatalogHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, supplierProductCatalogHandler *handlers.SupplierProductCatalogHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -424,8 +425,45 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 				// Story 10.4, AC2: Get payment history by supplier - Admin and Owner
 				supplierHistoryGroup.GET("/payment-history", supplierPaymentHandler.GetPaymentHistoryBySupplier)
 			}
+			}
+			// Story 10.5: Supplier product catalog management endpoints - require authentication and RBAC
+			// Only Admin and Owner can manage product catalogs and view pricing
+			if supplierProductCatalogHandler != nil {
+				catalogGroup := v1.Group("/supplier-product-catalogs")
+				catalogGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.5, AC1: Associate product with supplier - Admin only
+					catalogGroup.POST("", supplierProductCatalogHandler.AssociateProduct)
+					// Story 10.5: Get catalog entry by ID - Admin and Owner
+					catalogGroup.GET("/:id", supplierProductCatalogHandler.GetProductCatalog)
+					// Story 10.5: List catalog entries - Admin and Owner
+					catalogGroup.GET("", supplierProductCatalogHandler.ListProductCatalogs)
+					// Story 10.5, AC1: Update purchase price - Admin only
+					catalogGroup.PUT("/:id/price", supplierProductCatalogHandler.UpdatePurchasePrice)
+					// Story 10.5, AC1: Set preferred supplier - Admin only
+					catalogGroup.PUT("/:id/preferred", supplierProductCatalogHandler.SetPreferredSupplier)
+				}
+
+				// Story 10.5, AC1: Product price history endpoint - require authentication and RBAC
+				productPriceGroup := v1.Group("/products/:id")
+				productPriceGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.5, AC1: Get price history for a product - Admin and Owner
+					productPriceGroup.GET("/price-history", supplierProductCatalogHandler.GetPriceHistory)
+					// Story 10.5: Get preferred supplier for a product - Admin and Owner
+					productPriceGroup.GET("/preferred-supplier", supplierProductCatalogHandler.GetPreferredSupplier)
+				}
+
+				// Story 10.5: Supplier catalog endpoint - require authentication and RBAC
+				supplierCatalogGroup := v1.Group("/suppliers/:id")
+				supplierCatalogGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.5: Get supplier's product catalog - Admin and Owner
+					supplierCatalogGroup.GET("/product-catalog", supplierProductCatalogHandler.GetSupplierCatalog)
+				}
+			}
 		}
-	}
+
 
 	return router
 }
