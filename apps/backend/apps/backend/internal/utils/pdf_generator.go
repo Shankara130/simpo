@@ -13,7 +13,7 @@ import (
 // GenerateAuditTrailPDF generates a professional PDF report for supplier audit trail
 // AC: PDF export for compliance inspections with proper formatting and Indonesian locale
 func GenerateAuditTrailPDF(audits []models.SupplierAuditTrail, startDate, endDate time.Time, pharmacyName string) (*gofpdf.Fpdf, error) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf := gofpdf.Init("P", "mm", "A4", "")
 	pdf.AddPage()
 
 	// Set up fonts - support for Indonesian characters

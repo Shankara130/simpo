@@ -31,7 +31,8 @@ import (
 // Story 10.4: Added supplierPaymentHandler parameter
 // Story 10.5: Added supplierProductCatalogHandler parameter
 // Story 10.6: Added supplierAgingReportHandler parameter
-func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, supplierProductCatalogHandler *handlers.SupplierProductCatalogHandler, supplierAgingReportHandler *handlers.SupplierAgingReportHandler, redisClient *redis.Client) *gin.Engine {
+// Story 10.7: Added supplierAuditHandler parameter
+func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, authService auth.Service, cfg *config.Config, db *gorm.DB, whitelistHandler *whitelist.Handler, transactionHandler *handlers.TransactionHandler, productHandler handlers.ProductHandler, reportHandler *handlers.ReportHandler, auditHandler *handlers.AuditHandler, systemSettingsHandler handlers.SystemSettingsHandler, backupHandler *handlers.BackupHandler, supplierHandler *handlers.SupplierHandler, purchaseInvoiceHandler *handlers.PurchaseInvoiceHandler, goodsReceiptHandler *handlers.GoodsReceiptHandler, supplierPaymentHandler *handlers.SupplierPaymentHandler, supplierProductCatalogHandler *handlers.SupplierProductCatalogHandler, supplierAgingReportHandler *handlers.SupplierAgingReportHandler, supplierAuditHandler *handlers.SupplierAuditHandler, redisClient *redis.Client) *gin.Engine {
 	router := gin.New()
 
 	if cfg.App.Environment == "production" {
@@ -345,6 +346,25 @@ func SetupRouter(userHandler *user.Handler, authHandler handlers.AuthHandler, au
 					auditGroup.GET("/logs/export", auditHandler.GetAuditLogsExport)
 					// Story 5.4, Task 7: Manual retention cleanup (SystemAdmin only)
 					auditGroup.POST("/cleanup", auditHandler.CleanupAuditLogs)
+				}
+			}
+
+			// Story 10.7: Supplier audit trail endpoints - require authentication and RBAC
+			// Only Admin and Owner can access supplier audit trail
+			if supplierAuditHandler != nil {
+				supplierAuditGroup := v1.Group("/audit/supplier")
+				supplierAuditGroup.Use(auth.SessionAuthMiddleware(authService, sessionManager), middleware.RBACMiddleware())
+				{
+					// Story 10.7, AC2: Query supplier audit trail with filters
+					supplierAuditGroup.GET("", supplierAuditHandler.QueryAuditTrail)
+					// Story 10.7, AC2: Get audit trail for specific entity
+					supplierAuditGroup.GET("/entity/:type/:id", supplierAuditHandler.GetAuditByEntity)
+					// Story 10.7, AC2: Get audit trail for specific user
+					supplierAuditGroup.GET("/user/:id", supplierAuditHandler.GetAuditByUser)
+					// Story 10.7, AC3: Export audit trail in CSV format
+					supplierAuditGroup.GET("/export/csv", supplierAuditHandler.ExportAuditTrailCSV)
+					// Story 10.7, AC3: Export audit trail in PDF format
+					supplierAuditGroup.GET("/export/pdf", supplierAuditHandler.ExportAuditTrailPDF)
 				}
 			}
 		}

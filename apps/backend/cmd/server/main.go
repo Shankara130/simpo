@@ -122,6 +122,9 @@ func run() error {
 	auditRepo := repositories.NewAuditRepository(database)
 	auditService := services.NewAuditService(auditRepo)
 
+	// Story 10.7: Create supplier audit service for supplier transaction audit trail
+	supplierAuditService := services.NewSupplierAuditService(database)
+
 	// Create auth service with audit logging (Story 1.5, username-based login)
 	authServiceForJWT := auth.NewServiceWithRepo(&cfg.JWT, database)
 	newAuthService := services.NewAuthService(&cfg.JWT, userRepo, auditService)
@@ -232,7 +235,7 @@ func run() error {
 
 	// Story 10.1: Create supplier service and handler
 	supplierRepo := repositories.NewSupplierRepository(database)
-	supplierService := services.NewSupplierService(supplierRepo, auditService)
+	supplierService := services.NewSupplierService(supplierRepo, auditService, supplierAuditService)
 	supplierHandler := handlers.NewSupplierHandler(supplierService)
 
 	// Story 10.5: Create branch repository and supplier product catalog service early
@@ -243,18 +246,21 @@ func run() error {
 
 	// Story 10.2: Create purchase invoice service and handler
 	// Story 10.5, Task 9: Now receives supplierProductCatalogService for catalog price integration
+	// Story 10.7: Added supplierAuditService for audit trail integration
 	purchaseInvoiceRepo := repositories.NewPurchaseInvoiceRepository(database)
-	purchaseInvoiceService := services.NewPurchaseInvoiceService(purchaseInvoiceRepo, supplierRepo, productRepo, auditService, supplierProductCatalogService)
+	purchaseInvoiceService := services.NewPurchaseInvoiceService(purchaseInvoiceRepo, supplierRepo, productRepo, auditService, supplierProductCatalogService, supplierAuditService)
 	purchaseInvoiceHandler := handlers.NewPurchaseInvoiceHandler(purchaseInvoiceService)
 
 	// Story 10.3: Create goods receipt service and handler
+	// Story 10.7: Added supplierAuditService for audit trail integration
 	goodsReceiptRepo := repositories.NewGoodsReceiptRepository(database)
-	goodsReceiptService := services.NewGoodsReceiptService(database, goodsReceiptRepo, purchaseInvoiceRepo, productRepo, auditService, alertService, stockEventService)
+	goodsReceiptService := services.NewGoodsReceiptService(database, goodsReceiptRepo, purchaseInvoiceRepo, productRepo, auditService, alertService, stockEventService, supplierAuditService)
 	goodsReceiptHandler := handlers.NewGoodsReceiptHandler(goodsReceiptService)
 
 	// Story 10.4: Create supplier payment service and handler
+	// Story 10.7: Added supplierAuditService for audit trail integration
 	supplierPaymentRepo := repositories.NewSupplierPaymentRepository(database)
-	supplierPaymentService := services.NewSupplierPaymentService(database, supplierPaymentRepo, purchaseInvoiceRepo, supplierRepo, auditService)
+	supplierPaymentService := services.NewSupplierPaymentService(database, supplierPaymentRepo, purchaseInvoiceRepo, supplierRepo, auditService, supplierAuditService)
 	supplierPaymentHandler := handlers.NewSupplierPaymentHandler(supplierPaymentService)
 
 	// Story 10.5: Create supplier product catalog handler
@@ -264,7 +270,10 @@ func run() error {
 	supplierAgingReportService := services.NewSupplierAgingReportService(purchaseInvoiceRepo, supplierPaymentRepo, supplierRepo, auditService)
 	supplierAgingReportHandler := handlers.NewSupplierAgingReportHandler(supplierAgingReportService)
 
-	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, supplierProductCatalogHandler, supplierAgingReportHandler, redisClient)
+	// Story 10.7: Create supplier audit trail handler
+	supplierAuditHandler := handlers.NewSupplierAuditHandler(supplierAuditService)
+
+	router := server.SetupRouter(userHandler, newAuthHandler, authServiceForJWT, cfg, database, whitelistHandler, transactionHandler, productHandler, reportHandler, auditHandler, systemSettingsHandler, backupHandler, supplierHandler, purchaseInvoiceHandler, goodsReceiptHandler, supplierPaymentHandler, supplierProductCatalogHandler, supplierAgingReportHandler, supplierAuditHandler, redisClient)
 
 	// Story 4.2, Task 5: Start stock event broadcaster for real-time WebSocket updates
 	if stockEventService != nil {

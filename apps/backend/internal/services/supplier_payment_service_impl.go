@@ -13,29 +13,34 @@ import (
 
 // supplierPaymentServiceImpl implements SupplierPaymentService interface
 // Story 10.4: Service layer with business logic, transaction wrapping, and integrations
+// Story 10.7: Added SupplierAuditService for supplier transaction audit trail
 type supplierPaymentServiceImpl struct {
-	db                  *gorm.DB
-	supplierPaymentRepo repositories.SupplierPaymentRepository
-	invoiceRepo         repositories.PurchaseInvoiceRepository
-	supplierRepo        repositories.SupplierRepository
-	auditService        AuditService
+	db                   *gorm.DB
+	supplierPaymentRepo  repositories.SupplierPaymentRepository
+	invoiceRepo          repositories.PurchaseInvoiceRepository
+	supplierRepo         repositories.SupplierRepository
+	auditService         AuditService
+	supplierAuditService  SupplierAuditService
 }
 
 // NewSupplierPaymentService creates a new supplier payment service
 // Story 10.4: Factory function with dependency injection
+// Story 10.7: Added SupplierAuditService parameter for audit trail integration
 func NewSupplierPaymentService(
 	db *gorm.DB,
 	supplierPaymentRepo repositories.SupplierPaymentRepository,
 	invoiceRepo repositories.PurchaseInvoiceRepository,
 	supplierRepo repositories.SupplierRepository,
 	auditService AuditService,
+	supplierAuditService SupplierAuditService,
 ) SupplierPaymentService {
 	return &supplierPaymentServiceImpl{
-		db:                  db,
-		supplierPaymentRepo: supplierPaymentRepo,
-		invoiceRepo:         invoiceRepo,
-		supplierRepo:        supplierRepo,
-		auditService:        auditService,
+		db:                   db,
+		supplierPaymentRepo:  supplierPaymentRepo,
+		invoiceRepo:          invoiceRepo,
+		supplierRepo:         supplierRepo,
+		auditService:         auditService,
+		supplierAuditService:  supplierAuditService,
 	}
 }
 
@@ -149,6 +154,30 @@ func (s *supplierPaymentServiceImpl) RecordPayment(ctx context.Context, request 
 			"updated_by", createdBy,
 			"ip_address", ipAddress,
 		)
+
+		// Story 10.7: Log to supplier audit trail for Badan POM compliance
+		if s.supplierAuditService != nil {
+			auditLog := &models.SupplierAuditTrail{
+				TransactionType:   "payment",
+				EntityType:       "supplier_payment",
+				EntityID:         payment.ID,
+				UserID:           createdBy,
+				UserRole:         "Finance",
+				ActionType:       "PAY",
+				ActionDescription: fmt.Sprintf("Membayar tagihan supplier untuk faktur %s", invoice.InvoiceNumber),
+				Reason:           request.Notes,
+				TransactionAmount: &request.PaymentAmount,
+				AffectedItemsCount: 1, // One invoice affected
+				IPAddress:        ipAddress,
+				BranchID:         branchID,
+			}
+			if err := s.supplierAuditService.LogSupplierOperation(ctx, auditLog); err != nil {
+				slog.WarnContext(ctx, "failed_to_log_supplier_audit",
+					"payment_id", payment.ID,
+					"error", err.Error(),
+				)
+			}
+		}
 
 		// Store final payment for return
 		finalPayment = payment

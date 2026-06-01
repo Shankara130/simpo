@@ -16,12 +16,12 @@ CREATE INDEX idx_email_whitelist_domain ON email_whitelist(domain);
 
 -- Trigger to update updated_at timestamp (PostgreSQL specific)
 CREATE OR REPLACE FUNCTION update_email_whitelist_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $body$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_email_whitelist_updated_at
 BEFORE UPDATE ON email_whitelist

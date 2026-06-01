@@ -15,23 +15,27 @@ import (
 // purchaseInvoiceServiceImpl implements PurchaseInvoiceService interface
 // Story 10.2: Service layer with business logic and audit logging
 // Story 10.5: Added supplierProductCatalogService for catalog price integration
+// Story 10.7: Added SupplierAuditService for supplier transaction audit trail
 type purchaseInvoiceServiceImpl struct {
 	purchaseInvoiceRepo        repositories.PurchaseInvoiceRepository
 	supplierRepo               repositories.SupplierRepository
 	productRepo                repositories.ProductRepository
 	auditService               AuditService
 	supplierProductCatalogService SupplierProductCatalogService
+	supplierAuditService       SupplierAuditService
 }
 
 // NewPurchaseInvoiceService creates a new purchase invoice service
 // Story 10.2: Factory function with dependency injection
 // Story 10.5: Added supplierProductCatalogService parameter for catalog price integration
+// Story 10.7: Added SupplierAuditService parameter for audit trail integration
 func NewPurchaseInvoiceService(
 	purchaseInvoiceRepo repositories.PurchaseInvoiceRepository,
 	supplierRepo repositories.SupplierRepository,
 	productRepo repositories.ProductRepository,
 	auditService AuditService,
 	supplierProductCatalogService SupplierProductCatalogService,
+	supplierAuditService SupplierAuditService,
 ) PurchaseInvoiceService {
 	return &purchaseInvoiceServiceImpl{
 		purchaseInvoiceRepo:           purchaseInvoiceRepo,
@@ -39,6 +43,7 @@ func NewPurchaseInvoiceService(
 		productRepo:                   productRepo,
 		auditService:                   auditService,
 		supplierProductCatalogService:  supplierProductCatalogService,
+		supplierAuditService:           supplierAuditService,
 	}
 }
 
@@ -234,6 +239,27 @@ func (s *purchaseInvoiceServiceImpl) CreatePurchaseInvoice(ctx context.Context, 
 		// Consider implementing retry logic or dead letter queue for audit events in production
 	}
 
+	// Story 10.7: Log to supplier audit trail for Badan POM compliance
+	if s.supplierAuditService != nil {
+		auditLog := &models.SupplierAuditTrail{
+			TransactionType:     "purchase_invoice",
+			EntityType:         "purchase_invoice",
+			EntityID:           invoice.ID,
+			UserID:             createdBy,
+			UserRole:           "Admin",
+			ActionType:         "CREATE",
+			ActionDescription:   fmt.Sprintf("Merekam faktur pembelian: %s untuk supplier %s", invoice.InvoiceNumber, supplier.Name),
+			Reason:             "",
+			TransactionAmount:   &totalAmount,
+			AffectedItemsCount: len(items),
+			IPAddress:          ipAddress,
+			BranchID:           invoice.BranchID,
+		}
+		if err := s.supplierAuditService.LogSupplierOperation(ctx, auditLog); err != nil {
+			fmt.Printf("WARN: Supplier audit logging failed for purchase_invoice.created (invoice ID: %d): %v\n", invoice.ID, err)
+		}
+	}
+
 	return invoice, nil
 }
 
@@ -422,6 +448,27 @@ func (s *purchaseInvoiceServiceImpl) UpdatePurchaseInvoice(ctx context.Context, 
 		// Log error but don't fail the operation
 	}
 
+	// Story 10.7: Log to supplier audit trail for Badan POM compliance
+	if s.supplierAuditService != nil {
+		auditLog := &models.SupplierAuditTrail{
+			TransactionType:     "purchase_invoice",
+			EntityType:         "purchase_invoice",
+			EntityID:           existing.ID,
+			UserID:             updatedBy,
+			UserRole:           "Admin",
+			ActionType:         "UPDATE",
+			ActionDescription:   fmt.Sprintf("Memperbarui faktur pembelian: %s", existing.InvoiceNumber),
+			Reason:             updates.Reason,
+			TransactionAmount:   &existing.TotalAmount,
+			AffectedItemsCount: len(updates.Items),
+			IPAddress:          ipAddress,
+			BranchID:           existing.BranchID,
+		}
+		if err := s.supplierAuditService.LogSupplierOperation(ctx, auditLog); err != nil {
+			fmt.Printf("WARN: Supplier audit logging failed for purchase_invoice.updated (invoice ID: %d): %v\n", existing.ID, err)
+		}
+	}
+
 	return existing, nil
 }
 
@@ -459,6 +506,27 @@ func (s *purchaseInvoiceServiceImpl) DeletePurchaseInvoice(ctx context.Context, 
 	}
 	if err := s.auditService.LogLoginAttempt(ctx, entry); err != nil {
 		// Log error but don't fail the operation
+	}
+
+	// Story 10.7: Log to supplier audit trail for Badan POM compliance
+	if s.supplierAuditService != nil {
+		auditLog := &models.SupplierAuditTrail{
+			TransactionType:   "purchase_invoice",
+			EntityType:       "purchase_invoice",
+			EntityID:         invoice.ID,
+			UserID:           deletedBy,
+			UserRole:         "Admin",
+			ActionType:       "DELETE",
+			ActionDescription: fmt.Sprintf("Menghapus faktur pembelian: %s", invoice.InvoiceNumber),
+			Reason:           "Faktur pembelian dihapus",
+			TransactionAmount: &invoice.TotalAmount,
+			AffectedItemsCount: len(invoice.Items),
+			IPAddress:        ipAddress,
+			BranchID:         invoice.BranchID,
+		}
+		if err := s.supplierAuditService.LogSupplierOperation(ctx, auditLog); err != nil {
+			fmt.Printf("WARN: Supplier audit logging failed for purchase_invoice.deleted (invoice ID: %d): %v\n", invoice.ID, err)
+		}
 	}
 
 	return nil

@@ -7,6 +7,72 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+// DailySalesReportData represents the data structure for daily sales reports
+// Story 5.3: Excel export for daily sales summary
+type DailySalesReportData struct {
+	Date               string
+	BranchName         string
+	TotalSales         string
+	TotalTransactions  int
+	AvgTransaction     string
+	TopProducts        []TopProductItem
+	HourlySales        []HourlySalesItem
+	BreakdownType      string
+}
+
+// ProfitLossReportData represents the data structure for profit & loss reports
+// Story 5.3: Excel export for profit & loss statements
+type ProfitLossReportData struct {
+	PeriodStart      string
+	PeriodEnd        string
+	BranchName       string
+	Revenue          string
+	CostOfGoodsSold  string
+	GrossProfit      string
+	GrossProfitMargin float64
+	Breakdowns       []ProfitLossBreakdown
+	BreakdownType    string
+}
+
+// TopProductItem represents a top-selling product in daily sales
+type TopProductItem struct {
+	ProductName  string
+	Quantity     int
+	Revenue      string
+	Name         string
+	SKU          string
+	QuantitySold int
+}
+
+// HourlySalesItem represents hourly sales data
+type HourlySalesItem struct {
+	Hour            int
+	Revenue         string
+	Transactions    int
+	TransactionCount int
+	TotalAmount      string
+}
+
+// ProfitLossBreakdown represents a breakdown category in P&L reports
+type ProfitLossBreakdown struct {
+	Category         string
+	Amount           string
+	Name             string
+	Revenue          string
+	CostOfGoodsSold  string
+	GrossProfit      string
+	MarginPercentage float64
+}
+
+// BreakdownItem represents an individual breakdown item in P&L reports
+type BreakdownItem struct {
+	Name             string
+	Revenue          string
+	CostOfGoodsSold  string
+	GrossProfit      string
+	MarginPercentage float64
+}
+
 // ExcelGenerator handles Excel generation for financial reports
 // Story 5.3, Task 3, AC3: Excel generator with multi-sheet structure
 type ExcelGenerator struct {

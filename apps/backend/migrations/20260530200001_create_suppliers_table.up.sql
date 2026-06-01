@@ -49,7 +49,7 @@ BEGIN
     NEW.version = OLD.version + 1;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at and version
 DROP TRIGGER IF EXISTS trigger_suppliers_updated_at ON suppliers;

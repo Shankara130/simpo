@@ -18,19 +18,22 @@ import (
 // Story 10.3: Service layer with business logic, transaction wrapping, and integrations
 // Code review fix: CRITICAL-001, CRITICAL-002, CRITICAL-003, CRITICAL-004, CRITICAL-005
 // Added database transaction wrapping, invoice status update, audit logging, and overflow checks
+// Story 10.7: Added SupplierAuditService for supplier transaction audit trail
 type goodsReceiptServiceImpl struct {
-	db               *gorm.DB
-	goodsReceiptRepo repositories.GoodsReceiptRepository
-	invoiceRepo      repositories.PurchaseInvoiceRepository
-	productRepo       repositories.ProductRepository
-	auditService      AuditService
-	alertService      AlertService
-	stockEventService StockEventService
+	db                    *gorm.DB
+	goodsReceiptRepo     repositories.GoodsReceiptRepository
+	invoiceRepo          repositories.PurchaseInvoiceRepository
+	productRepo           repositories.ProductRepository
+	auditService          AuditService
+	alertService          AlertService
+	stockEventService     StockEventService
+	supplierAuditService  SupplierAuditService
 }
 
 // NewGoodsReceiptService creates a new goods receipt service
 // Story 10.3: Factory function with dependency injection
 // Code review fix: Added db parameter for transaction wrapping (CRITICAL-001)
+// Story 10.7: Added SupplierAuditService parameter for audit trail integration
 func NewGoodsReceiptService(
 	db *gorm.DB,
 	goodsReceiptRepo repositories.GoodsReceiptRepository,
@@ -39,15 +42,17 @@ func NewGoodsReceiptService(
 	auditService AuditService,
 	alertService AlertService,
 	stockEventService StockEventService,
+	supplierAuditService SupplierAuditService,
 ) GoodsReceiptService {
 	return &goodsReceiptServiceImpl{
-		db:               db,
-		goodsReceiptRepo: goodsReceiptRepo,
-		invoiceRepo:      invoiceRepo,
-		productRepo:       productRepo,
-		auditService:      auditService,
-		alertService:      alertService,
-		stockEventService: stockEventService,
+		db:                   db,
+		goodsReceiptRepo:    goodsReceiptRepo,
+		invoiceRepo:         invoiceRepo,
+		productRepo:          productRepo,
+		auditService:         auditService,
+		alertService:         alertService,
+		stockEventService:    stockEventService,
+		supplierAuditService: supplierAuditService,
 	}
 }
 
@@ -269,6 +274,33 @@ func (s *goodsReceiptServiceImpl) ProcessGoodsReceipt(ctx context.Context, invoi
 				"old_cost", update["old_cost"],
 				"new_cost", update["new_cost"],
 			)
+		}
+
+		// Story 10.7: Log to supplier audit trail for Badan POM compliance
+		if s.supplierAuditService != nil {
+			// Calculate total amount from invoice
+			totalAmount := invoice.TotalAmount
+
+			auditLog := &models.SupplierAuditTrail{
+				TransactionType:     "goods_receipt",
+				EntityType:         "goods_receipt",
+				EntityID:           goodsReceipt.ID,
+				UserID:             receivedBy,
+				UserRole:           "Warehouse",
+				ActionType:         "RECEIVE",
+				ActionDescription:   fmt.Sprintf("Menerima barang untuk faktur %s", invoice.InvoiceNumber),
+				Reason:             notes,
+				TransactionAmount:   &totalAmount,
+				AffectedItemsCount: len(invoice.Items),
+				IPAddress:          "", // Would need to be passed in or tracked elsewhere
+				BranchID:           branchID,
+			}
+			if err := s.supplierAuditService.LogSupplierOperation(ctx, auditLog); err != nil {
+				slog.WarnContext(ctx, "failed_to_log_supplier_audit",
+					"receipt_id", goodsReceipt.ID,
+					"error", err.Error(),
+				)
+			}
 		}
 
 		// Load complete goods receipt with relationships

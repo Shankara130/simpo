@@ -25,7 +25,7 @@ BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_purchase_invoice_items_updated_at
     BEFORE UPDATE ON purchase_invoice_items

@@ -44,7 +44,7 @@ BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_purchase_invoices_updated_at
     BEFORE UPDATE ON purchase_invoices
@@ -58,7 +58,7 @@ BEGIN
     NEW.version = OLD.version + 1;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_increment_purchase_invoices_version
     BEFORE UPDATE ON purchase_invoices

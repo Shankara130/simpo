@@ -55,7 +55,7 @@ BEGIN
     NEW.version = OLD.version + 1;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$body$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at and version
 DROP TRIGGER IF EXISTS trigger_products_updated_at ON products;
