@@ -46,7 +46,7 @@ export interface BluetoothManagerCallbacks {
  * - Auto-reconnection
  */
 export class BluetoothManager {
-  private bleClient: BleClient;
+  private bleClient: BleClient | null = null;
   private connectedDevices: Map<string, BluetoothDevice> = new Map();
   private discoveredDevices: Map<string, BluetoothDevice> = new Map();
   private callbacks: BluetoothManagerCallbacks;
@@ -62,7 +62,12 @@ export class BluetoothManager {
 
   constructor(callbacks: BluetoothManagerCallbacks) {
     this.callbacks = callbacks;
-    this.bleClient = new BleClient();
+    // Defensive check - BleClient might not be available if native module not linked
+    if (typeof BleClient !== 'undefined') {
+      this.bleClient = new BleClient();
+    } else {
+      console.warn('[BluetoothManager] BleClient not available - Bluetooth features disabled');
+    }
   }
 
   /**
